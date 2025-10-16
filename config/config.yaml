@@ -1,0 +1,22 @@
+# 데이터베이스 설정
+database:
+  path: "data/stock_data.db"
+
+# 데이터 수집 설정
+collector:
+  default_start_date: "2023-01-01"
+  default_end_date: "2024-12-31"
+  update_interval: 1  # 일 단위
+
+# 조건 설정
+condition:
+  conditions_file: "config/conditions.yaml"
+
+# AI 학습 설정
+learning:
+  models_dir: "models/"
+  sequence_length: 60  # LSTM 입력 시퀀스 길이
+  train_test_split: 0.8
+  batch_size: 32
+  epochs: 50
+  learning_rate: 0.001

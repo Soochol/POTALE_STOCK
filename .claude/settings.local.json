@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(if [ -d \"venv\" ])",
+      "Bash(then echo \"venv exists\")",
+      "Bash(elif [ -d \".venv\" ])",
+      "Bash(then echo \".venv exists\")",
+      "Bash(else echo \"No venv found\")",
+      "Bash(fi)",
+      "Bash(source venv/Scripts/activate)",
+      "Bash(pip show:*)",
+      "Bash(pip index:*)",
+      "Bash(tree:*)",
+      "Bash(curl:*)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

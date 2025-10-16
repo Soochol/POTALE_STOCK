@@ -1,0 +1,24 @@
+# 주식 데이터 수집
+pykrx>=1.0.40
+
+# 데이터 처리 및 분석
+pandas>=2.0.0
+numpy>=1.24.0
+
+# AI/ML 라이브러리
+scikit-learn>=1.3.0
+tensorflow>=2.13.0
+
+# CLI 인터페이스
+click>=8.1.0
+rich>=13.0.0
+
+# 설정 파일 관리
+pyyaml>=6.0
+
+# 데이터 저장
+sqlalchemy>=2.0.0
+
+# 유틸리티
+python-dateutil>=2.8.0
+tqdm>=4.65.0
