@@ -16,7 +16,22 @@
       "Bash(curl:*)",
       "Bash(git init:*)",
       "Bash(git remote add:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(if not exist datadatabase mkdir datadatabase)",
+      "Bash(findstr:*)",
+      "Bash(where:*)",
+      "Bash(dir:*)",
+      "Bash(uv --version:*)",
+      "Bash(uv pip install:*)",
+      "Bash(uv venv:*)",
+      "Bash(uv run python:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(timeout 5 uv run:*)",
+      "Bash(git rm:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: Complete pykrx removal and add TUI interface\n\nMajor architectural changes:\n- Remove all pykrx dependencies and collectors\n- Implement 100% Naver Finance-based data collection\n- Add naver_ticker_list utility (4,189 stocks from market cap pages)\n- Complete hybrid collector integration\n\nNew features:\n- Interactive TUI interface (Textual-based, Claude Code style)\n- CLI tool (potale.py) with rich output formatting\n- Data validation script (validate_data.py)\n- Analysis and testing utilities\n\nDocumentation updates:\n- README: Updated to reflect pykrx removal\n- IMPLEMENTATION_ROADMAP: Steps 1-4 completed\n- CHANGELOG: Track major version changes\n\nTesting:\n- Small-scale test: 3 stocks × 30 days ✓\n- Hybrid validation: Adjusted price + volume ✓\n- Data quality: 0 NULLs, 0 duplicates ✓\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git log:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

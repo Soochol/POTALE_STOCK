@@ -51,3 +51,7 @@ logs/
 # 테스트 파일
 test_*.py
 test_*.txt
+
+# Temporary/junk files
+=*
+nul

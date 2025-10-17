@@ -28,9 +28,9 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from pykrx import stock
 from src.infrastructure.database.connection import DatabaseConnection
 from src.infrastructure.collectors.bulk_collector import BulkCollector
+from src.infrastructure.utils.naver_ticker_list import get_all_tickers as get_naver_tickers
 
 
 def parse_date(date_str: str) -> date:
@@ -42,18 +42,9 @@ def parse_date(date_str: str) -> date:
 
 
 def get_all_tickers() -> list[str]:
-    """pykrx를 사용하여 전체 종목 코드 가져오기"""
-    print("전체 종목 리스트 로딩 중...")
+    """네이버 금융을 사용하여 전체 종목 코드 가져오기"""
     try:
-        # KOSPI + KOSDAQ 종목 가져오기 (오늘 날짜 기준)
-        today = date.today().strftime("%Y%m%d")
-        kospi_tickers = stock.get_market_ticker_list(date=today, market="KOSPI")
-        kosdaq_tickers = stock.get_market_ticker_list(date=today, market="KOSDAQ")
-        all_tickers = list(set(kospi_tickers + kosdaq_tickers))
-        print(f"  총 {len(all_tickers)}개 종목 발견 (기준일: {today})")
-        print(f"  - KOSPI: {len(kospi_tickers)}개")
-        print(f"  - KOSDAQ: {len(kosdaq_tickers)}개")
-        return sorted(all_tickers)
+        return get_naver_tickers()
     except Exception as e:
         print(f"[Error] 종목 리스트 로딩 실패: {e}")
         import traceback
