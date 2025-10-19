@@ -377,6 +377,61 @@ class Block3ConditionPreset(Base):
         return f"<Block3ConditionPreset(name={self.name}, entry_surge_rate={self.entry_surge_rate})>"
 
 
+class Block4ConditionPreset(Base):
+    """블록4 조건 프리셋 테이블"""
+    __tablename__ = 'block4_condition_preset'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), unique=True, nullable=False, comment='조건 프리셋 이름')
+    description = Column(String(500), comment='조건 설명')
+
+    # Block1 조건 (상속)
+    entry_surge_rate = Column(Float, comment='진입 급등률 (%)')
+    entry_ma_period = Column(Integer, comment='진입 이동평균선 기간')
+    entry_high_above_ma = Column(Integer, comment='고가가 이평선 위에 있어야 함')
+    entry_max_deviation_ratio = Column(Float, comment='최대 이격도 비율 (%)')
+    entry_min_trading_value = Column(Float, comment='최소 거래대금 (억원)')
+    entry_volume_high_months = Column(Integer, comment='N개월 신고거래량')
+    entry_volume_spike_ratio = Column(Float, comment='전날 대비 거래량 급증 비율 (%)')
+    entry_price_high_months = Column(Integer, comment='N개월 신고가')
+    exit_condition_type = Column(String(50), nullable=False, comment='종료 조건 타입')
+    exit_ma_period = Column(Integer, comment='종료용 이동평균선 기간')
+
+    # Block2 추가 조건 (상속)
+    block2_volume_ratio = Column(Float, comment='블록1 최고 거래량 대비 비율 (%, Block2 조건)')
+    block2_low_price_margin = Column(Float, comment='저가 마진 (%, Block2 조건)')
+
+    # Block3 추가 조건 (상속)
+    block3_volume_ratio = Column(Float, comment='블록2 최고 거래량 대비 비율 (%, Block3 조건)')
+    block3_low_price_margin = Column(Float, comment='저가 마진 (%, Block3 조건)')
+
+    # Block4 추가 조건
+    block4_volume_ratio = Column(Float, comment='블록3 최고 거래량 대비 비율 (%, 예: 20 = 20%)')
+    block4_low_price_margin = Column(Float, comment='저가 마진 (%, 예: 10 = 10%)')
+
+    # 중복 탐지 방지
+    cooldown_days = Column(Integer, default=20, nullable=False, comment='쿨다운 기간 (일)')
+
+    # Block 전환 조건
+    block2_min_candles_after_block1 = Column(Integer, comment='Block1 시작 후 최소 캔들 수')
+    block3_min_candles_after_block2 = Column(Integer, comment='Block2 시작 후 최소 캔들 수')
+    block4_min_candles_after_block3 = Column(Integer, comment='Block3 시작 후 최소 캔들 수 (예: 4 = 5번째 캔들부터)')
+
+    # 메타데이터
+    is_active = Column(Integer, default=1, comment='활성 여부 (1: 활성, 0: 비활성)')
+    created_at = Column(DateTime, default=datetime.now, comment='생성일시')
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment='수정일시')
+
+    # 인덱스
+    __table_args__ = (
+        Index('ix_block4_condition_name', 'name', unique=True),
+        Index('ix_block4_condition_active', 'is_active'),
+    )
+
+    def __repr__(self):
+        return f"<Block4ConditionPreset(name={self.name}, entry_surge_rate={self.entry_surge_rate})>"
+
+
 class Block1Detection(Base):
     """블록1 탐지 결과 테이블"""
     __tablename__ = 'block1_detection'
@@ -568,6 +623,69 @@ class Block3Detection(Base):
         return f"<Block3Detection(ticker={self.ticker}, started={self.started_at}, status={self.status})>"
 
 
+class Block4Detection(Base):
+    """블록4 탐지 결과 테이블"""
+    __tablename__ = 'block4_detection'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    block4_id = Column(String(50), unique=True, nullable=False, comment='블록4 고유 ID (UUID)')
+    ticker = Column(String(10), ForeignKey('stock_info.ticker'), nullable=False, comment='종목코드')
+
+    # 상태
+    status = Column(String(20), nullable=False, default='active', comment='상태 (active, completed)')
+
+    # 시작/종료 날짜
+    started_at = Column(Date, nullable=False, comment='블록4 시작일')
+    ended_at = Column(Date, comment='블록4 종료일')
+
+    # 진입 정보
+    entry_close = Column(Float, nullable=False, comment='시작일 종가')
+    entry_rate = Column(Float, comment='시작일 등락률 (%)')
+
+    # 직전 블록3 정보
+    prev_block3_id = Column(Integer, ForeignKey('block3_detection.id'), comment='참조한 블록3 ID')
+    prev_block3_peak_price = Column(Float, comment='블록3 최고가')
+    prev_block3_peak_volume = Column(BigInteger, comment='블록3 최고 거래량')
+
+    # 블록4 기간 중 최고가/거래량 추적
+    peak_price = Column(Float, comment='블록4 기간 중 최고가')
+    peak_date = Column(Date, comment='최고가 달성일')
+    peak_gain_ratio = Column(Float, comment='최고가 상승률 (%)')
+    peak_volume = Column(BigInteger, comment='블록4 기간 중 최고 거래량')
+
+    # 종료 정보
+    duration_days = Column(Integer, comment='지속 기간 (일)')
+    exit_reason = Column(String(50), comment='종료 사유 (ma_break, three_line_reversal, body_middle)')
+
+    # 메타데이터
+    condition_name = Column(String(100), comment='사용된 조건 이름')
+    created_at = Column(DateTime, default=datetime.now, comment='레코드 생성일시')
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment='수정일시')
+
+    # 패턴 재탐지 시스템
+    pattern_id = Column(Integer, ForeignKey('block_pattern.pattern_id'), comment='패턴 ID (재탐지 시스템용)')
+    detection_type = Column(String(20), comment='탐지 타입 (seed, redetection)')
+
+    # 관계 설정
+    stock_info = relationship("StockInfo")
+    prev_block3 = relationship("Block3Detection", foreign_keys=[prev_block3_id])
+    pattern = relationship("BlockPattern", back_populates="block4_detections", foreign_keys=[pattern_id])
+
+    # 인덱스
+    __table_args__ = (
+        Index('ix_block4_ticker_started', 'ticker', 'started_at'),
+        Index('ix_block4_status', 'status'),
+        Index('ix_block4_started', 'started_at'),
+        Index('ix_block4_id', 'block4_id', unique=True),
+        Index('ix_block4_prev_block3', 'prev_block3_id'),
+        Index('ix_block4_pattern', 'pattern_id'),
+        Index('ix_block4_detection_type', 'detection_type'),
+    )
+
+    def __repr__(self):
+        return f"<Block4Detection(ticker={self.ticker}, started={self.started_at}, status={self.status})>"
+
+
 class BlockPattern(Base):
     """블록 패턴 (재탐지 시스템)"""
     __tablename__ = 'block_pattern'
@@ -596,6 +714,7 @@ class BlockPattern(Base):
     block1_detections = relationship("Block1Detection", back_populates="pattern", foreign_keys="Block1Detection.pattern_id")
     block2_detections = relationship("Block2Detection", back_populates="pattern", foreign_keys="Block2Detection.pattern_id")
     block3_detections = relationship("Block3Detection", back_populates="pattern", foreign_keys="Block3Detection.pattern_id")
+    block4_detections = relationship("Block4Detection", back_populates="pattern", foreign_keys="Block4Detection.pattern_id")
 
     # 인덱스
     __table_args__ = (
@@ -643,6 +762,11 @@ class SeedConditionPreset(Base):
     block3_low_price_margin = Column(Float, comment='Block2 최고가 저가 마진 (%)')
     block3_min_candles_after_block2 = Column(Integer, comment='Block2 시작 후 최소 캔들 수')
 
+    # Block4 추가 조건
+    block4_volume_ratio = Column(Float, comment='Block3 최고 거래량 대비 비율 (%)')
+    block4_low_price_margin = Column(Float, comment='Block3 최고가 저가 마진 (%)')
+    block4_min_candles_after_block3 = Column(Integer, comment='Block3 시작 후 최소 캔들 수')
+
     # 메타데이터
     is_active = Column(Integer, default=1, comment='활성 여부')
     created_at = Column(DateTime, default=datetime.now, comment='생성일시')
@@ -680,6 +804,7 @@ class RedetectionConditionPreset(Base):
     block1_tolerance_pct = Column(Float, nullable=False, default=10.0, comment='Block1 재탐지 가격 범위 (±%)')
     block2_tolerance_pct = Column(Float, nullable=False, default=15.0, comment='Block2 재탐지 가격 범위 (±%)')
     block3_tolerance_pct = Column(Float, nullable=False, default=20.0, comment='Block3 재탐지 가격 범위 (±%)')
+    block4_tolerance_pct = Column(Float, nullable=False, default=25.0, comment='Block4 재탐지 가격 범위 (±%)')
 
     # 종료 조건
     exit_condition_type = Column(String(50), nullable=False, comment='종료 조건 타입')
@@ -697,6 +822,11 @@ class RedetectionConditionPreset(Base):
     block3_volume_ratio = Column(Float, comment='Block2 최고 거래량 대비 비율 (%)')
     block3_low_price_margin = Column(Float, comment='Block2 최고가 저가 마진 (%)')
     block3_min_candles_after_block2 = Column(Integer, comment='Block2 시작 후 최소 캔들 수')
+
+    # Block4 추가 조건
+    block4_volume_ratio = Column(Float, comment='Block3 최고 거래량 대비 비율 (%)')
+    block4_low_price_margin = Column(Float, comment='Block3 최고가 저가 마진 (%)')
+    block4_min_candles_after_block3 = Column(Integer, comment='Block3 시작 후 최소 캔들 수')
 
     # 메타데이터
     is_active = Column(Integer, default=1, comment='활성 여부')
