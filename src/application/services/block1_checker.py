@@ -44,47 +44,47 @@ class Block1Checker:
                 return False
 
         # 조건 2: 고가 >= 이동평균선 N
-        if condition.entry_ma_period and condition.high_above_ma:
+        if condition.entry_ma_period and condition.entry_high_above_ma:
             ma_key = f'MA_{condition.entry_ma_period}'
             ma_value = indicators.get(ma_key)
             if ma_value is None or stock.high < ma_value:
                 return False
 
         # 조건 3: 이격도 (MA를 100으로 봤을 때 종가 비율)
-        if condition.max_deviation_ratio is not None:
+        if condition.entry_max_deviation_ratio is not None:
             deviation = indicators.get('deviation', 100)
             # deviation_threshold = 115 의미: MA를 100으로 봤을 때 115 이하
-            if deviation > condition.max_deviation_ratio:
+            if deviation > condition.entry_max_deviation_ratio:
                 return False
 
         # 조건 4: 거래대금 N억 이상
-        if condition.min_trading_value is not None:
+        if condition.entry_min_trading_value is not None:
             trading_value = indicators.get('trading_value_100m', 0)
-            if trading_value < condition.min_trading_value:
+            if trading_value < condition.entry_min_trading_value:
                 return False
 
         # 조건 5: N개월 신고거래량
-        if condition.volume_high_months is not None:
+        if condition.entry_volume_high_months is not None:
             is_volume_high = indicators.get('is_volume_high', False)
             if not is_volume_high:
                 return False
 
         # 조건 6: 전날 거래량 대비 N% 수준 (필수)
-        if condition.volume_spike_ratio is not None:
+        if condition.entry_volume_spike_ratio is not None:
             if prev_stock is None:
                 # 전날 데이터가 없으면 조건 실패
                 return False
 
             # 당일_거래량 >= 전날_거래량 × (N/100)
             # N은 % 단위 (예: 400 = 400%, 즉 4배)
-            ratio = condition.volume_spike_ratio / 100.0
+            ratio = condition.entry_volume_spike_ratio / 100.0
             required_volume = prev_stock.volume * ratio
             if stock.volume < required_volume:
                 return False
         # prev_day_volume_increase_ratio가 None이면 이 조건은 체크하지 않음 (하위 호환성)
 
         # 조건 7: N개월 신고가 (선택적)
-        if condition.price_high_months is not None:
+        if condition.entry_price_high_months is not None:
             indicators = stock.indicators if hasattr(stock, 'indicators') else {}
             is_new_high = indicators.get('is_new_high', False)
             if not is_new_high:

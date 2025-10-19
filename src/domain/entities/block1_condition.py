@@ -39,20 +39,20 @@ class Block1Condition:
 
     # 진입 조건 2, 3: 이평선
     entry_ma_period: Optional[int] = None  # 진입용 이동평균선 기간 (예: 5, 20, 120일)
-    high_above_ma: Optional[bool] = None  # 고가 >= 이평선 검사 여부
-    max_deviation_ratio: Optional[float] = None  # 이격도 (MA를 100으로 봤을 때, 예: 115 = MA의 115%)
+    entry_high_above_ma: Optional[bool] = None  # 고가 >= 이평선 검사 여부
+    entry_max_deviation_ratio: Optional[float] = None  # 이격도 (MA를 100으로 봤을 때, 예: 115 = MA의 115%)
 
     # 진입 조건 4: 거래대금
-    min_trading_value: Optional[float] = None  # 거래대금 (억, 예: 100 = 100억)
+    entry_min_trading_value: Optional[float] = None  # 거래대금 (억, 예: 100 = 100억)
 
     # 진입 조건 5: 거래량
-    volume_high_months: Optional[int] = None  # 신고거래량 기간 (개월, 예: 3, 6개월)
+    entry_volume_high_months: Optional[int] = None  # 신고거래량 기간 (개월, 예: 3, 6개월)
 
     # 진입 조건 6: 전날 거래량 비율
-    volume_spike_ratio: Optional[float] = None  # 전날 대비 비율 (%, 예: 400 = 400%, 즉 4배)
+    entry_volume_spike_ratio: Optional[float] = None  # 전날 대비 비율 (%, 예: 400 = 400%, 즉 4배)
 
     # 진입 조건 7: 신고가 조건
-    price_high_months: Optional[int] = None  # N개월 신고가 (개월, 예: 2 = 2개월 신고가)
+    entry_price_high_months: Optional[int] = None  # N개월 신고가 (개월, 예: 2 = 2개월 신고가)
 
     # 종료 조건
     exit_condition_type: Block1ExitConditionType = Block1ExitConditionType.MA_BREAK
@@ -67,8 +67,8 @@ class Block1Condition:
         has_condition = any([
             self.entry_surge_rate is not None,
             self.entry_ma_period is not None,
-            self.min_trading_value is not None,
-            self.volume_high_months is not None
+            self.entry_min_trading_value is not None,
+            self.entry_volume_high_months is not None
         ])
 
         if not has_condition:
@@ -81,22 +81,22 @@ class Block1Condition:
         if self.entry_ma_period is not None and self.entry_ma_period <= 0:
             return False
 
-        if self.max_deviation_ratio is not None and self.max_deviation_ratio <= 0:
+        if self.entry_max_deviation_ratio is not None and self.entry_max_deviation_ratio <= 0:
             return False
 
-        if self.min_trading_value is not None and self.min_trading_value <= 0:
+        if self.entry_min_trading_value is not None and self.entry_min_trading_value <= 0:
             return False
 
-        if self.volume_high_months is not None and self.volume_high_months <= 0:
+        if self.entry_volume_high_months is not None and self.entry_volume_high_months <= 0:
             return False
 
-        if self.volume_spike_ratio is not None and self.volume_spike_ratio < 0:
+        if self.entry_volume_spike_ratio is not None and self.entry_volume_spike_ratio < 0:
             return False
 
         if self.cooldown_days <= 0:
             return False
 
-        if self.price_high_months is not None and self.price_high_months <= 0:
+        if self.entry_price_high_months is not None and self.entry_price_high_months <= 0:
             return False
 
         return True
@@ -109,11 +109,11 @@ class Block1Condition:
             conditions.append(f"진입MA{self.entry_ma_period}")
         if self.exit_ma_period:
             conditions.append(f"종료MA{self.exit_ma_period}")
-        if self.min_trading_value:
-            conditions.append(f"거래대금>={self.min_trading_value}억")
-        if self.volume_high_months:
-            conditions.append(f"{self.volume_high_months}개월신고거래량")
-        if self.volume_spike_ratio:
-            conditions.append(f"전날대비{self.volume_spike_ratio*100:.0f}%증가")
+        if self.entry_min_trading_value:
+            conditions.append(f"거래대금>={self.entry_min_trading_value}억")
+        if self.entry_volume_high_months:
+            conditions.append(f"{self.entry_volume_high_months}개월신고거래량")
+        if self.entry_volume_spike_ratio:
+            conditions.append(f"전날대비{self.entry_volume_spike_ratio*100:.0f}%증가")
 
         return f"<Block1Condition({', '.join(conditions)})>"
