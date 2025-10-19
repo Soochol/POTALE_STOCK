@@ -36,27 +36,39 @@ def update_seed_conditions(db: DatabaseConnection, json_data: dict, dry_run: boo
         print(f"  설명: {data.get('description', 'N/A')}")
         print(f"  진입 등락률: {data['entry_surge_rate']}%")
         print(f"  진입 MA: {data['entry_ma_period']}일")
+        print(f"  고가 >= MA: {data['entry_high_above_ma']}")
+        print(f"  이격도: {data['entry_max_deviation_ratio']}%")
+        print(f"  거래대금: {data['entry_min_trading_value']}억")
+        print(f"  신고거래량 기간: {data['entry_volume_high_months']}개월")
+        print(f"  전날 대비 거래량: {data['entry_volume_spike_ratio']}%")
+        print(f"  신고가 기간: {data['entry_price_high_months']}개월")
         print(f"  종료 MA: {data['exit_ma_period']}일")
-        print(f"  신고거래량 기간: {data['volume_high_months']}개월")
-        print(f"  신고가 기간: {data['price_high_months']}개월")
         print(f"  Cooldown: {data['cooldown_days']}일")
         print(f"  Block2 거래량 비율: {data['block2_volume_ratio']}%")
         print(f"  Block2 저가 마진: {data['block2_low_price_margin']}%")
+        print(f"  Block2 최소 캔들: {data['block2_min_candles_after_block1']}")
         print(f"  Block3 거래량 비율: {data['block3_volume_ratio']}%")
         print(f"  Block3 저가 마진: {data['block3_low_price_margin']}%")
+        print(f"  Block3 최소 캔들: {data['block3_min_candles_after_block2']}")
 
         if not dry_run:
             condition = SeedCondition(
                 entry_surge_rate=data['entry_surge_rate'],
                 entry_ma_period=data['entry_ma_period'],
+                entry_high_above_ma=data['entry_high_above_ma'],
+                entry_max_deviation_ratio=data['entry_max_deviation_ratio'],
+                entry_min_trading_value=data['entry_min_trading_value'],
+                entry_volume_high_months=data['entry_volume_high_months'],
+                entry_volume_spike_ratio=data['entry_volume_spike_ratio'],
+                entry_price_high_months=data['entry_price_high_months'],
                 exit_ma_period=data['exit_ma_period'],
-                volume_high_months=data['volume_high_months'],
-                price_high_months=data['price_high_months'],
                 cooldown_days=data['cooldown_days'],
                 block2_volume_ratio=data['block2_volume_ratio'],
                 block2_low_price_margin=data['block2_low_price_margin'],
+                block2_min_candles_after_block1=data['block2_min_candles_after_block1'],
                 block3_volume_ratio=data['block3_volume_ratio'],
-                block3_low_price_margin=data['block3_low_price_margin']
+                block3_low_price_margin=data['block3_low_price_margin'],
+                block3_min_candles_after_block2=data['block3_min_candles_after_block2']
             )
 
             repo.save(name, condition, data.get('description', ''))
@@ -78,33 +90,45 @@ def update_redetection_conditions(db: DatabaseConnection, json_data: dict, dry_r
         print(f"  설명: {data.get('description', 'N/A')}")
         print(f"  진입 등락률: {data['entry_surge_rate']}%")
         print(f"  진입 MA: {data['entry_ma_period']}일")
+        print(f"  고가 >= MA: {data['entry_high_above_ma']}")
+        print(f"  이격도: {data['entry_max_deviation_ratio']}%")
+        print(f"  거래대금: {data['entry_min_trading_value']}억")
+        print(f"  신고거래량 기간: {data['entry_volume_high_months']}개월")
+        print(f"  전날 대비 거래량: {data['entry_volume_spike_ratio']}%")
+        print(f"  신고가 기간: {data['entry_price_high_months']}개월")
         print(f"  종료 MA: {data['exit_ma_period']}일")
-        print(f"  신고거래량 기간: {data['volume_high_months']}개월")
-        print(f"  신고가 기간: {data['price_high_months']}개월")
         print(f"  Cooldown: {data['cooldown_days']}일")
         print(f"  Block1 가격 Tolerance: {data['block1_tolerance_pct']}%")
         print(f"  Block2 가격 Tolerance: {data['block2_tolerance_pct']}%")
         print(f"  Block3 가격 Tolerance: {data['block3_tolerance_pct']}%")
         print(f"  Block2 거래량 비율: {data['block2_volume_ratio']}%")
         print(f"  Block2 저가 마진: {data['block2_low_price_margin']}%")
+        print(f"  Block2 최소 캔들: {data['block2_min_candles_after_block1']}")
         print(f"  Block3 거래량 비율: {data['block3_volume_ratio']}%")
         print(f"  Block3 저가 마진: {data['block3_low_price_margin']}%")
+        print(f"  Block3 최소 캔들: {data['block3_min_candles_after_block2']}")
 
         if not dry_run:
             condition = RedetectionCondition(
                 entry_surge_rate=data['entry_surge_rate'],
                 entry_ma_period=data['entry_ma_period'],
+                entry_high_above_ma=data['entry_high_above_ma'],
+                entry_max_deviation_ratio=data['entry_max_deviation_ratio'],
+                entry_min_trading_value=data['entry_min_trading_value'],
+                entry_volume_high_months=data['entry_volume_high_months'],
+                entry_volume_spike_ratio=data['entry_volume_spike_ratio'],
+                entry_price_high_months=data['entry_price_high_months'],
                 exit_ma_period=data['exit_ma_period'],
-                volume_high_months=data['volume_high_months'],
-                price_high_months=data['price_high_months'],
                 cooldown_days=data['cooldown_days'],
                 block1_tolerance_pct=data['block1_tolerance_pct'],
                 block2_tolerance_pct=data['block2_tolerance_pct'],
                 block3_tolerance_pct=data['block3_tolerance_pct'],
                 block2_volume_ratio=data['block2_volume_ratio'],
                 block2_low_price_margin=data['block2_low_price_margin'],
+                block2_min_candles_after_block1=data['block2_min_candles_after_block1'],
                 block3_volume_ratio=data['block3_volume_ratio'],
-                block3_low_price_margin=data['block3_low_price_margin']
+                block3_low_price_margin=data['block3_low_price_margin'],
+                block3_min_candles_after_block2=data['block3_min_candles_after_block2']
             )
 
             repo.save(name, condition, data.get('description', ''))

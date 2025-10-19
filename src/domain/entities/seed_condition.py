@@ -24,12 +24,12 @@ class SeedCondition:
     # 진입 조건
     entry_surge_rate: float  # 등락률 (%, 예: 8.0 = 8%)
     entry_ma_period: int  # 진입용 이동평균선 기간
-    high_above_ma: bool = True  # 고가 >= 이평선 검사
-    max_deviation_ratio: float = 120.0  # 이격도 (%)
-    min_trading_value: float = 300.0  # 거래대금 (억)
-    volume_high_months: int = 12  # 신고거래량 기간 (개월)
-    volume_spike_ratio: float = 400.0  # 전날 대비 비율 (%)
-    price_high_months: int = 2  # N개월 신고가
+    entry_high_above_ma: bool = True  # 고가 >= 이평선 검사
+    entry_max_deviation_ratio: float = 120.0  # 이격도 (%)
+    entry_min_trading_value: float = 300.0  # 거래대금 (억)
+    entry_volume_high_months: int = 12  # 신고거래량 기간 (개월)
+    entry_volume_spike_ratio: float = 400.0  # 전날 대비 비율 (%)
+    entry_price_high_months: int = 2  # N개월 신고가
 
     # 종료 조건
     exit_condition_type: Block1ExitConditionType = Block1ExitConditionType.MA_BREAK
@@ -55,15 +55,15 @@ class SeedCondition:
             return False
         if self.entry_ma_period <= 0:
             return False
-        if self.max_deviation_ratio <= 0:
+        if self.entry_max_deviation_ratio <= 0:
             return False
-        if self.min_trading_value <= 0:
+        if self.entry_min_trading_value <= 0:
             return False
-        if self.volume_high_months <= 0:
+        if self.entry_volume_high_months <= 0:
             return False
-        if self.volume_spike_ratio < 0:
+        if self.entry_volume_spike_ratio < 0:
             return False
-        if self.price_high_months <= 0:
+        if self.entry_price_high_months <= 0:
             return False
         if self.cooldown_days <= 0:
             return False
@@ -91,7 +91,7 @@ class SeedCondition:
             f"<SeedCondition("
             f"surge={self.entry_surge_rate}%, "
             f"MA{self.entry_ma_period}, "
-            f"vol={self.volume_high_months}mo, "
+            f"vol={self.entry_volume_high_months}mo, "
             f"cooldown={self.cooldown_days}d"
             f")>"
         )
