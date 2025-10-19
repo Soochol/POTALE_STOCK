@@ -13,10 +13,11 @@ class SeedCondition:
     """
     Seed 조건 엔티티 (엄격한 조건)
 
-    Block1/2/3 Seed를 찾기 위한 엄격한 조건 세트
+    Block1/2/3/4 Seed를 찾기 위한 엄격한 조건 세트
     - Block1 기본 조건
     - Block2 추가 조건
     - Block3 추가 조건
+    - Block4 추가 조건
     - Cooldown (Seed 간 최소 간격)
     """
 
@@ -47,6 +48,11 @@ class SeedCondition:
     block3_volume_ratio: float = 15.0  # Block2 최고 거래량 대비 (%)
     block3_low_price_margin: float = 10.0  # Block2 최고가 저가 마진 (%)
     block3_min_candles_after_block2: int = 4  # Block2 시작 후 최소 캔들 수
+
+    # ===== Block4 추가 조건 =====
+    block4_volume_ratio: float = 20.0  # Block3 최고 거래량 대비 (%)
+    block4_low_price_margin: float = 10.0  # Block3 최고가 저가 마진 (%)
+    block4_min_candles_after_block3: int = 4  # Block3 시작 후 최소 캔들 수
 
     def validate(self) -> bool:
         """조건 유효성 검사"""
@@ -82,6 +88,14 @@ class SeedCondition:
         if self.block3_low_price_margin < 0:
             return False
         if self.block3_min_candles_after_block2 < 0:
+            return False
+
+        # Block4 조건
+        if self.block4_volume_ratio <= 0:
+            return False
+        if self.block4_low_price_margin < 0:
+            return False
+        if self.block4_min_candles_after_block3 < 0:
             return False
 
         return True

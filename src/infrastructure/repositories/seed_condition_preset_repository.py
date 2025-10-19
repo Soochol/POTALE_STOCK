@@ -52,6 +52,9 @@ class SeedConditionPresetRepository:
                 existing.block3_volume_ratio = condition.block3_volume_ratio
                 existing.block3_low_price_margin = condition.block3_low_price_margin
                 existing.block3_min_candles_after_block2 = condition.block3_min_candles_after_block2
+                existing.block4_volume_ratio = condition.block4_volume_ratio
+                existing.block4_low_price_margin = condition.block4_low_price_margin
+                existing.block4_min_candles_after_block3 = condition.block4_min_candles_after_block3
             else:
                 # 신규 생성
                 preset = SeedConditionPreset(
@@ -73,7 +76,10 @@ class SeedConditionPresetRepository:
                     block2_min_candles_after_block1=condition.block2_min_candles_after_block1,
                     block3_volume_ratio=condition.block3_volume_ratio,
                     block3_low_price_margin=condition.block3_low_price_margin,
-                    block3_min_candles_after_block2=condition.block3_min_candles_after_block2
+                    block3_min_candles_after_block2=condition.block3_min_candles_after_block2,
+                    block4_volume_ratio=condition.block4_volume_ratio,
+                    block4_low_price_margin=condition.block4_low_price_margin,
+                    block4_min_candles_after_block3=condition.block4_min_candles_after_block3
                 )
                 session.add(preset)
 
@@ -113,7 +119,10 @@ class SeedConditionPresetRepository:
                 block2_min_candles_after_block1=preset.block2_min_candles_after_block1,
                 block3_volume_ratio=preset.block3_volume_ratio,
                 block3_low_price_margin=preset.block3_low_price_margin,
-                block3_min_candles_after_block2=preset.block3_min_candles_after_block2
+                block3_min_candles_after_block2=preset.block3_min_candles_after_block2,
+                block4_volume_ratio=preset.block4_volume_ratio,
+                block4_low_price_margin=preset.block4_low_price_margin,
+                block4_min_candles_after_block3=preset.block4_min_candles_after_block3
             )
 
     def list_all(self) -> List[str]:

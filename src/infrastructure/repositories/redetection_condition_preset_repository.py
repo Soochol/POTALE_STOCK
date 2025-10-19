@@ -46,6 +46,7 @@ class RedetectionConditionPresetRepository:
                 existing.block1_tolerance_pct = condition.block1_tolerance_pct
                 existing.block2_tolerance_pct = condition.block2_tolerance_pct
                 existing.block3_tolerance_pct = condition.block3_tolerance_pct
+                existing.block4_tolerance_pct = condition.block4_tolerance_pct
                 existing.exit_condition_type = condition.exit_condition_type.value
                 existing.exit_ma_period = condition.exit_ma_period
                 existing.cooldown_days = condition.cooldown_days
@@ -55,6 +56,9 @@ class RedetectionConditionPresetRepository:
                 existing.block3_volume_ratio = condition.block3_volume_ratio
                 existing.block3_low_price_margin = condition.block3_low_price_margin
                 existing.block3_min_candles_after_block2 = condition.block3_min_candles_after_block2
+                existing.block4_volume_ratio = condition.block4_volume_ratio
+                existing.block4_low_price_margin = condition.block4_low_price_margin
+                existing.block4_min_candles_after_block3 = condition.block4_min_candles_after_block3
             else:
                 # 신규 생성
                 preset = RedetectionConditionPreset(
@@ -71,6 +75,7 @@ class RedetectionConditionPresetRepository:
                     block1_tolerance_pct=condition.block1_tolerance_pct,
                     block2_tolerance_pct=condition.block2_tolerance_pct,
                     block3_tolerance_pct=condition.block3_tolerance_pct,
+                    block4_tolerance_pct=condition.block4_tolerance_pct,
                     exit_condition_type=condition.exit_condition_type.value,
                     exit_ma_period=condition.exit_ma_period,
                     cooldown_days=condition.cooldown_days,
@@ -79,7 +84,10 @@ class RedetectionConditionPresetRepository:
                     block2_min_candles_after_block1=condition.block2_min_candles_after_block1,
                     block3_volume_ratio=condition.block3_volume_ratio,
                     block3_low_price_margin=condition.block3_low_price_margin,
-                    block3_min_candles_after_block2=condition.block3_min_candles_after_block2
+                    block3_min_candles_after_block2=condition.block3_min_candles_after_block2,
+                    block4_volume_ratio=condition.block4_volume_ratio,
+                    block4_low_price_margin=condition.block4_low_price_margin,
+                    block4_min_candles_after_block3=condition.block4_min_candles_after_block3
                 )
                 session.add(preset)
 
@@ -114,6 +122,7 @@ class RedetectionConditionPresetRepository:
                 block1_tolerance_pct=preset.block1_tolerance_pct,
                 block2_tolerance_pct=preset.block2_tolerance_pct,
                 block3_tolerance_pct=preset.block3_tolerance_pct,
+                block4_tolerance_pct=preset.block4_tolerance_pct,
                 exit_condition_type=Block1ExitConditionType(preset.exit_condition_type),
                 exit_ma_period=preset.exit_ma_period,
                 cooldown_days=preset.cooldown_days,
@@ -122,7 +131,10 @@ class RedetectionConditionPresetRepository:
                 block2_min_candles_after_block1=preset.block2_min_candles_after_block1,
                 block3_volume_ratio=preset.block3_volume_ratio,
                 block3_low_price_margin=preset.block3_low_price_margin,
-                block3_min_candles_after_block2=preset.block3_min_candles_after_block2
+                block3_min_candles_after_block2=preset.block3_min_candles_after_block2,
+                block4_volume_ratio=preset.block4_volume_ratio,
+                block4_low_price_margin=preset.block4_low_price_margin,
+                block4_min_candles_after_block3=preset.block4_min_candles_after_block3
             )
 
     def list_all(self) -> List[str]:
