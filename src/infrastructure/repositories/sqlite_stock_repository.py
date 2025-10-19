@@ -61,6 +61,9 @@ class SqliteStockRepository(IStockRepository):
             stocks = []
             for price, name in results:
                 try:
+                    # 거래대금 계산 (종가 * 거래량)
+                    trading_value = price.close * price.volume if price.close and price.volume else None
+
                     stock = Stock(
                         ticker=price.ticker,
                         name=name,
@@ -69,7 +72,8 @@ class SqliteStockRepository(IStockRepository):
                         high=price.high,
                         low=price.low,
                         close=price.close,
-                        volume=price.volume
+                        volume=price.volume,
+                        trading_value=trading_value
                     )
                     stocks.append(stock)
                 except Exception as e:

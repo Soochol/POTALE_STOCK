@@ -29,7 +29,6 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 from src.infrastructure.database.connection import DatabaseConnection
-from src.infrastructure.collectors.bulk_collector import BulkCollector
 from src.infrastructure.utils.naver_ticker_list import get_all_tickers as get_naver_tickers
 
 
@@ -105,6 +104,44 @@ def main():
         help="레거시 모드 (원본 주가만, 하이브리드 비활성화)"
     )
 
+    # 성능 최적화 옵션 (비동기 + 증분 수집)
+    parser.add_argument(
+        "--async",
+        dest="use_async",
+        action="store_true",
+        default=True,
+        help="비동기 병렬 수집 사용 (기본값: True, 5-10배 빠름)"
+    )
+    parser.add_argument(
+        "--no-async",
+        dest="use_async",
+        action="store_false",
+        help="비동기 비활성화 (기존 동기 방식 사용)"
+    )
+    parser.add_argument(
+        "--incremental",
+        action="store_true",
+        default=True,
+        help="증분 수집 사용 (이미 수집된 데이터 건너뛰기, 기본값: True)"
+    )
+    parser.add_argument(
+        "--force-full",
+        action="store_true",
+        help="전체 재수집 강제 (증분 수집 무시)"
+    )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=10,
+        help="동시 수집 종목 수 (비동기 모드 전용, 기본값: 10)"
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=100,
+        help="배치 크기 (메모리 관리용, 기본값: 100)"
+    )
+
     # 성능 옵션
     parser.add_argument(
         "--delay",
@@ -135,6 +172,8 @@ def main():
     print(f"종목 수: {len(tickers):,}개")
     print(f"기간: {args.fromdate} ~ {args.todate}")
     print(f"수집 방식: {'레거시 (원본 주가)' if args.legacy else '하이브리드 (수정주가+수정거래량)'}")
+    print(f"비동기 병렬: {'활성화 (동시 {0}개)'.format(args.concurrency) if args.use_async else '비활성화'}")
+    print(f"증분 수집: {'활성화' if args.incremental and not args.force_full else '비활성화'}")
     print(f"투자자 정보: {'수집' if args.investor else '미수집'}")
     print(f"이어하기: {'활성화' if args.resume else '비활성화'}")
     print(f"API 대기 시간: {args.delay}초")
@@ -154,26 +193,47 @@ def main():
     db.create_tables()
     print("DB 테이블 생성 완료")
 
-    # BulkCollector 초기화
-    collector = BulkCollector(
-        db_connection=db,
-        delay=args.delay,
-        use_hybrid=not args.legacy  # legacy 모드가 아니면 하이브리드 사용
-    )
-
     # 수집 실행
     try:
-        stats = collector.collect_all_stocks(
-            tickers=tickers,
-            fromdate=args.fromdate,
-            todate=args.todate,
-            collect_price=True,
-            collect_investor=args.investor,
-            resume=args.resume
-        )
+        # 비동기 모드 (가격 + 투자자 데이터 모두 지원)
+        if args.use_async:
+            print(f"\n[비동기 모드] 시작...")
+            from src.infrastructure.collectors.async_bulk_collector import run_async_collection
 
-        # 최종 통계 출력
-        elapsed_seconds = (stats.completed_at - stats.started_at).total_seconds()
+            stats = run_async_collection(
+                db_connection=db,
+                tickers=tickers,
+                fromdate=args.fromdate,
+                todate=args.todate,
+                concurrency=args.concurrency,
+                collect_investor=args.investor,
+                use_incremental=args.incremental and not args.force_full,
+                force_full=args.force_full
+            )
+
+            elapsed_seconds = stats.duration_seconds
+
+        # 동기 모드 (레거시 지원용)
+        else:
+            print(f"\n[동기 모드] 시작...")
+            from src.infrastructure.collectors.bulk_collector import BulkCollector
+
+            collector = BulkCollector(
+                db_connection=db,
+                delay=args.delay,
+                use_hybrid=not args.legacy
+            )
+
+            stats = collector.collect_all_stocks(
+                tickers=tickers,
+                fromdate=args.fromdate,
+                todate=args.todate,
+                collect_price=True,
+                collect_investor=args.investor,
+                resume=args.resume
+            )
+
+            elapsed_seconds = (stats.completed_at - stats.started_at).total_seconds()
 
         print("\n" + "=" * 80)
         print("수집 완료!")

@@ -52,8 +52,10 @@ class DatabaseConnection:
             cursor = dbapi_conn.cursor()
             cursor.execute("PRAGMA journal_mode=WAL")  # Write-Ahead Logging
             cursor.execute("PRAGMA synchronous=NORMAL")
-            cursor.execute("PRAGMA cache_size=10000")
+            cursor.execute("PRAGMA cache_size=-64000")  # 64MB cache (negative = KB)
             cursor.execute("PRAGMA temp_store=MEMORY")
+            cursor.execute("PRAGMA mmap_size=268435456")  # 256MB memory-mapped I/O
+            cursor.execute("PRAGMA page_size=4096")  # Optimal page size
             cursor.close()
 
         # 세션 팩토리

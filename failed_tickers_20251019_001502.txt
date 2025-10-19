@@ -1,0 +1,6 @@
+# 실패한 종목 리스트 (3개)
+# 생성 시간: 2025-10-19 00:15:02.423503
+
+005930	'NoneType' object has no attribute 'put'
+000660	'NoneType' object has no attribute 'put'
+035720	'NoneType' object has no attribute 'put'
