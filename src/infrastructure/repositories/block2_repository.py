@@ -1,24 +1,24 @@
 """
 Block2 Repository - 블록2 탐지 결과 저장/조회 Repository
 """
-from typing import List, Optional
+from typing import Optional
 from datetime import date
-from sqlalchemy.orm import Session
 from ...domain.entities.block2_detection import Block2Detection as Block2DetectionEntity
 from ..database.models import Block2Detection as Block2DetectionModel
 from ..database.connection import DatabaseConnection
+from .common import BaseDetectionRepository
 import uuid
 
 
-class Block2Repository:
+class Block2Repository(BaseDetectionRepository[Block2DetectionEntity, Block2DetectionModel]):
     """블록2 탐지 결과 Repository"""
 
     def __init__(self, db_connection: DatabaseConnection):
-        self.db = db_connection
+        super().__init__(db_connection, Block2DetectionModel)
 
     def save(self, detection: Block2DetectionEntity) -> Block2DetectionEntity:
         """
-        블록2 탐지 결과 저장
+        블록2 탐지 결과 저장 (block2_id 자동 생성 포함)
 
         Args:
             detection: 블록2 탐지 결과 엔티티
@@ -26,122 +26,19 @@ class Block2Repository:
         Returns:
             저장된 블록2 탐지 결과
         """
-        session = self.db.get_session()
+        # block2_id 자동 생성 (없는 경우)
+        if not hasattr(detection, 'block2_id') or not detection.block2_id:
+            detection.block2_id = str(uuid.uuid4())
 
-        try:
-            # block2_id 자동 생성 (없는 경우)
-            if not hasattr(detection, 'block2_id') or not detection.block2_id:
-                detection.block2_id = str(uuid.uuid4())
+        return super().save(detection)
 
-            # 엔티티를 모델로 변환
-            model = self._entity_to_model(detection)
+    def _get_block_id(self, entity: Block2DetectionEntity) -> str:
+        """엔티티에서 block2_id 추출"""
+        return getattr(entity, 'block2_id', str(uuid.uuid4()))
 
-            # 기존 데이터 확인 (block2_id로)
-            existing = session.query(Block2DetectionModel).filter(
-                Block2DetectionModel.block2_id == detection.block2_id
-            ).first()
-
-            if existing:
-                # 업데이트
-                for key, value in model.__dict__.items():
-                    if key != '_sa_instance_state' and key != 'id':
-                        setattr(existing, key, value)
-            else:
-                # 신규 삽입
-                session.add(model)
-
-            session.commit()
-
-            # 저장된 ID 반영
-            if not existing:
-                detection.id = model.id
-
-            return detection
-
-        except Exception as e:
-            session.rollback()
-            raise Exception(f"Failed to save Block2Detection: {e}")
-
-        finally:
-            session.close()
-
-    def find_by_id(self, block2_id: str) -> Optional[Block2DetectionEntity]:
-        """
-        block2_id로 블록2 조회
-
-        Args:
-            block2_id: 블록2 고유 ID
-
-        Returns:
-            블록2 탐지 결과 또는 None
-        """
-        session = self.db.get_session()
-
-        try:
-            model = session.query(Block2DetectionModel).filter(
-                Block2DetectionModel.block2_id == block2_id
-            ).first()
-
-            if model:
-                return self._model_to_entity(model)
-            return None
-
-        finally:
-            session.close()
-
-    def find_by_ticker(
-        self,
-        ticker: str,
-        status: Optional[str] = None,
-        from_date: Optional[date] = None,
-        to_date: Optional[date] = None
-    ) -> List[Block2DetectionEntity]:
-        """
-        종목코드로 블록2 리스트 조회
-
-        Args:
-            ticker: 종목코드
-            status: 상태 필터 ("active", "completed", None)
-            from_date: 시작일 필터
-            to_date: 종료일 필터
-
-        Returns:
-            블록2 탐지 결과 리스트
-        """
-        session = self.db.get_session()
-
-        try:
-            query = session.query(Block2DetectionModel).filter(
-                Block2DetectionModel.ticker == ticker
-            )
-
-            if status:
-                query = query.filter(Block2DetectionModel.status == status)
-
-            if from_date:
-                query = query.filter(Block2DetectionModel.started_at >= from_date)
-
-            if to_date:
-                query = query.filter(Block2DetectionModel.started_at <= to_date)
-
-            models = query.order_by(Block2DetectionModel.started_at).all()
-
-            return [self._model_to_entity(model) for model in models]
-
-        finally:
-            session.close()
-
-    def find_active_by_ticker(self, ticker: str) -> List[Block2DetectionEntity]:
-        """
-        종목의 활성 블록2 조회
-
-        Args:
-            ticker: 종목코드
-
-        Returns:
-            활성 블록2 리스트
-        """
-        return self.find_by_ticker(ticker, status="active")
+    def _get_model_block_id_field(self):
+        """모델의 block2_id 필드 반환"""
+        return Block2DetectionModel.block2_id
 
     def find_latest_completed_before(
         self,
@@ -158,9 +55,7 @@ class Block2Repository:
         Returns:
             블록2 탐지 결과 또는 None
         """
-        session = self.db.get_session()
-
-        try:
+        with self.db.session_scope() as session:
             model = session.query(Block2DetectionModel).filter(
                 Block2DetectionModel.ticker == ticker,
                 Block2DetectionModel.status == "completed",
@@ -173,9 +68,6 @@ class Block2Repository:
                 return self._model_to_entity(model)
             return None
 
-        finally:
-            session.close()
-
     def update_status(
         self,
         block2_id: str,
@@ -184,7 +76,7 @@ class Block2Repository:
         exit_reason: Optional[str] = None
     ) -> bool:
         """
-        블록2 상태 업데이트
+        블록2 상태 업데이트 (duration_days 자동 계산)
 
         Args:
             block2_id: 블록2 고유 ID
@@ -195,109 +87,20 @@ class Block2Repository:
         Returns:
             업데이트 성공 여부
         """
-        session = self.db.get_session()
+        # duration_days 계산 (ended_at 있으면)
+        duration_days = None
+        if ended_at:
+            with self.db.session_scope() as session:
+                model = session.query(Block2DetectionModel).filter(
+                    Block2DetectionModel.block2_id == block2_id
+                ).first()
+                if model and model.started_at:
+                    duration_days = (ended_at - model.started_at).days + 1
 
-        try:
-            model = session.query(Block2DetectionModel).filter(
-                Block2DetectionModel.block2_id == block2_id
-            ).first()
-
-            if not model:
-                return False
-
-            model.status = status
-            if ended_at:
-                model.ended_at = ended_at
-                model.duration_days = (ended_at - model.started_at).days + 1
-            if exit_reason:
-                model.exit_reason = exit_reason
-
-            session.commit()
-            return True
-
-        except Exception as e:
-            session.rollback()
-            raise Exception(f"Failed to update Block2Detection status: {e}")
-
-        finally:
-            session.close()
-
-    def update_peak(
-        self,
-        block2_id: str,
-        peak_price: float,
-        peak_date: date,
-        peak_gain_ratio: float,
-        peak_volume: int
-    ) -> bool:
-        """
-        블록2 최고가/거래량 업데이트
-
-        Args:
-            block2_id: 블록2 고유 ID
-            peak_price: 최고가
-            peak_date: 최고가 달성일
-            peak_gain_ratio: 최고가 상승률
-            peak_volume: 최고 거래량
-
-        Returns:
-            업데이트 성공 여부
-        """
-        session = self.db.get_session()
-
-        try:
-            model = session.query(Block2DetectionModel).filter(
-                Block2DetectionModel.block2_id == block2_id
-            ).first()
-
-            if not model:
-                return False
-
-            model.peak_price = peak_price
-            model.peak_date = peak_date
-            model.peak_gain_ratio = peak_gain_ratio
-            model.peak_volume = peak_volume
-
-            session.commit()
-            return True
-
-        except Exception as e:
-            session.rollback()
-            raise Exception(f"Failed to update Block2Detection peak: {e}")
-
-        finally:
-            session.close()
-
-    def delete(self, block2_id: str) -> bool:
-        """
-        블록2 삭제
-
-        Args:
-            block2_id: 블록2 고유 ID
-
-        Returns:
-            삭제 성공 여부
-        """
-        session = self.db.get_session()
-
-        try:
-            model = session.query(Block2DetectionModel).filter(
-                Block2DetectionModel.block2_id == block2_id
-            ).first()
-
-            if not model:
-                return False
-
-            session.delete(model)
-            session.commit()
-            return True
-
-        except Exception as e:
-            session.rollback()
-            raise Exception(f"Failed to delete Block2Detection: {e}")
-
-        finally:
-            session.close()
+        return super().update_status(
+            block2_id, status, ended_at, exit_reason,
+            duration_days=duration_days
+        )
 
     def _entity_to_model(self, entity: Block2DetectionEntity) -> Block2DetectionModel:
         """엔티티를 DB 모델로 변환"""
