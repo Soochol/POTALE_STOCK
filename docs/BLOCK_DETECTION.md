@@ -109,7 +109,7 @@
 
 #### 3. 이평선 조건 B: 이격도 (필수)
 - **설명**: 이동평균선을 100으로 봤을 때 종가 비율
-- **파라미터**: `entry_ma_period`, `max_deviation_ratio`
+- **파라미터**: `entry_ma_period`, `entry_max_deviation_ratio`
 - **계산식**: `(종가 / MA_N) × 100 <= M`
 - **예시**:
   - MA120 = 5,000원, 종가 = 6,000원 → 이격도 = 120
@@ -118,21 +118,21 @@
 
 #### 4. 거래대금 조건
 - **설명**: 거래대금 N억 이상
-- **파라미터**: `min_trading_value` (단위: 억)
+- **파라미터**: `entry_min_trading_value` (단위: 억)
 - **계산식**: `종가 × 거래량 >= N × 100,000,000`
 - **예시**: `min_trading_value=300.0` → 300억 이상
 - **의미**: 대형 자금 유입 확인
 
 #### 5. 거래량 조건
 - **설명**: N개월 신고거래량 (최근 N개월 중 최대)
-- **파라미터**: `volume_high_months`
+- **파라미터**: `entry_volume_high_months`
 - **계산식**: `당일거래량 >= max(최근_N개월_거래량)`
 - **예시**: `volume_high_months=24` → 최근 24개월(2년) 최고 거래량
 - **의미**: 장기 거래량 돌파 확인
 
 #### 6. 전날 거래량 조건
 - **설명**: 전일 거래량 대비 N% 수준
-- **파라미터**: `volume_spike_ratio` (단위: %)
+- **파라미터**: `entry_volume_spike_ratio` (단위: %)
 - **계산식**: `당일_거래량 >= 전날_거래량 × (N/100)`
 - **예시**:
   - `volume_spike_ratio=400` → 전날 대비 400% (4배)
@@ -144,7 +144,7 @@
 #### 7. 신고가 조건
 
 - **설명**: 당일 고가가 N개월 신고가인지 확인
-- **파라미터**: `price_high_months` (단위: 개월)
+- **파라미터**: `entry_price_high_months` (단위: 개월)
 - **계산식**: `당일_고가 >= max(과거_N개월_고가)`
 - **예시**:
   - `price_high_months=2` → 2개월(60일) 신고가
@@ -932,12 +932,12 @@ def detect_all_patterns(ticker, start_date, end_date, seed_cond, redetect_cond):
 | **진입 조건 (완화)** | | | | |
 | `entry_surge_rate` | `FLOAT` | `5.0` | 전일 대비 고가 등락률 (%) | `5.0` = 5% 이상 |
 | `entry_ma_period` | `INTEGER` | `120` | 진입 이동평균선 기간 (일) | `120` = MA120 |
-| `high_above_ma` | `BOOLEAN` | `TRUE` | 고가 >= MA 검사 | `TRUE` |
-| `max_deviation_ratio` | `FLOAT` | `120.0` | MA 이격도 상한 | `120.0` = MA의 120% 이하 |
-| `min_trading_value` | `FLOAT` | `300.0` | 최소 거래대금 (억원) | `300.0` = 300억 이상 |
-| `volume_high_months` | `INTEGER` | `6` | 신고거래량 기간 (개월) | `6` = 6개월 최고 |
-| `volume_spike_ratio` | `FLOAT` | `300.0` | 전일 대비 거래량 비율 (%) | `300.0` = 3배 |
-| `price_high_months` | `INTEGER` | `1` | 신고가 기간 (개월) | `1` = 1개월 신고가 |
+| `entry_high_above_ma` | `BOOLEAN` | `TRUE` | 고가 >= MA 검사 | `TRUE` |
+| `entry_max_deviation_ratio` | `FLOAT` | `120.0` | MA 이격도 상한 | `120.0` = MA의 120% 이하 |
+| `entry_min_trading_value` | `FLOAT` | `300.0` | 최소 거래대금 (억원) | `300.0` = 300억 이상 |
+| `entry_volume_high_months` | `INTEGER` | `6` | 신고거래량 기간 (개월) | `6` = 6개월 최고 |
+| `entry_volume_spike_ratio` | `FLOAT` | `300.0` | 전일 대비 거래량 비율 (%) | `300.0` = 3배 |
+| `entry_price_high_months` | `INTEGER` | `1` | 신고가 기간 (개월) | `1` = 1개월 신고가 |
 | | | | | |
 | **재탐지 전용: 가격 범위** | | | | |
 | `block1_tolerance_pct` | `FLOAT` | `10.0` | Block1 재탐지 가격 범위 (%) | `10.0` = ±10% |
@@ -957,9 +957,9 @@ def detect_all_patterns(ticker, start_date, end_date, seed_cond, redetect_cond):
 | 조건 | Seed (엄격) | Redetection (완화) | 차이 |
 |------|-------------|-------------------|------|
 | `entry_surge_rate` | `8.0%` | `5.0%` | -3% (완화) |
-| `volume_high_months` | `12개월` | `6개월` | -50% (완화) |
-| `volume_spike_ratio` | `400%` | `300%` | -100% (완화) |
-| `price_high_months` | `2개월` | `1개월` | -50% (완화) |
+| `entry_volume_high_months` | `12개월` | `6개월` | -50% (완화) |
+| `entry_volume_spike_ratio` | `400%` | `300%` | -100% (완화) |
+| `entry_price_high_months` | `2개월` | `1개월` | -50% (완화) |
 | **가격 범위 필터** | ❌ 없음 | ✅ 있음 | 재탐지 전용 |
 
 ---
@@ -1041,8 +1041,8 @@ SELECT * FROM block1_detection WHERE pattern_id = 1 AND detection_type = 'redete
 | `entry_` | 진입 조건 | - | `entry_surge_rate`, `entry_ma_period` |
 | `exit_` | 종료 조건 | - | `exit_condition_type`, `exit_ma_period` |
 | `redetection_` | 재탐지 관련 | - | `redetection_start`, `redetection_end` |
-| `min_` | 최소값 | - | `min_trading_value` |
-| `max_` | 최대값 | - | `max_deviation_ratio` |
+| `min_` | 최소값 | - | `entry_min_trading_value` |
+| `max_` | 최대값 | - | `entry_max_deviation_ratio` |
 
 **일관성 규칙:**
 - Block별 구분: `block1_`, `block2_`, `block3_` prefix 사용
@@ -1096,11 +1096,11 @@ Block이 높아질수록 변동성이 커지므로 더 넓은 범위를 허용�
 | `entry_surge_rate` | 8.0 | 8.0 | 8.0 | 등락률 8% |
 | `entry_ma_period` | 120 | 120 | 120 | 진입 MA120 |
 | `exit_ma_period` | 60 | 60 | 60 | 종료 MA60 |
-| `max_deviation_ratio` | 120 | 120 | 120 | 이격도 120 |
-| `min_trading_value` | 300 | 300 | 300 | 거래대금 300억 |
-| `volume_high_months` | 24 | 24 | 24 | 24개월 신고거래량 |
-| `volume_spike_ratio` | 400 | 400 | 400 | 전날 대비 400% (4배, 필수) |
-| `price_high_months` | 2 | 2 | 2 | 2개월 신고가 (필수) |
+| `entry_max_deviation_ratio` | 120 | 120 | 120 | 이격도 120 |
+| `entry_min_trading_value` | 300 | 300 | 300 | 거래대금 300억 |
+| `entry_volume_high_months` | 24 | 24 | 24 | 24개월 신고거래량 |
+| `entry_volume_spike_ratio` | 400 | 400 | 400 | 전날 대비 400% (4배, 필수) |
+| `entry_price_high_months` | 2 | 2 | 2 | 2개월 신고가 (필수) |
 | `block_volume_ratio` | - | 15 | 15 | 이전 블록 최고의 15% |
 | `low_price_margin` | - | 10 | 10 | 저가 마진 10% |
 | `cooldown_days` | 120 | 120 | - | 쿨다운 120일 |
