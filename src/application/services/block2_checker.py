@@ -50,8 +50,8 @@ class Block2Checker:
         # 추가 조건 1: 블록 거래량 조건 (선택적)
         # 당일_거래량 >= 블록1_최고_거래량 × (block_volume_ratio/100)
         # block_volume_ratio는 % 단위 (예: 15 = 15%)
-        if condition.block_volume_ratio is not None and prev_block1.peak_volume is not None:
-            ratio = condition.block_volume_ratio / 100.0
+        if condition.block2_volume_ratio is not None and prev_block1.peak_volume is not None:
+            ratio = condition.block2_volume_ratio / 100.0
             required_volume = prev_block1.peak_volume * ratio
             if stock.volume < required_volume:
                 return False
@@ -59,8 +59,8 @@ class Block2Checker:
         # 추가 조건 2: 저가 마진 조건 (선택적)
         # 당일_저가 × (1 + low_price_margin/100) > 블록1_peak_price
         # low_price_margin은 % 단위 (예: 10 = 10%)
-        if condition.low_price_margin is not None and prev_block1.peak_price is not None:
-            margin = condition.low_price_margin / 100.0
+        if condition.block2_low_price_margin is not None and prev_block1.peak_price is not None:
+            margin = condition.block2_low_price_margin / 100.0
             threshold_price = stock.low * (1 + margin)
             if threshold_price <= prev_block1.peak_price:
                 return False

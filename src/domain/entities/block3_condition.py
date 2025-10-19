@@ -29,11 +29,11 @@ class Block3Condition:
     block2_condition: Block2Condition
 
     # 블록3 추가 조건 (블록2와 동일한 구조, 대상만 블록2)
-    block_volume_ratio: Optional[float] = None  # 블록2 최고 거래량의 N% (단위: %, 예: 15 = 15%)
-    low_price_margin: Optional[float] = None     # 저가 마진 (단위: %, 예: 10 = 10%)
+    block3_volume_ratio: Optional[float] = None  # 블록2 최고 거래량의 N% (단위: %, 예: 15 = 15%)
+    block3_low_price_margin: Optional[float] = None     # 저가 마진 (단위: %, 예: 10 = 10%)
 
     # 블록 전환 대기 기간
-    min_candles_after_block2: Optional[int] = None  # 블록2 시작 후 최소 캔들 수 (예: 4 = 5번째 캔들부터 블록3 가능)
+    block3_min_candles_after_block2: Optional[int] = None  # 블록2 시작 후 최소 캔들 수 (예: 4 = 5번째 캔들부터 블록3 가능)
 
     def validate(self) -> bool:
         """조건 유효성 검사"""
@@ -42,13 +42,13 @@ class Block3Condition:
             return False
 
         # 블록3 추가 조건 검증
-        if self.block_volume_ratio is not None and self.block_volume_ratio <= 0:
+        if self.block3_volume_ratio is not None and self.block3_volume_ratio <= 0:
             return False
 
-        if self.low_price_margin is not None and self.low_price_margin < 0:
+        if self.block3_low_price_margin is not None and self.block3_low_price_margin < 0:
             return False
 
-        if self.min_candles_after_block2 is not None and self.min_candles_after_block2 < 0:
+        if self.block3_min_candles_after_block2 is not None and self.block3_min_candles_after_block2 < 0:
             return False
 
         return True
@@ -57,7 +57,7 @@ class Block3Condition:
         return (
             f"<Block3Condition("
             f"Block2={self.block2_condition}, "
-            f"거래량비율={self.block_volume_ratio:.0f}%, "
-            f"저가마진={self.low_price_margin:.0f}%"
+            f"거래량비율={self.block3_volume_ratio:.0f}%, "
+            f"저가마진={self.block3_low_price_margin:.0f}%"
             f")>"
         )

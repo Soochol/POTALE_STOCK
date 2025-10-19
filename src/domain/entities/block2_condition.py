@@ -30,14 +30,14 @@ class Block2Condition:
     block1_condition: Block1Condition
 
     # 블록2 추가 조건
-    block_volume_ratio: Optional[float] = None  # 블록1 최고 거래량의 N% (단위: %, 예: 15 = 15%)
-    low_price_margin: Optional[float] = None     # 저가 마진 (단위: %, 예: 10 = 10%)
+    block2_volume_ratio: Optional[float] = None  # 블록1 최고 거래량의 N% (단위: %, 예: 15 = 15%)
+    block2_low_price_margin: Optional[float] = None     # 저가 마진 (단위: %, 예: 10 = 10%)
 
     # 중복 방지
     cooldown_days: Optional[int] = None  # 재탐지 제외 기간 (예: 120 = 120일)
 
     # 블록 전환 대기 기간
-    min_candles_after_block1: Optional[int] = None  # 블록1 시작 후 최소 캔들 수 (예: 4 = 5번째 캔들부터 블록2 가능)
+    block2_min_candles_after_block1: Optional[int] = None  # 블록1 시작 후 최소 캔들 수 (예: 4 = 5번째 캔들부터 블록2 가능)
 
     def validate(self) -> bool:
         """조건 유효성 검사"""
@@ -46,16 +46,16 @@ class Block2Condition:
             return False
 
         # 블록2 추가 조건 검증
-        if self.block_volume_ratio is not None and self.block_volume_ratio <= 0:
+        if self.block2_volume_ratio is not None and self.block2_volume_ratio <= 0:
             return False
 
-        if self.low_price_margin is not None and self.low_price_margin < 0:
+        if self.block2_low_price_margin is not None and self.block2_low_price_margin < 0:
             return False
 
         if self.cooldown_days is not None and self.cooldown_days <= 0:
             return False
 
-        if self.min_candles_after_block1 is not None and self.min_candles_after_block1 < 0:
+        if self.block2_min_candles_after_block1 is not None and self.block2_min_candles_after_block1 < 0:
             return False
 
         return True
@@ -64,7 +64,7 @@ class Block2Condition:
         return (
             f"<Block2Condition("
             f"Block1={self.block1_condition}, "
-            f"거래량비율={self.block_volume_ratio:.0f}%, "
-            f"저가마진={self.low_price_margin:.0f}%"
+            f"거래량비율={self.block2_volume_ratio:.0f}%, "
+            f"저가마진={self.block2_low_price_margin:.0f}%"
             f")>"
         )

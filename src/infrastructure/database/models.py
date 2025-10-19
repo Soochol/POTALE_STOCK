@@ -303,14 +303,14 @@ class Block2ConditionPreset(Base):
     exit_ma_period = Column(Integer, comment='종료용 이동평균선 기간')
 
     # Block2 추가 조건
-    block_volume_ratio = Column(Float, comment='블록1 최고 거래량 대비 비율 (%, 예: 15 = 15%)')
-    low_price_margin = Column(Float, comment='저가 마진 (%, 예: 10 = 10%)')
+    block2_volume_ratio = Column(Float, comment='블록1 최고 거래량 대비 비율 (%, 예: 15 = 15%)')
+    block2_low_price_margin = Column(Float, comment='저가 마진 (%, 예: 10 = 10%)')
 
     # 중복 탐지 방지
     cooldown_days = Column(Integer, default=20, nullable=False, comment='쿨다운 기간 (일)')
 
     # Block 전환 조건
-    min_candles_after_block1 = Column(Integer, comment='Block1 시작 후 최소 캔들 수 (예: 4 = 5번째 캔들부터)')
+    block2_min_candles_after_block1 = Column(Integer, comment='Block1 시작 후 최소 캔들 수 (예: 4 = 5번째 캔들부터)')
 
     # 메타데이터
     is_active = Column(Integer, default=1, comment='활성 여부 (1: 활성, 0: 비활성)')
@@ -352,15 +352,15 @@ class Block3ConditionPreset(Base):
     block2_low_price_margin = Column(Float, comment='저가 마진 (%, Block2 조건)')
 
     # Block3 추가 조건
-    block_volume_ratio = Column(Float, comment='블록2 최고 거래량 대비 비율 (%, 예: 15 = 15%)')
-    low_price_margin = Column(Float, comment='저가 마진 (%, 예: 10 = 10%)')
+    block3_volume_ratio = Column(Float, comment='블록2 최고 거래량 대비 비율 (%, 예: 15 = 15%)')
+    block3_low_price_margin = Column(Float, comment='저가 마진 (%, 예: 10 = 10%)')
 
     # 중복 탐지 방지
     cooldown_days = Column(Integer, default=20, nullable=False, comment='쿨다운 기간 (일)')
 
     # Block 전환 조건
-    min_candles_after_block1 = Column(Integer, comment='Block1 시작 후 최소 캔들 수')
-    min_candles_after_block2 = Column(Integer, comment='Block2 시작 후 최소 캔들 수 (예: 4 = 5번째 캔들부터)')
+    block2_min_candles_after_block1 = Column(Integer, comment='Block1 시작 후 최소 캔들 수')
+    block3_min_candles_after_block2 = Column(Integer, comment='Block2 시작 후 최소 캔들 수 (예: 4 = 5번째 캔들부터)')
 
     # 메타데이터
     is_active = Column(Integer, default=1, comment='활성 여부 (1: 활성, 0: 비활성)')
