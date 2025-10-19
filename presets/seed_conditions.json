@@ -1,0 +1,41 @@
+{
+  "aggressive_seed": {
+    "description": "공격적 Seed 조건 (엄격한 기준)",
+    "entry_surge_rate": 8.0,
+    "entry_ma_period": 120,
+    "exit_ma_period": 120,
+    "volume_high_months": 12,
+    "price_high_months": 2,
+    "cooldown_days": 20,
+    "block2_volume_ratio": 15.0,
+    "block2_low_price_margin": 10.0,
+    "block3_volume_ratio": 15.0,
+    "block3_low_price_margin": 10.0
+  },
+  "standard_seed": {
+    "description": "표준 Seed 조건",
+    "entry_surge_rate": 6.0,
+    "entry_ma_period": 120,
+    "exit_ma_period": 120,
+    "volume_high_months": 12,
+    "price_high_months": 2,
+    "cooldown_days": 20,
+    "block2_volume_ratio": 15.0,
+    "block2_low_price_margin": 10.0,
+    "block3_volume_ratio": 15.0,
+    "block3_low_price_margin": 10.0
+  },
+  "conservative_seed": {
+    "description": "보수적 Seed 조건 (완화된 기준)",
+    "entry_surge_rate": 5.0,
+    "entry_ma_period": 120,
+    "exit_ma_period": 120,
+    "volume_high_months": 6,
+    "price_high_months": 2,
+    "cooldown_days": 20,
+    "block2_volume_ratio": 15.0,
+    "block2_low_price_margin": 10.0,
+    "block3_volume_ratio": 15.0,
+    "block3_low_price_margin": 10.0
+  }
+}

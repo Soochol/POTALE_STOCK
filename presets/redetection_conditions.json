@@ -1,0 +1,50 @@
+{
+  "aggressive_redetect": {
+    "description": "공격적 재탐지 조건 (상대적으로 엄격)",
+    "entry_surge_rate": 5.0,
+    "entry_ma_period": 120,
+    "exit_ma_period": 120,
+    "volume_high_months": 6,
+    "price_high_months": 2,
+    "cooldown_days": 20,
+    "block1_tolerance_pct": 10.0,
+    "block2_tolerance_pct": 15.0,
+    "block3_tolerance_pct": 20.0,
+    "block2_volume_ratio": 15.0,
+    "block2_low_price_margin": 10.0,
+    "block3_volume_ratio": 15.0,
+    "block3_low_price_margin": 10.0
+  },
+  "standard_redetect": {
+    "description": "표준 재탐지 조건",
+    "entry_surge_rate": 4.0,
+    "entry_ma_period": 120,
+    "exit_ma_period": 120,
+    "volume_high_months": 6,
+    "price_high_months": 2,
+    "cooldown_days": 20,
+    "block1_tolerance_pct": 12.0,
+    "block2_tolerance_pct": 17.0,
+    "block3_tolerance_pct": 22.0,
+    "block2_volume_ratio": 15.0,
+    "block2_low_price_margin": 10.0,
+    "block3_volume_ratio": 15.0,
+    "block3_low_price_margin": 10.0
+  },
+  "conservative_redetect": {
+    "description": "보수적 재탐지 조건 (가장 완화)",
+    "entry_surge_rate": 3.0,
+    "entry_ma_period": 120,
+    "exit_ma_period": 120,
+    "volume_high_months": 3,
+    "price_high_months": 2,
+    "cooldown_days": 20,
+    "block1_tolerance_pct": 15.0,
+    "block2_tolerance_pct": 20.0,
+    "block3_tolerance_pct": 25.0,
+    "block2_volume_ratio": 15.0,
+    "block2_low_price_margin": 10.0,
+    "block3_volume_ratio": 15.0,
+    "block3_low_price_margin": 10.0
+  }
+}

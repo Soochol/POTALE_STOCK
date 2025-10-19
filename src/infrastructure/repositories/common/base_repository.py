@@ -7,7 +7,7 @@ from typing import TypeVar, Generic, Optional, List, Type
 from datetime import date, datetime
 from sqlalchemy.orm import Session
 
-from ..database.connection import DatabaseConnection
+from ...database.connection import DatabaseConnection
 
 
 # Type Variables

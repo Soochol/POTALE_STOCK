@@ -2,7 +2,7 @@
 Block1 Condition Preset Repository
 블록1 조건 프리셋 저장/조회 Repository
 """
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 from src.infrastructure.database.connection import DatabaseConnection
