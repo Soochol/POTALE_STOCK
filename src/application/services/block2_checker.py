@@ -7,6 +7,7 @@ from ...domain.entities.stock import Stock
 from ...domain.entities.block2_condition import Block2Condition
 from ...domain.entities.block2_detection import Block2Detection
 from ...domain.entities.block1_detection import Block1Detection
+from ...domain.entities.block1_condition import Block1Condition
 from .block1_checker import Block1Checker
 
 
@@ -36,9 +37,58 @@ class Block2Checker:
         Returns:
             모든 조건 만족 여부
         """
-        # 1. 블록1 조건 검사 (상속)
-        if not self.block1_checker.check_entry(condition.block1_condition, stock, prev_stock):
+        # 1. Block1 기본 조건 검사
+        if not hasattr(stock, 'indicators'):
             return False
+
+        indicators = stock.indicators
+
+        # 조건 1: 등락률 (전일 대비 N% 이상, 양수만)
+        if condition.entry_surge_rate is not None:
+            rate = indicators.get('rate', 0)
+            if rate < condition.entry_surge_rate:
+                return False
+
+        # 조건 2: 고가 >= 이동평균선 N
+        if condition.entry_ma_period and condition.entry_high_above_ma:
+            ma_key = f'MA_{condition.entry_ma_period}'
+            ma_value = indicators.get(ma_key)
+            if ma_value is None or stock.high < ma_value:
+                return False
+
+        # 조건 3: 이격도 (MA를 100으로 봤을 때 종가 비율)
+        if condition.entry_max_deviation_ratio is not None:
+            deviation = indicators.get('deviation', 100)
+            if deviation > condition.entry_max_deviation_ratio:
+                return False
+
+        # 조건 4: 거래대금 N억 이상
+        if condition.entry_min_trading_value is not None:
+            trading_value = indicators.get('trading_value_100m', 0)
+            if trading_value < condition.entry_min_trading_value:
+                return False
+
+        # 조건 5: N개월 신고거래량
+        if condition.entry_volume_high_months is not None:
+            is_volume_high = indicators.get('is_volume_high', False)
+            if not is_volume_high:
+                return False
+
+        # 조건 6: 전날 거래량 대비 N% 수준
+        if condition.entry_volume_spike_ratio is not None:
+            if prev_stock is None:
+                return False
+
+            ratio = condition.entry_volume_spike_ratio / 100.0
+            required_volume = prev_stock.volume * ratio
+            if stock.volume < required_volume:
+                return False
+
+        # 조건 7: N개월 신고가
+        if condition.entry_price_high_months is not None:
+            is_new_high = indicators.get('is_new_high', False)
+            if not is_new_high:
+                return False
 
         # 2. 블록2 추가 조건 검사
         # 추가 조건을 위해서는 prev_block1이 필요 (독립적으로 시작하는 경우 prev_block1이 없을 수 있음)
@@ -91,9 +141,24 @@ class Block2Checker:
         # Block1Detection 형식으로 변환하여 block1_checker 재사용
         temp_block1 = self._convert_to_block1_detection(detection)
 
+        # Block2Condition에서 Block1Condition 임시 생성
+        temp_block1_condition = Block1Condition(
+            entry_surge_rate=condition.entry_surge_rate,
+            entry_ma_period=condition.entry_ma_period,
+            entry_high_above_ma=condition.entry_high_above_ma,
+            entry_max_deviation_ratio=condition.entry_max_deviation_ratio,
+            entry_min_trading_value=condition.entry_min_trading_value,
+            entry_volume_high_months=condition.entry_volume_high_months,
+            entry_volume_spike_ratio=condition.entry_volume_spike_ratio,
+            entry_price_high_months=condition.entry_price_high_months,
+            exit_condition_type=condition.exit_condition_type,
+            exit_ma_period=condition.exit_ma_period,
+            cooldown_days=condition.cooldown_days
+        )
+
         # Block1 종료 조건 검사 재사용
         exit_reason = self.block1_checker.check_exit(
-            condition.block1_condition,
+            temp_block1_condition,
             temp_block1,
             current_stock,
             all_stocks

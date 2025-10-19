@@ -8,6 +8,7 @@ from ...domain.entities.block4_detection import Block4Detection
 from ...domain.entities.block3_detection import Block3Detection
 from ...domain.entities.block2_detection import Block2Detection
 from ...domain.entities.block1_detection import Block1Detection
+from ...domain.entities.block1_condition import Block1Condition
 from .block3_checker import Block3Checker
 from .block2_checker import Block2Checker
 from .block1_checker import Block1Checker
@@ -45,9 +46,80 @@ class Block4Checker:
         Returns:
             모든 조건 만족 여부
         """
-        # 1. 블록3 조건 검사 (상속)
-        if not self.block3_checker.check_entry(condition.block3_condition, stock, prev_stock, prev_block1, prev_block2):
+        # 1. Block1+Block2+Block3 기본 조건 검사
+        if not hasattr(stock, 'indicators'):
             return False
+
+        indicators = stock.indicators
+
+        # Block1 조건
+        if condition.entry_surge_rate is not None:
+            rate = indicators.get('rate', 0)
+            if rate < condition.entry_surge_rate:
+                return False
+
+        if condition.entry_ma_period and condition.entry_high_above_ma:
+            ma_key = f'MA_{condition.entry_ma_period}'
+            ma_value = indicators.get(ma_key)
+            if ma_value is None or stock.high < ma_value:
+                return False
+
+        if condition.entry_max_deviation_ratio is not None:
+            deviation = indicators.get('deviation', 100)
+            if deviation > condition.entry_max_deviation_ratio:
+                return False
+
+        if condition.entry_min_trading_value is not None:
+            trading_value = indicators.get('trading_value_100m', 0)
+            if trading_value < condition.entry_min_trading_value:
+                return False
+
+        if condition.entry_volume_high_months is not None:
+            is_volume_high = indicators.get('is_volume_high', False)
+            if not is_volume_high:
+                return False
+
+        if condition.entry_volume_spike_ratio is not None:
+            if prev_stock is None:
+                return False
+
+            ratio = condition.entry_volume_spike_ratio / 100.0
+            required_volume = prev_stock.volume * ratio
+            if stock.volume < required_volume:
+                return False
+
+        if condition.entry_price_high_months is not None:
+            is_new_high = indicators.get('is_new_high', False)
+            if not is_new_high:
+                return False
+
+        # Block2 추가 조건
+        if prev_block1 is not None:
+            if condition.block2_volume_ratio is not None and prev_block1.peak_volume is not None:
+                ratio = condition.block2_volume_ratio / 100.0
+                required_volume = prev_block1.peak_volume * ratio
+                if stock.volume < required_volume:
+                    return False
+
+            if condition.block2_low_price_margin is not None and prev_block1.peak_price is not None:
+                margin = condition.block2_low_price_margin / 100.0
+                threshold_price = stock.low * (1 + margin)
+                if threshold_price <= prev_block1.peak_price:
+                    return False
+
+        # Block3 추가 조건
+        if prev_block2 is not None:
+            if condition.block3_volume_ratio is not None and prev_block2.peak_volume is not None:
+                ratio = condition.block3_volume_ratio / 100.0
+                required_volume = prev_block2.peak_volume * ratio
+                if stock.volume < required_volume:
+                    return False
+
+            if condition.block3_low_price_margin is not None and prev_block2.peak_price is not None:
+                margin = condition.block3_low_price_margin / 100.0
+                threshold_price = stock.low * (1 + margin)
+                if threshold_price <= prev_block2.peak_price:
+                    return False
 
         # 2. 블록4 추가 조건 검사
         # 추가 조건을 위해서는 prev_block3가 필요 (독립적으로 시작하는 경우 prev_block3가 없을 수 있음)
@@ -96,9 +168,20 @@ class Block4Checker:
         Returns:
             종료 사유 또는 None
         """
-        # Block1 checker를 사용하여 종료 조건 검사
-        # (Block1/2/3/4 모두 동일한 종료 조건 사용)
-        block1_cond = condition.block3_condition.block2_condition.block1_condition
+        # Block4Condition에서 Block1Condition 임시 생성
+        temp_block1_condition = Block1Condition(
+            entry_surge_rate=condition.entry_surge_rate,
+            entry_ma_period=condition.entry_ma_period,
+            entry_high_above_ma=condition.entry_high_above_ma,
+            entry_max_deviation_ratio=condition.entry_max_deviation_ratio,
+            entry_min_trading_value=condition.entry_min_trading_value,
+            entry_volume_high_months=condition.entry_volume_high_months,
+            entry_volume_spike_ratio=condition.entry_volume_spike_ratio,
+            entry_price_high_months=condition.entry_price_high_months,
+            exit_condition_type=condition.exit_condition_type,
+            exit_ma_period=condition.exit_ma_period,
+            cooldown_days=condition.cooldown_days
+        )
 
         # Block1Detection 형태로 변환하여 전달
         temp_block1 = Block1Detection(
@@ -110,7 +193,7 @@ class Block4Checker:
         )
 
         return self.block1_checker.check_exit(
-            block1_cond,
+            temp_block1_condition,
             temp_block1,
             current_stock,
             all_stocks
