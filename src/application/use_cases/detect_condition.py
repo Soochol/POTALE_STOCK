@@ -3,12 +3,12 @@ Detect Condition Use Case - 조건 탐지 유스케이스
 """
 from datetime import datetime
 from typing import List
-from ...domain.entities.stock import Stock
-from ...domain.entities.condition import Condition
-from ...domain.entities.detection_result import DetectionResult
-from ...domain.repositories.condition_repository import IConditionRepository
-from ..services.indicator_calculator import IndicatorCalculator
-from ..services.condition_checker import ConditionChecker
+from src.domain.entities.stock import Stock
+from src.domain.entities.condition import Condition
+from src.domain.entities.detection_result import DetectionResult
+from src.domain.repositories.condition_repository import IConditionRepository
+from src.application.services.indicators.indicator_calculator import IndicatorCalculator
+from src.application.services.condition_checker import ConditionChecker
 
 
 class DetectConditionUseCase:

@@ -19,12 +19,7 @@ from .block1_repository import Block1Repository
 from .block2_repository import Block2Repository
 from .block3_repository import Block3Repository
 
-# Block Condition Preset repositories
-from .block1_condition_preset_repository import Block1ConditionPresetRepository
-from .block2_condition_preset_repository import Block2ConditionPresetRepository
-from .block3_condition_preset_repository import Block3ConditionPresetRepository
-
-# Other repositories
+# Condition Preset repositories (통합된 Seed/Redetection 방식 사용)
 from .seed_condition_preset_repository import SeedConditionPresetRepository
 from .redetection_condition_preset_repository import RedetectionConditionPresetRepository
 from .block_pattern_repository import BlockPatternRepository
@@ -42,12 +37,9 @@ __all__ = [
     'Block1Repository',
     'Block2Repository',
     'Block3Repository',
-    # Block Condition Preset
-    'Block1ConditionPresetRepository',
-    'Block2ConditionPresetRepository',
-    'Block3ConditionPresetRepository',
-    # Other
+    # Condition Preset (통합)
     'SeedConditionPresetRepository',
     'RedetectionConditionPresetRepository',
+    # Pattern
     'BlockPatternRepository',
 ]

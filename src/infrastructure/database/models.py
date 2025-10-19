@@ -230,208 +230,6 @@ class DataQualityCheck(Base):
 
 
 
-class Block1ConditionPreset(Base):
-    """블록1 조건 프리셋 테이블"""
-    __tablename__ = 'block1_condition_preset'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(100), unique=True, nullable=False, comment='조건 프리셋 이름')
-    description = Column(String(500), comment='조건 설명')
-
-    # 진입 조건 1: 등락률
-    entry_surge_rate = Column(Float, comment='진입 급등률 (%)')
-
-    # 진입 조건 2: 이평선 위치
-    entry_ma_period = Column(Integer, comment='진입 이동평균선 기간')
-    entry_high_above_ma = Column(Integer, comment='고가가 이평선 위에 있어야 함 (1: True, 0: False, NULL: None)')
-
-    # 진입 조건 3: 이격도
-    entry_max_deviation_ratio = Column(Float, comment='최대 이격도 비율 (%)')
-
-    # 진입 조건 4: 거래대금
-    entry_min_trading_value = Column(Float, comment='최소 거래대금 (억원)')
-
-    # 진입 조건 5: 거래량 신고 (N개월 신고거래량)
-    entry_volume_high_months = Column(Integer, comment='N개월 신고거래량')
-
-    # 진입 조건 6: 전날 거래량 급증
-    entry_volume_spike_ratio = Column(Float, comment='전날 대비 거래량 급증 비율 (%)')
-
-    # 진입 조건 7: 가격 신고 (N개월 신고가)
-    entry_price_high_months = Column(Integer, comment='N개월 신고가')
-
-    # 종료 조건
-    exit_condition_type = Column(String(50), nullable=False, comment='종료 조건 타입 (ma_break, three_line_reversal, body_middle)')
-    exit_ma_period = Column(Integer, comment='종료용 이동평균선 기간')
-
-    # 중복 탐지 방지
-    cooldown_days = Column(Integer, default=120, nullable=False, comment='쿨다운 기간 (일)')
-
-    # 메타데이터
-    is_active = Column(Integer, default=1, comment='활성 여부 (1: 활성, 0: 비활성)')
-    created_at = Column(DateTime, default=datetime.now, comment='생성일시')
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment='수정일시')
-
-    # 인덱스
-    __table_args__ = (
-        Index('ix_block1_condition_name', 'name', unique=True),
-        Index('ix_block1_condition_active', 'is_active'),
-    )
-
-    def __repr__(self):
-        return f"<Block1ConditionPreset(name={self.name}, entry_ma_period={self.entry_ma_period})>"
-
-
-class Block2ConditionPreset(Base):
-    """블록2 조건 프리셋 테이블"""
-    __tablename__ = 'block2_condition_preset'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(100), unique=True, nullable=False, comment='조건 프리셋 이름')
-    description = Column(String(500), comment='조건 설명')
-
-    # Block1 조건 (상속, 값은 다를 수 있음)
-    entry_surge_rate = Column(Float, comment='진입 급등률 (%)')
-    entry_ma_period = Column(Integer, comment='진입 이동평균선 기간')
-    entry_high_above_ma = Column(Integer, comment='고가가 이평선 위에 있어야 함')
-    entry_max_deviation_ratio = Column(Float, comment='최대 이격도 비율 (%)')
-    entry_min_trading_value = Column(Float, comment='최소 거래대금 (억원)')
-    entry_volume_high_months = Column(Integer, comment='N개월 신고거래량')
-    entry_volume_spike_ratio = Column(Float, comment='전날 대비 거래량 급증 비율 (%)')
-    entry_price_high_months = Column(Integer, comment='N개월 신고가')
-    exit_condition_type = Column(String(50), nullable=False, comment='종료 조건 타입')
-    exit_ma_period = Column(Integer, comment='종료용 이동평균선 기간')
-
-    # Block2 추가 조건
-    block2_volume_ratio = Column(Float, comment='블록1 최고 거래량 대비 비율 (%, 예: 15 = 15%)')
-    block2_low_price_margin = Column(Float, comment='저가 마진 (%, 예: 10 = 10%)')
-
-    # 중복 탐지 방지
-    cooldown_days = Column(Integer, default=20, nullable=False, comment='쿨다운 기간 (일)')
-
-    # Block 전환 조건
-    block2_min_candles_after_block1 = Column(Integer, comment='Block1 시작 후 최소 캔들 수 (예: 4 = 5번째 캔들부터)')
-
-    # 메타데이터
-    is_active = Column(Integer, default=1, comment='활성 여부 (1: 활성, 0: 비활성)')
-    created_at = Column(DateTime, default=datetime.now, comment='생성일시')
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment='수정일시')
-
-    # 인덱스
-    __table_args__ = (
-        Index('ix_block2_condition_name', 'name', unique=True),
-        Index('ix_block2_condition_active', 'is_active'),
-    )
-
-    def __repr__(self):
-        return f"<Block2ConditionPreset(name={self.name}, entry_surge_rate={self.entry_surge_rate})>"
-
-
-class Block3ConditionPreset(Base):
-    """블록3 조건 프리셋 테이블"""
-    __tablename__ = 'block3_condition_preset'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(100), unique=True, nullable=False, comment='조건 프리셋 이름')
-    description = Column(String(500), comment='조건 설명')
-
-    # Block1 조건 (상속, Block2에서도 상속받았지만 Block3에서 다시 정의 가능)
-    entry_surge_rate = Column(Float, comment='진입 급등률 (%)')
-    entry_ma_period = Column(Integer, comment='진입 이동평균선 기간')
-    entry_high_above_ma = Column(Integer, comment='고가가 이평선 위에 있어야 함')
-    entry_max_deviation_ratio = Column(Float, comment='최대 이격도 비율 (%)')
-    entry_min_trading_value = Column(Float, comment='최소 거래대금 (억원)')
-    entry_volume_high_months = Column(Integer, comment='N개월 신고거래량')
-    entry_volume_spike_ratio = Column(Float, comment='전날 대비 거래량 급증 비율 (%)')
-    entry_price_high_months = Column(Integer, comment='N개월 신고가')
-    exit_condition_type = Column(String(50), nullable=False, comment='종료 조건 타입')
-    exit_ma_period = Column(Integer, comment='종료용 이동평균선 기간')
-
-    # Block2 추가 조건 (상속)
-    block2_volume_ratio = Column(Float, comment='블록1 최고 거래량 대비 비율 (%, Block2 조건)')
-    block2_low_price_margin = Column(Float, comment='저가 마진 (%, Block2 조건)')
-
-    # Block3 추가 조건
-    block3_volume_ratio = Column(Float, comment='블록2 최고 거래량 대비 비율 (%, 예: 15 = 15%)')
-    block3_low_price_margin = Column(Float, comment='저가 마진 (%, 예: 10 = 10%)')
-
-    # 중복 탐지 방지
-    cooldown_days = Column(Integer, default=20, nullable=False, comment='쿨다운 기간 (일)')
-
-    # Block 전환 조건
-    block2_min_candles_after_block1 = Column(Integer, comment='Block1 시작 후 최소 캔들 수')
-    block3_min_candles_after_block2 = Column(Integer, comment='Block2 시작 후 최소 캔들 수 (예: 4 = 5번째 캔들부터)')
-
-    # 메타데이터
-    is_active = Column(Integer, default=1, comment='활성 여부 (1: 활성, 0: 비활성)')
-    created_at = Column(DateTime, default=datetime.now, comment='생성일시')
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment='수정일시')
-
-    # 인덱스
-    __table_args__ = (
-        Index('ix_block3_condition_name', 'name', unique=True),
-        Index('ix_block3_condition_active', 'is_active'),
-    )
-
-    def __repr__(self):
-        return f"<Block3ConditionPreset(name={self.name}, entry_surge_rate={self.entry_surge_rate})>"
-
-
-class Block4ConditionPreset(Base):
-    """블록4 조건 프리셋 테이블"""
-    __tablename__ = 'block4_condition_preset'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(100), unique=True, nullable=False, comment='조건 프리셋 이름')
-    description = Column(String(500), comment='조건 설명')
-
-    # Block1 조건 (상속)
-    entry_surge_rate = Column(Float, comment='진입 급등률 (%)')
-    entry_ma_period = Column(Integer, comment='진입 이동평균선 기간')
-    entry_high_above_ma = Column(Integer, comment='고가가 이평선 위에 있어야 함')
-    entry_max_deviation_ratio = Column(Float, comment='최대 이격도 비율 (%)')
-    entry_min_trading_value = Column(Float, comment='최소 거래대금 (억원)')
-    entry_volume_high_months = Column(Integer, comment='N개월 신고거래량')
-    entry_volume_spike_ratio = Column(Float, comment='전날 대비 거래량 급증 비율 (%)')
-    entry_price_high_months = Column(Integer, comment='N개월 신고가')
-    exit_condition_type = Column(String(50), nullable=False, comment='종료 조건 타입')
-    exit_ma_period = Column(Integer, comment='종료용 이동평균선 기간')
-
-    # Block2 추가 조건 (상속)
-    block2_volume_ratio = Column(Float, comment='블록1 최고 거래량 대비 비율 (%, Block2 조건)')
-    block2_low_price_margin = Column(Float, comment='저가 마진 (%, Block2 조건)')
-
-    # Block3 추가 조건 (상속)
-    block3_volume_ratio = Column(Float, comment='블록2 최고 거래량 대비 비율 (%, Block3 조건)')
-    block3_low_price_margin = Column(Float, comment='저가 마진 (%, Block3 조건)')
-
-    # Block4 추가 조건
-    block4_volume_ratio = Column(Float, comment='블록3 최고 거래량 대비 비율 (%, 예: 20 = 20%)')
-    block4_low_price_margin = Column(Float, comment='저가 마진 (%, 예: 10 = 10%)')
-
-    # 중복 탐지 방지
-    cooldown_days = Column(Integer, default=20, nullable=False, comment='쿨다운 기간 (일)')
-
-    # Block 전환 조건
-    block2_min_candles_after_block1 = Column(Integer, comment='Block1 시작 후 최소 캔들 수')
-    block3_min_candles_after_block2 = Column(Integer, comment='Block2 시작 후 최소 캔들 수')
-    block4_min_candles_after_block3 = Column(Integer, comment='Block3 시작 후 최소 캔들 수 (예: 4 = 5번째 캔들부터)')
-
-    # 메타데이터
-    is_active = Column(Integer, default=1, comment='활성 여부 (1: 활성, 0: 비활성)')
-    created_at = Column(DateTime, default=datetime.now, comment='생성일시')
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment='수정일시')
-
-    # 인덱스
-    __table_args__ = (
-        Index('ix_block4_condition_name', 'name', unique=True),
-        Index('ix_block4_condition_active', 'is_active'),
-    )
-
-    def __repr__(self):
-        return f"<Block4ConditionPreset(name={self.name}, entry_surge_rate={self.entry_surge_rate})>"
-
-
 class Block1Detection(Base):
     """블록1 탐지 결과 테이블"""
     __tablename__ = 'block1_detection'
@@ -736,21 +534,21 @@ class SeedConditionPreset(Base):
     description = Column(String(500), comment='프리셋 설명')
 
     # Block1 진입 조건
-    entry_surge_rate = Column(Float, nullable=False, comment='진입 급등률 (%)')
-    entry_ma_period = Column(Integer, nullable=False, comment='진입 이동평균선 기간')
-    entry_high_above_ma = Column(Integer, default=1, comment='고가가 이평선 위에 있어야 함')
-    entry_max_deviation_ratio = Column(Float, nullable=False, comment='최대 이격도 비율')
-    entry_min_trading_value = Column(Float, nullable=False, comment='최소 거래대금 (억원)')
-    entry_volume_high_months = Column(Integer, nullable=False, comment='N개월 신고거래량')
-    entry_volume_spike_ratio = Column(Float, nullable=False, comment='전날 대비 거래량 비율 (%)')
-    entry_price_high_months = Column(Integer, nullable=False, comment='N개월 신고가')
+    block1_entry_surge_rate = Column(Float, nullable=False, comment='진입 급등률 (%)')
+    block1_entry_ma_period = Column(Integer, nullable=False, comment='진입 이동평균선 기간')
+    block1_entry_high_above_ma = Column(Integer, default=1, comment='고가가 이평선 위에 있어야 함')
+    block1_entry_max_deviation_ratio = Column(Float, nullable=False, comment='최대 이격도 비율')
+    block1_entry_min_trading_value = Column(Float, nullable=False, comment='최소 거래대금 (억원)')
+    block1_entry_volume_high_months = Column(Integer, nullable=False, comment='N개월 신고거래량')
+    block1_entry_volume_spike_ratio = Column(Float, nullable=False, comment='전날 대비 거래량 비율 (%)')
+    block1_entry_price_high_months = Column(Integer, nullable=False, comment='N개월 신고가')
 
     # 종료 조건
-    exit_condition_type = Column(String(50), nullable=False, comment='종료 조건 타입')
-    exit_ma_period = Column(Integer, comment='종료용 이동평균선 기간')
+    block1_exit_condition_type = Column(String(50), nullable=False, comment='종료 조건 타입')
+    block1_exit_ma_period = Column(Integer, comment='종료용 이동평균선 기간')
 
     # 시스템
-    cooldown_days = Column(Integer, default=20, nullable=False, comment='Seed 간 최소 간격 (일)')
+    block1_cooldown_days = Column(Integer, default=20, nullable=False, comment='Seed 간 최소 간격 (일)')
 
     # Block2 추가 조건
     block2_volume_ratio = Column(Float, comment='Block1 최고 거래량 대비 비율 (%)')
@@ -766,6 +564,45 @@ class SeedConditionPreset(Base):
     block4_volume_ratio = Column(Float, comment='Block3 최고 거래량 대비 비율 (%)')
     block4_low_price_margin = Column(Float, comment='Block3 최고가 저가 마진 (%)')
     block4_min_candles_after_block3 = Column(Integer, comment='Block3 시작 후 최소 캔들 수')
+
+    # Block2 전용 파라미터 (Optional)
+    block2_entry_surge_rate = Column(Float, comment='Block2 전용 진입 급등률 (%)')
+    block2_entry_ma_period = Column(Integer, comment='Block2 전용 진입 이동평균선 기간')
+    block2_entry_high_above_ma = Column(Integer, comment='Block2 전용 고가≥이평선')
+    block2_entry_max_deviation_ratio = Column(Float, comment='Block2 전용 최대 이격도')
+    block2_entry_min_trading_value = Column(Float, comment='Block2 전용 최소 거래대금')
+    block2_entry_volume_high_months = Column(Integer, comment='Block2 전용 N개월 신고거래량')
+    block2_entry_volume_spike_ratio = Column(Float, comment='Block2 전용 거래량 비율')
+    block2_entry_price_high_months = Column(Integer, comment='Block2 전용 N개월 신고가')
+    block2_exit_condition_type = Column(String(50), comment='Block2 전용 종료 조건 타입')
+    block2_exit_ma_period = Column(Integer, comment='Block2 전용 종료 이평선 기간')
+    block2_cooldown_days = Column(Integer, comment='Block2 전용 Cooldown (일)')
+
+    # Block3 전용 파라미터 (Optional)
+    block3_entry_surge_rate = Column(Float, comment='Block3 전용 진입 급등률 (%)')
+    block3_entry_ma_period = Column(Integer, comment='Block3 전용 진입 이동평균선 기간')
+    block3_entry_high_above_ma = Column(Integer, comment='Block3 전용 고가≥이평선')
+    block3_entry_max_deviation_ratio = Column(Float, comment='Block3 전용 최대 이격도')
+    block3_entry_min_trading_value = Column(Float, comment='Block3 전용 최소 거래대금')
+    block3_entry_volume_high_months = Column(Integer, comment='Block3 전용 N개월 신고거래량')
+    block3_entry_volume_spike_ratio = Column(Float, comment='Block3 전용 거래량 비율')
+    block3_entry_price_high_months = Column(Integer, comment='Block3 전용 N개월 신고가')
+    block3_exit_condition_type = Column(String(50), comment='Block3 전용 종료 조건 타입')
+    block3_exit_ma_period = Column(Integer, comment='Block3 전용 종료 이평선 기간')
+    block3_cooldown_days = Column(Integer, comment='Block3 전용 Cooldown (일)')
+
+    # Block4 전용 파라미터 (Optional)
+    block4_entry_surge_rate = Column(Float, comment='Block4 전용 진입 급등률 (%)')
+    block4_entry_ma_period = Column(Integer, comment='Block4 전용 진입 이동평균선 기간')
+    block4_entry_high_above_ma = Column(Integer, comment='Block4 전용 고가≥이평선')
+    block4_entry_max_deviation_ratio = Column(Float, comment='Block4 전용 최대 이격도')
+    block4_entry_min_trading_value = Column(Float, comment='Block4 전용 최소 거래대금')
+    block4_entry_volume_high_months = Column(Integer, comment='Block4 전용 N개월 신고거래량')
+    block4_entry_volume_spike_ratio = Column(Float, comment='Block4 전용 거래량 비율')
+    block4_entry_price_high_months = Column(Integer, comment='Block4 전용 N개월 신고가')
+    block4_exit_condition_type = Column(String(50), comment='Block4 전용 종료 조건 타입')
+    block4_exit_ma_period = Column(Integer, comment='Block4 전용 종료 이평선 기간')
+    block4_cooldown_days = Column(Integer, comment='Block4 전용 Cooldown (일)')
 
     # 메타데이터
     is_active = Column(Integer, default=1, comment='활성 여부')
@@ -791,14 +628,14 @@ class RedetectionConditionPreset(Base):
     description = Column(String(500), comment='프리셋 설명')
 
     # Block1 진입 조건 (완화)
-    entry_surge_rate = Column(Float, nullable=False, comment='진입 급등률 (%) - 완화')
-    entry_ma_period = Column(Integer, nullable=False, comment='진입 이동평균선 기간')
-    entry_high_above_ma = Column(Integer, default=1, comment='고가가 이평선 위에 있어야 함')
-    entry_max_deviation_ratio = Column(Float, nullable=False, comment='최대 이격도 비율')
-    entry_min_trading_value = Column(Float, nullable=False, comment='최소 거래대금 (억원)')
-    entry_volume_high_months = Column(Integer, nullable=False, comment='N개월 신고거래량 - 완화')
-    entry_volume_spike_ratio = Column(Float, nullable=False, comment='전날 대비 거래량 비율 (%) - 완화')
-    entry_price_high_months = Column(Integer, nullable=False, comment='N개월 신고가 - 완화')
+    block1_entry_surge_rate = Column(Float, nullable=False, comment='진입 급등률 (%) - 완화')
+    block1_entry_ma_period = Column(Integer, nullable=False, comment='진입 이동평균선 기간')
+    block1_entry_high_above_ma = Column(Integer, default=1, comment='고가가 이평선 위에 있어야 함')
+    block1_entry_max_deviation_ratio = Column(Float, nullable=False, comment='최대 이격도 비율')
+    block1_entry_min_trading_value = Column(Float, nullable=False, comment='최소 거래대금 (억원)')
+    block1_entry_volume_high_months = Column(Integer, nullable=False, comment='N개월 신고거래량 - 완화')
+    block1_entry_volume_spike_ratio = Column(Float, nullable=False, comment='전날 대비 거래량 비율 (%) - 완화')
+    block1_entry_price_high_months = Column(Integer, nullable=False, comment='N개월 신고가 - 완화')
 
     # 재탐지 전용: 가격 범위 Tolerance
     block1_tolerance_pct = Column(Float, nullable=False, default=10.0, comment='Block1 재탐지 가격 범위 (±%)')
@@ -807,11 +644,11 @@ class RedetectionConditionPreset(Base):
     block4_tolerance_pct = Column(Float, nullable=False, default=25.0, comment='Block4 재탐지 가격 범위 (±%)')
 
     # 종료 조건
-    exit_condition_type = Column(String(50), nullable=False, comment='종료 조건 타입')
-    exit_ma_period = Column(Integer, comment='종료용 이동평균선 기간')
+    block1_exit_condition_type = Column(String(50), nullable=False, comment='종료 조건 타입')
+    block1_exit_ma_period = Column(Integer, comment='종료용 이동평균선 기간')
 
     # 시스템
-    cooldown_days = Column(Integer, default=20, nullable=False, comment='재탐지 간 최소 간격 (일)')
+    block1_cooldown_days = Column(Integer, default=20, nullable=False, comment='재탐지 간 최소 간격 (일)')
 
     # Block2 추가 조건
     block2_volume_ratio = Column(Float, comment='Block1 최고 거래량 대비 비율 (%)')
@@ -827,6 +664,45 @@ class RedetectionConditionPreset(Base):
     block4_volume_ratio = Column(Float, comment='Block3 최고 거래량 대비 비율 (%)')
     block4_low_price_margin = Column(Float, comment='Block3 최고가 저가 마진 (%)')
     block4_min_candles_after_block3 = Column(Integer, comment='Block3 시작 후 최소 캔들 수')
+
+    # Block2 전용 파라미터 (Optional)
+    block2_entry_surge_rate = Column(Float, comment='Block2 전용 진입 급등률 (%)')
+    block2_entry_ma_period = Column(Integer, comment='Block2 전용 진입 이동평균선 기간')
+    block2_entry_high_above_ma = Column(Integer, comment='Block2 전용 고가>=이평선')
+    block2_entry_max_deviation_ratio = Column(Float, comment='Block2 전용 최대 이격도 비율')
+    block2_entry_min_trading_value = Column(Float, comment='Block2 전용 최소 거래대금 (억원)')
+    block2_entry_volume_high_months = Column(Integer, comment='Block2 전용 N개월 신고거래량')
+    block2_entry_volume_spike_ratio = Column(Float, comment='Block2 전용 전날 대비 거래량 비율 (%)')
+    block2_entry_price_high_months = Column(Integer, comment='Block2 전용 N개월 신고가')
+    block2_exit_condition_type = Column(String(50), comment='Block2 전용 종료 조건 타입')
+    block2_exit_ma_period = Column(Integer, comment='Block2 전용 종료용 이동평균선 기간')
+    block2_cooldown_days = Column(Integer, comment='Block2 전용 재탐지 간 최소 간격 (일)')
+
+    # Block3 전용 파라미터 (Optional)
+    block3_entry_surge_rate = Column(Float, comment='Block3 전용 진입 급등률 (%)')
+    block3_entry_ma_period = Column(Integer, comment='Block3 전용 진입 이동평균선 기간')
+    block3_entry_high_above_ma = Column(Integer, comment='Block3 전용 고가>=이평선')
+    block3_entry_max_deviation_ratio = Column(Float, comment='Block3 전용 최대 이격도 비율')
+    block3_entry_min_trading_value = Column(Float, comment='Block3 전용 최소 거래대금 (억원)')
+    block3_entry_volume_high_months = Column(Integer, comment='Block3 전용 N개월 신고거래량')
+    block3_entry_volume_spike_ratio = Column(Float, comment='Block3 전용 전날 대비 거래량 비율 (%)')
+    block3_entry_price_high_months = Column(Integer, comment='Block3 전용 N개월 신고가')
+    block3_exit_condition_type = Column(String(50), comment='Block3 전용 종료 조건 타입')
+    block3_exit_ma_period = Column(Integer, comment='Block3 전용 종료용 이동평균선 기간')
+    block3_cooldown_days = Column(Integer, comment='Block3 전용 재탐지 간 최소 간격 (일)')
+
+    # Block4 전용 파라미터 (Optional)
+    block4_entry_surge_rate = Column(Float, comment='Block4 전용 진입 급등률 (%)')
+    block4_entry_ma_period = Column(Integer, comment='Block4 전용 진입 이동평균선 기간')
+    block4_entry_high_above_ma = Column(Integer, comment='Block4 전용 고가>=이평선')
+    block4_entry_max_deviation_ratio = Column(Float, comment='Block4 전용 최대 이격도 비율')
+    block4_entry_min_trading_value = Column(Float, comment='Block4 전용 최소 거래대금 (억원)')
+    block4_entry_volume_high_months = Column(Integer, comment='Block4 전용 N개월 신고거래량')
+    block4_entry_volume_spike_ratio = Column(Float, comment='Block4 전용 전날 대비 거래량 비율 (%)')
+    block4_entry_price_high_months = Column(Integer, comment='Block4 전용 N개월 신고가')
+    block4_exit_condition_type = Column(String(50), comment='Block4 전용 종료 조건 타입')
+    block4_exit_ma_period = Column(Integer, comment='Block4 전용 종료용 이동평균선 기간')
+    block4_cooldown_days = Column(Integer, comment='Block4 전용 재탐지 간 최소 간격 (일)')
 
     # 메타데이터
     is_active = Column(Integer, default=1, comment='활성 여부')

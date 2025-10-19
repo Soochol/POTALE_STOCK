@@ -13,7 +13,7 @@ sys.path.insert(0, str(project_root))
 from datetime import date, timedelta
 from src.domain.entities.stock import Stock
 from src.domain.entities.block1_condition import Block1Condition, Block1ExitConditionType
-from src.application.use_cases.detect_block1 import DetectBlock1UseCase
+from src.application.use_cases.block_detection.detect_block1 import DetectBlock1UseCase
 from src.infrastructure.repositories.block1_repository import Block1Repository
 from src.infrastructure.database.connection import DatabaseConnection
 

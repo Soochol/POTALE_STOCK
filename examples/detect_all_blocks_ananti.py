@@ -21,9 +21,9 @@ from src.domain.entities.block1_condition import Block1Condition, Block1ExitCond
 from src.domain.entities.block2_condition import Block2Condition
 from src.domain.entities.block3_condition import Block3Condition
 
-from src.application.use_cases.detect_block1 import DetectBlock1UseCase
-from src.application.use_cases.detect_block2 import DetectBlock2UseCase
-from src.application.use_cases.detect_block3 import DetectBlock3UseCase
+from src.application.use_cases.block_detection.detect_block1 import DetectBlock1UseCase
+from src.application.use_cases.block_detection.detect_block2 import DetectBlock2UseCase
+from src.application.use_cases.block_detection.detect_block3 import DetectBlock3UseCase
 
 
 def main():

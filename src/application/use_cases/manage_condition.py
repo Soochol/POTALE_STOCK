@@ -2,8 +2,8 @@
 Manage Condition Use Cases - 조건 관리 유스케이스들
 """
 from typing import List, Optional
-from ...domain.entities.condition import Condition, Rule
-from ...domain.repositories.condition_repository import IConditionRepository
+from src.domain.entities.condition import Condition, Rule
+from src.domain.repositories.condition_repository import IConditionRepository
 
 
 class CreateConditionUseCase:
