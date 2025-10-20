@@ -4,7 +4,7 @@ SQLite 데이터베이스 연결 관리
 """
 from pathlib import Path
 from contextlib import contextmanager
-from typing import Generator
+from typing import Generator, Optional
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
@@ -109,8 +109,8 @@ class DatabaseConnection:
             print("Database connection closed")
 
 
-# 전역 데이터베이스 연결 인스턴스
-_db_connection: DatabaseConnection = None
+# 전역 데이터베이스 연결 인스턴스 (싱글톤 패턴)
+_db_connection: Optional[DatabaseConnection] = None
 
 
 def get_db_connection(db_path: str = "data/database/stock_data.db") -> DatabaseConnection:

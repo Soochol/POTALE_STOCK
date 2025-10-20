@@ -26,6 +26,7 @@ wheels/
 # 데이터 및 모델
 data/
 models/
+!src/infrastructure/database/models/
 *.db
 *.sqlite
 

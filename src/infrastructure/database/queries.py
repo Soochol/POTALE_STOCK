@@ -1,6 +1,9 @@
 """
 Database Query Helpers
 데이터베이스 쿼리 헬퍼 함수들 (증분 수집 최적화)
+
+Note: 이 모듈은 주로 IncrementalCollector에서 사용됨.
+      Repository 패턴과 중복되지 않는 복잡한 분석 쿼리만 포함.
 """
 from datetime import date
 from typing import Dict, List, Optional, Tuple
