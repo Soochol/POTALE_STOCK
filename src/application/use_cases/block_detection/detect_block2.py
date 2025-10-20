@@ -1,9 +1,9 @@
 """
 Detect Block2 Use Case - 블록2 탐지 유스케이스
 """
+from src.domain.entities import Stock
 from typing import List, Optional
 from datetime import date
-from src.domain.entities.stock import Stock
 from src.domain.entities.block2_condition import Block2Condition
 from src.domain.entities.block2_detection import Block2Detection
 from src.domain.entities.block1_detection import Block1Detection
@@ -11,7 +11,6 @@ from src.application.services.indicators.block1_indicator_calculator import Bloc
 from src.application.services.checkers.block2_checker import Block2Checker
 from src.infrastructure.repositories.block2_repository import Block2Repository
 from src.infrastructure.repositories.block1_repository import Block1Repository
-
 
 class DetectBlock2UseCase:
     """

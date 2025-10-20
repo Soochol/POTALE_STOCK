@@ -1,10 +1,9 @@
 """
 Manage Condition Use Cases - 조건 관리 유스케이스들
 """
+from src.domain.entities import Condition, Rule
 from typing import List, Optional
-from src.domain.entities.condition import Condition, Rule
 from src.domain.repositories.condition_repository import IConditionRepository
-
 
 class CreateConditionUseCase:
     """조건 생성 유스케이스"""
@@ -51,7 +50,6 @@ class CreateConditionUseCase:
 
         return condition
 
-
 class UpdateConditionUseCase:
     """조건 수정 유스케이스"""
 
@@ -97,7 +95,6 @@ class UpdateConditionUseCase:
 
         return condition
 
-
 class DeleteConditionUseCase:
     """조건 삭제 유스케이스"""
 
@@ -124,7 +121,6 @@ class DeleteConditionUseCase:
             raise RuntimeError("조건 삭제에 실패했습니다")
 
         return True
-
 
 class ListConditionsUseCase:
     """조건 목록 조회 유스케이스"""

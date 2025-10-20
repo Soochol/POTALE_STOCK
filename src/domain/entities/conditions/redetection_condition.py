@@ -1,27 +1,34 @@
 """
-Seed Condition Entity - Seed 조건 엔티티
+Redetection Condition Entity - 재탐지 조건 엔티티
 
-Seed 탐지를 위한 엄격한 조건
+재탐지를 위한 완화된 조건 + 가격 범위 필터
 """
 from dataclasses import dataclass
 from typing import Optional
-from src.domain.entities.base_entry_condition import BaseEntryCondition, Block1ExitConditionType
+from .base_entry_condition import BaseEntryCondition, Block1ExitConditionType
 
 
 @dataclass
-class SeedCondition:
+class RedetectionCondition:
     """
-    Seed 조건 엔티티 (엄격한 조건)
+    재탐지 조건 엔티티 (완화된 조건 + 가격 범위)
 
-    Block1/2/3/4 Seed를 찾기 위한 엄격한 조건 세트
-    - Block1 기본 조건 (base)
+    5년 재탐지를 위한 조건 세트
+    - Block1 기본 조건 (완화, base)
+    - 가격 범위 Tolerance (block1/2/3/4)
     - Block2/3/4 전용 파라미터 (Optional, 없으면 Block1 값 사용)
-    - Block2/3/4 추가 조건 (volume_ratio, low_price_margin 등)
-    - Cooldown (Seed 간 최소 간격)
+    - Block2/3/4 추가 조건
+    - Cooldown (재탐지 간 최소 간격)
     """
 
-    # ===== Block1 기본 조건 =====
+    # ===== Block1 기본 조건 (완화) =====
     base: BaseEntryCondition
+
+    # ===== 재탐지 전용: 가격 범위 Tolerance =====
+    block1_tolerance_pct: float = 10.0  # Block1 재탐지 가격 범위 (±%)
+    block2_tolerance_pct: float = 15.0  # Block2 재탐지 가격 범위 (±%)
+    block3_tolerance_pct: float = 20.0  # Block3 재탐지 가격 범위 (±%)
+    block4_tolerance_pct: float = 25.0  # Block4 재탐지 가격 범위 (±%)
 
     # ===== Block2 추가 조건 =====
     block2_volume_ratio: float = 15.0  # Block1 최고 거래량 대비 (%)

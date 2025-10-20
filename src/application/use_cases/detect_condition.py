@@ -1,15 +1,12 @@
 """
 Detect Condition Use Case - 조건 탐지 유스케이스
 """
+from src.domain.entities import Condition, DetectionResult, Stock
 from datetime import datetime
 from typing import List
-from src.domain.entities.stock import Stock
-from src.domain.entities.condition import Condition
-from src.domain.entities.detection_result import DetectionResult
 from src.domain.repositories.condition_repository import IConditionRepository
 from src.application.services.indicators.indicator_calculator import IndicatorCalculator
 from src.application.services.condition_checker import ConditionChecker
-
 
 class DetectConditionUseCase:
     """조건 탐지 유스케이스"""

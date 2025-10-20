@@ -27,9 +27,9 @@ for stock in stocks:  # 메인 루프
             if Block1_exit:
                 break
 """
+from src.domain.entities import Stock
 from typing import List, Tuple, Optional
 from datetime import date, timedelta
-from src.domain.entities.stock import Stock
 from src.domain.entities.block1_condition import Block1Condition
 from src.domain.entities.block2_condition import Block2Condition
 from src.domain.entities.block3_condition import Block3Condition
@@ -43,7 +43,6 @@ from src.application.services.checkers.block3_checker import Block3Checker
 from src.infrastructure.repositories.block1_repository import Block1Repository
 from src.infrastructure.repositories.block2_repository import Block2Repository
 from src.infrastructure.repositories.block3_repository import Block3Repository
-
 
 class DetectBlocksIntegratedUseCase:
     """

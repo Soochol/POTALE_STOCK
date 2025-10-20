@@ -1,12 +1,11 @@
 """
 Block1 Indicator Calculator - 블록1 전용 지표 계산 서비스
 """
+from src.domain.entities import Stock
 from typing import List, Dict
 from datetime import date, timedelta
 import pandas as pd
-from src.domain.entities.stock import Stock
 from src.application.services.three_line_break import ThreeLineBreakCalculator
-
 
 class Block1IndicatorCalculator:
     """

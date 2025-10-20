@@ -3,13 +3,16 @@ Block2 Checker Service - 블록2 진입/종료 조건 검사 서비스
 """
 from typing import Optional, List
 from datetime import date, timedelta
-from src.domain.entities.stock import Stock
-from src.domain.entities.block2_condition import Block2Condition
-from src.domain.entities.block2_detection import Block2Detection
-from src.domain.entities.block1_detection import Block1Detection
-from src.domain.entities.block1_condition import Block1Condition
-from .block1_checker import Block1Checker
 
+from src.domain.entities import (
+    Stock,
+    Block1Condition,
+    Block1Detection,
+    Block2Condition,
+    Block2Detection,
+)
+from .block1_checker import Block1Checker
+from ..common.utils import get_previous_trading_day_stock
 
 class Block2Checker:
     """블록2 진입 및 종료 조건 검사 서비스"""
@@ -21,7 +24,7 @@ class Block2Checker:
         self,
         condition: Block2Condition,
         stock: Stock,
-        prev_stock: Optional[Stock] = None,
+        all_stocks: List[Stock],
         prev_block1: Optional[Block1Detection] = None
     ) -> bool:
         """
@@ -31,7 +34,7 @@ class Block2Checker:
         Args:
             condition: 블록2 조건
             stock: 주식 데이터 (지표 포함)
-            prev_stock: 전일 주식 데이터 (전날 거래량 조건용, 선택적)
+            all_stocks: 전체 주식 데이터 리스트 (마지막 거래일 조회용)
             prev_block1: 직전 블록1 탐지 결과 (추가 조건용, 선택적)
 
         Returns:
@@ -76,7 +79,8 @@ class Block2Checker:
 
         # 조건 6: 전날 거래량 대비 N% 수준
         if condition.base.block1_entry_volume_spike_ratio is not None:
-            if prev_stock is None:
+            prev_stock = get_previous_trading_day_stock(stock.date, all_stocks)
+            if prev_stock is None or prev_stock.volume <= 0:
                 return False
 
             ratio = condition.base.block1_entry_volume_spike_ratio / 100.0

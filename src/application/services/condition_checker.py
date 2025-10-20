@@ -1,10 +1,8 @@
 """
 Condition Checker Service - 조건 검사 서비스
 """
+from src.domain.entities import Condition, Rule, RuleType, Stock
 from typing import List
-from ...domain.entities.stock import Stock
-from ...domain.entities.condition import Condition, Rule, RuleType
-
 
 class ConditionChecker:
     """조건 검사 서비스"""

@@ -1,10 +1,9 @@
 """
 Indicator Calculator Service - 기술적 지표 계산 서비스
 """
+from src.domain.entities import Stock
 from typing import List, Dict
 import pandas as pd
-from src.domain.entities.stock import Stock
-
 
 class IndicatorCalculator:
     """기술적 지표 계산 서비스"""

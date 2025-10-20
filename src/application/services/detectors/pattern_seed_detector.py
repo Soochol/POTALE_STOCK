@@ -5,18 +5,20 @@ Block1/2/3/4 Seed 탐지 서비스
 """
 from typing import List, Optional
 from datetime import date, timedelta
-from src.domain.entities.stock import Stock
-from src.domain.entities.seed_condition import SeedCondition
-from src.domain.entities.base_entry_condition import BaseEntryCondition
-from src.domain.entities.block1_detection import Block1Detection
-from src.domain.entities.block2_detection import Block2Detection
-from src.domain.entities.block3_detection import Block3Detection
-from src.domain.entities.block4_detection import Block4Detection
+
+from src.domain.entities import (
+    BaseEntryCondition,
+    SeedCondition,
+    Stock,
+    Block1Detection,
+    Block2Detection,
+    Block3Detection,
+    Block4Detection,
+)
 from src.application.services.checkers.block1_checker import Block1Checker
 from src.application.services.checkers.block2_checker import Block2Checker
 from src.application.services.checkers.block3_checker import Block3Checker
 from src.application.services.checkers.block4_checker import Block4Checker
-
 
 class PatternSeedDetector:
     """
@@ -105,9 +107,10 @@ class PatternSeedDetector:
             if self.block1_checker.check_entry(
                 condition=block1_condition,
                 stock=stock,
-                prev_stock=stocks[i - 1] if i > 0 else None
+                all_stocks=stocks
             ):
                 # Block1 Detection 생성
+                indicators = stock.indicators if hasattr(stock, 'indicators') else {}
                 block1 = Block1Detection(
                     block1_id=None,  # Repository에서 할당
                     ticker=stock.ticker,
@@ -119,7 +122,7 @@ class PatternSeedDetector:
                     entry_close=stock.close,
                     entry_volume=stock.volume,
                     entry_trading_value=stock.close * stock.volume / 100_000_000,
-                    entry_rate=((stock.high - stocks[i - 1].close) / stocks[i - 1].close * 100) if i > 0 else 0,
+                    entry_rate=indicators.get('rate'),
                     peak_price=stock.high,
                     peak_date=stock.date,
                     peak_volume=stock.volume,  # 진입일 거래량으로 초기화
@@ -172,17 +175,18 @@ class PatternSeedDetector:
             if self.block2_checker.check_entry(
                 condition=block2_condition,
                 stock=stock,
-                prev_stock=stocks_after[i - 1] if i > 0 else None,
+                all_stocks=stocks,
                 prev_block1=block1
             ):
                 # Block2 Detection 생성
+                indicators = stock.indicators if hasattr(stock, 'indicators') else {}
                 block2 = Block2Detection(
                     block2_id=None,
                     ticker=stock.ticker,
                     started_at=stock.date,
                     ended_at=None,
                     entry_close=stock.close,
-                    entry_rate=((stock.high - stocks_after[i - 1].close) / stocks_after[i - 1].close * 100) if i > 0 else 0,
+                    entry_rate=indicators.get('rate'),
                     prev_block1_id=block1.block1_id,
                     prev_block1_peak_price=block1.peak_price,
                     peak_price=stock.high,
@@ -238,17 +242,19 @@ class PatternSeedDetector:
             if self.block3_checker.check_entry(
                 condition=block3_condition,
                 stock=stock,
-                prev_stock=stocks_after[i - 1] if i > 0 else None,
+                all_stocks=stocks,
+                prev_block1=None,
                 prev_block2=block2
             ):
                 # Block3 Detection 생성
+                indicators = stock.indicators if hasattr(stock, 'indicators') else {}
                 block3 = Block3Detection(
                     block3_id=None,
                     ticker=stock.ticker,
                     started_at=stock.date,
                     ended_at=None,
                     entry_close=stock.close,
-                    entry_rate=((stock.high - stocks_after[i - 1].close) / stocks_after[i - 1].close * 100) if i > 0 else 0,
+                    entry_rate=indicators.get('rate'),
                     prev_block2_id=block2.block2_id,
                     prev_block2_peak_price=block2.peak_price,
                     peak_price=stock.high,
@@ -308,19 +314,20 @@ class PatternSeedDetector:
             if self.block4_checker.check_entry(
                 condition=block4_condition,
                 stock=stock,
-                prev_stock=stocks_after[i - 1] if i > 0 else None,
+                all_stocks=stocks,
                 prev_block1=None,  # Block4Checker가 필요로 하지 않음
                 prev_block2=None,  # Block4Checker가 필요로 하지 않음
                 prev_block3=block3
             ):
                 # Block4 Detection 생성
+                indicators = stock.indicators if hasattr(stock, 'indicators') else {}
                 block4 = Block4Detection(
                     block4_id=None,
                     ticker=stock.ticker,
                     started_at=stock.date,
                     ended_at=None,
                     entry_close=stock.close,
-                    entry_rate=((stock.high - stocks_after[i - 1].close) / stocks_after[i - 1].close * 100) if i > 0 else 0,
+                    entry_rate=indicators.get('rate'),
                     prev_block3_id=block3.block3_id,
                     prev_block3_peak_price=block3.peak_price,
                     peak_price=stock.high,

@@ -3,11 +3,15 @@ Block1 Checker Service - 블록1 진입/종료 조건 검사 서비스
 """
 from typing import List, Optional, Dict
 from datetime import date, timedelta
-from src.domain.entities.stock import Stock
-from src.domain.entities.block1_condition import Block1Condition, Block1ExitConditionType
-from src.domain.entities.block1_detection import Block1Detection
-from src.application.services.three_line_break import ThreeLineBreakCalculator
 
+from src.domain.entities import (
+    Stock,
+    Block1Condition,
+    Block1ExitConditionType,
+    Block1Detection,
+)
+from src.application.services.three_line_break import ThreeLineBreakCalculator
+from src.application.services.common.utils import get_previous_trading_day_stock
 
 class Block1Checker:
     """블록1 진입 및 종료 조건 검사 서비스"""
@@ -19,7 +23,7 @@ class Block1Checker:
         self,
         condition: Block1Condition,
         stock: Stock,
-        prev_stock: Optional[Stock] = None
+        all_stocks: List[Stock]
     ) -> bool:
         """
         블록1 진입 조건 검사 (6가지 조건 개별 판단)
@@ -27,10 +31,14 @@ class Block1Checker:
         Args:
             condition: 블록1 조건
             stock: 주식 데이터 (지표 포함)
-            prev_stock: 전일 주식 데이터 (전날 거래량 조건용, 선택적)
+            all_stocks: 전체 주식 데이터 리스트 (마지막 거래일 조회용)
 
         Returns:
             모든 조건 만족 여부
+
+        Note:
+            - 전날 거래량 비교 시 "마지막 실제 거래일" 기준 사용
+            - 공휴일/거래정지로 인한 Gap 자동 처리
         """
         if not hasattr(stock, 'indicators'):
             return False
@@ -71,8 +79,16 @@ class Block1Checker:
 
         # 조건 6: 전날 거래량 대비 N% 수준 (필수)
         if condition.base.block1_entry_volume_spike_ratio is not None:
+            # 마지막 실제 거래일 조회 (공휴일/거래정지 자동 건너뛰기)
+            prev_stock = get_previous_trading_day_stock(stock.date, all_stocks)
+
             if prev_stock is None:
-                # 전날 데이터가 없으면 조건 실패
+                # 과거 데이터가 없으면 조건 실패 (첫 거래일)
+                return False
+
+            if prev_stock.volume <= 0:
+                # 전날 거래량이 0이면 조건 실패 (거래정지 등)
+                # 0으로 나누는 것을 방지하고, 논리적으로도 비교 불가
                 return False
 
             # 당일_거래량 >= 전날_거래량 × (N/100)
@@ -81,7 +97,6 @@ class Block1Checker:
             required_volume = prev_stock.volume * ratio
             if stock.volume < required_volume:
                 return False
-        # prev_day_volume_increase_ratio가 None이면 이 조건은 체크하지 않음 (하위 호환성)
 
         # 조건 7: N개월 신고가 (선택적)
         if condition.base.block1_entry_price_high_months is not None:

@@ -1,11 +1,10 @@
 """
 Collect Stock Data Use Case - 주식 데이터 수집 유스케이스
 """
+from src.domain.entities import Stock
 from datetime import date
 from typing import List
-from src.domain.entities.stock import Stock
 from src.domain.repositories.stock_repository import IStockRepository
-
 
 class CollectStockDataUseCase:
     """주식 데이터 수집 유스케이스"""

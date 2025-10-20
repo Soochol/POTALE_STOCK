@@ -4,12 +4,9 @@ Detect Patterns Use Case
 패턴 재탐지 시스템의 메인 Use Case
 3단계 프로세스: Seed 탐지 → Pattern 생성 → 5년 재탐지
 """
+from src.domain.entities import BlockPattern, RedetectionCondition, SeedCondition, Stock
 from typing import List, Dict
 from datetime import timedelta
-from src.domain.entities.stock import Stock
-from src.domain.entities.seed_condition import SeedCondition
-from src.domain.entities.redetection_condition import RedetectionCondition
-from src.domain.entities.block_pattern import BlockPattern
 from src.application.services.detectors.pattern_seed_detector import PatternSeedDetector
 from src.application.services.detectors.pattern_redetector import PatternRedetector
 from src.application.services.indicators.block1_indicator_calculator import Block1IndicatorCalculator
@@ -18,7 +15,6 @@ from src.infrastructure.repositories.block1_repository import Block1Repository
 from src.infrastructure.repositories.block2_repository import Block2Repository
 from src.infrastructure.repositories.block3_repository import Block3Repository
 from src.infrastructure.database.connection import DatabaseConnection
-
 
 class DetectPatternsUseCase:
     """

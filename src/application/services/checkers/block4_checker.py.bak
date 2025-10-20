@@ -1,7 +1,7 @@
 """
 Block4 Checker Service - 블록4 진입/종료 조건 검사 서비스
 """
-from typing import Optional, List
+from typing import Optional
 
 from src.domain.entities import (
     Stock,
@@ -15,7 +15,6 @@ from src.domain.entities import (
 from .block3_checker import Block3Checker
 from .block2_checker import Block2Checker
 from .block1_checker import Block1Checker
-from ..common.utils import get_previous_trading_day_stock
 
 class Block4Checker:
     """블록4 진입 및 종료 조건 검사 서비스"""
@@ -29,7 +28,7 @@ class Block4Checker:
         self,
         condition: Block4Condition,
         stock: Stock,
-        all_stocks: List[Stock],
+        prev_stock: Optional[Stock] = None,
         prev_block1: Optional[Block1Detection] = None,
         prev_block2: Optional[Block2Detection] = None,
         prev_block3: Optional[Block3Detection] = None
@@ -83,8 +82,7 @@ class Block4Checker:
                 return False
 
         if condition.base.block1_entry_volume_spike_ratio is not None:
-            prev_stock = get_previous_trading_day_stock(stock.date, all_stocks)
-            if prev_stock is None or prev_stock.volume <= 0:
+            if prev_stock is None:
                 return False
 
             ratio = condition.base.block1_entry_volume_spike_ratio / 100.0
