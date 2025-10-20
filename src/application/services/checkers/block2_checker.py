@@ -266,6 +266,39 @@ class Block2Checker:
         # 즉, candles_count > min_candles
         return candles_count > min_candles
 
+    def check_max_candles(
+        self,
+        current_date: date,
+        prev_block1: Optional[Block1Detection],
+        max_candles: int,
+        all_stocks: List[Stock]
+    ) -> bool:
+        """
+        블록1 시작 후 최대 캔들 수 확인
+
+        Args:
+            current_date: 현재 날짜
+            prev_block1: 직전 블록1
+            max_candles: 최대 캔들 수
+            all_stocks: 전체 주식 데이터 (캔들 수 계산용, 날짜순 정렬)
+
+        Returns:
+            조건 만족 여부 (True: 가능, False: 최대 캔들 수 초과)
+        """
+        if prev_block1 is None or max_candles is None:
+            # 직전 블록1이 없거나 조건이 없으면 무시
+            return True
+
+        # 블록1 시작일부터 현재일까지의 캔들 수 계산
+        candles_count = self._count_candles_between(
+            prev_block1.started_at,
+            current_date,
+            all_stocks
+        )
+
+        # max_candles 이내여야 함
+        return candles_count <= max_candles
+
     def _count_candles_between(
         self,
         start_date: date,

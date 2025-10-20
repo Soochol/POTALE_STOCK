@@ -22,9 +22,9 @@ class SeedConditionPreset(Base):
     block1_entry_high_above_ma = Column(Integer, default=1, comment='고가가 이평선 위에 있어야 함')
     block1_entry_max_deviation_ratio = Column(Float, nullable=False, comment='최대 이격도 비율')
     block1_entry_min_trading_value = Column(Float, nullable=False, comment='최소 거래대금 (억원)')
-    block1_entry_volume_high_months = Column(Integer, nullable=False, comment='N개월 신고거래량')
+    block1_entry_volume_high_months = Column(Integer, nullable=True, comment='N개월 신고거래량 (None=조건 비활성화)')
     block1_entry_volume_spike_ratio = Column(Float, nullable=False, comment='전날 대비 거래량 비율 (%)')
-    block1_entry_price_high_months = Column(Integer, nullable=False, comment='N개월 신고가')
+    block1_entry_price_high_months = Column(Integer, nullable=True, comment='N개월 신고가 (None=조건 비활성화)')
 
     # 종료 조건
     block1_exit_condition_type = Column(String(50), nullable=False, comment='종료 조건 타입')
@@ -37,16 +37,19 @@ class SeedConditionPreset(Base):
     block2_volume_ratio = Column(Float, comment='Block1 최고 거래량 대비 비율 (%)')
     block2_low_price_margin = Column(Float, comment='Block1 최고가 저가 마진 (%)')
     block2_min_candles_after_block1 = Column(Integer, comment='Block1 시작 후 최소 캔들 수')
+    block2_max_candles_after_block1 = Column(Integer, nullable=True, comment='Block1 시작 후 최대 캔들 수')
 
     # Block3 추가 조건
     block3_volume_ratio = Column(Float, comment='Block2 최고 거래량 대비 비율 (%)')
     block3_low_price_margin = Column(Float, comment='Block2 최고가 저가 마진 (%)')
     block3_min_candles_after_block2 = Column(Integer, comment='Block2 시작 후 최소 캔들 수')
+    block3_max_candles_after_block2 = Column(Integer, nullable=True, comment='Block2 시작 후 최대 캔들 수')
 
     # Block4 추가 조건
     block4_volume_ratio = Column(Float, comment='Block3 최고 거래량 대비 비율 (%)')
     block4_low_price_margin = Column(Float, comment='Block3 최고가 저가 마진 (%)')
     block4_min_candles_after_block3 = Column(Integer, comment='Block3 시작 후 최소 캔들 수')
+    block4_max_candles_after_block3 = Column(Integer, nullable=True, comment='Block3 시작 후 최대 캔들 수')
 
     # Block2 전용 파라미터 (Optional)
     block2_entry_surge_rate = Column(Float, comment='Block2 전용 진입 급등률 (%)')
@@ -116,9 +119,9 @@ class RedetectionConditionPreset(Base):
     block1_entry_high_above_ma = Column(Integer, default=1, comment='고가가 이평선 위에 있어야 함')
     block1_entry_max_deviation_ratio = Column(Float, nullable=False, comment='최대 이격도 비율')
     block1_entry_min_trading_value = Column(Float, nullable=False, comment='최소 거래대금 (억원)')
-    block1_entry_volume_high_months = Column(Integer, nullable=False, comment='N개월 신고거래량 - 완화')
+    block1_entry_volume_high_months = Column(Integer, nullable=True, comment='N개월 신고거래량 (None=조건 비활성화)')
     block1_entry_volume_spike_ratio = Column(Float, nullable=False, comment='전날 대비 거래량 비율 (%) - 완화')
-    block1_entry_price_high_months = Column(Integer, nullable=False, comment='N개월 신고가 - 완화')
+    block1_entry_price_high_months = Column(Integer, nullable=True, comment='N개월 신고가 (None=조건 비활성화)')
 
     # 재탐지 전용: 가격 범위 Tolerance
     block1_tolerance_pct = Column(Float, nullable=False, default=10.0, comment='Block1 재탐지 가격 범위 (±%)')
@@ -137,16 +140,19 @@ class RedetectionConditionPreset(Base):
     block2_volume_ratio = Column(Float, comment='Block1 최고 거래량 대비 비율 (%)')
     block2_low_price_margin = Column(Float, comment='Block1 최고가 저가 마진 (%)')
     block2_min_candles_after_block1 = Column(Integer, comment='Block1 시작 후 최소 캔들 수')
+    block2_max_candles_after_block1 = Column(Integer, nullable=True, comment='Block1 시작 후 최대 캔들 수')
 
     # Block3 추가 조건
     block3_volume_ratio = Column(Float, comment='Block2 최고 거래량 대비 비율 (%)')
     block3_low_price_margin = Column(Float, comment='Block2 최고가 저가 마진 (%)')
     block3_min_candles_after_block2 = Column(Integer, comment='Block2 시작 후 최소 캔들 수')
+    block3_max_candles_after_block2 = Column(Integer, nullable=True, comment='Block2 시작 후 최대 캔들 수')
 
     # Block4 추가 조건
     block4_volume_ratio = Column(Float, comment='Block3 최고 거래량 대비 비율 (%)')
     block4_low_price_margin = Column(Float, comment='Block3 최고가 저가 마진 (%)')
     block4_min_candles_after_block3 = Column(Integer, comment='Block3 시작 후 최소 캔들 수')
+    block4_max_candles_after_block3 = Column(Integer, nullable=True, comment='Block3 시작 후 최대 캔들 수')
 
     # Block2 전용 파라미터 (Optional)
     block2_entry_surge_rate = Column(Float, comment='Block2 전용 진입 급등률 (%)')

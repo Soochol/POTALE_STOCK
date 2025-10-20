@@ -250,6 +250,25 @@ class Block3Checker:
         # 즉, candles_count > min_candles
         return candles_count > min_candles
 
+    def check_max_candles(
+        self,
+        current_date: date,
+        prev_block2: Optional[Block2Detection],
+        max_candles: int,
+        all_stocks: List[Stock]
+    ) -> bool:
+        """블록2 시작 후 최대 캔들 수 확인"""
+        if prev_block2 is None or max_candles is None:
+            return True
+
+        candles_count = self._count_candles_between(
+            prev_block2.started_at,
+            current_date,
+            all_stocks
+        )
+
+        return candles_count <= max_candles
+
     def _count_candles_between(
         self,
         start_date: date,

@@ -1,6 +1,7 @@
 """
 Block4 Repository - 블록4 탐지 결과 저장/조회 Repository
 """
+import uuid
 from typing import Optional
 from datetime import date
 from ....domain.entities import Block4Detection as Block4DetectionEntity

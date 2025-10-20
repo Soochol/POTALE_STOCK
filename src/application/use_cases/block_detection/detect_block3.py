@@ -4,15 +4,15 @@ Detect Block3 Use Case - 블록3 탐지 유스케이스
 from src.domain.entities import Stock
 from typing import List, Optional
 from datetime import date
-from src.domain.entities.block3_condition import Block3Condition
-from src.domain.entities.block3_detection import Block3Detection
-from src.domain.entities.block2_detection import Block2Detection
-from src.domain.entities.block1_detection import Block1Detection
+from src.domain.entities.conditions.block_conditions import Block3Condition
+from src.domain.entities.detections.block3_detection import Block3Detection
+from src.domain.entities.detections.block2_detection import Block2Detection
+from src.domain.entities.detections.block1_detection import Block1Detection
 from src.application.services.indicators.block1_indicator_calculator import Block1IndicatorCalculator
 from src.application.services.checkers.block3_checker import Block3Checker
-from src.infrastructure.repositories.block3_repository import Block3Repository
-from src.infrastructure.repositories.block2_repository import Block2Repository
-from src.infrastructure.repositories.block1_repository import Block1Repository
+from src.infrastructure.repositories.detection.block3_repository import Block3Repository
+from src.infrastructure.repositories.detection.block2_repository import Block2Repository
+from src.infrastructure.repositories.detection.block1_repository import Block1Repository
 
 class DetectBlock3UseCase:
     """
@@ -194,6 +194,16 @@ class DetectBlock3UseCase:
                 stock.date,
                 prev_block2,
                 condition.min_candles_after_block2,
+                all_stocks
+            ):
+                return False
+
+        # 4. 최대 캔들 수 검사 (선택적)
+        if condition.max_candles_after_block2 is not None:
+            if not self.checker.check_max_candles(
+                stock.date,
+                prev_block2,
+                condition.max_candles_after_block2,
                 all_stocks
             ):
                 return False

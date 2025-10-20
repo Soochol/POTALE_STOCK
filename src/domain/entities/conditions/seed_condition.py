@@ -33,6 +33,7 @@ class SeedCondition:
     block2_volume_ratio: float = 15.0  # Block1 최고 거래량 대비 (%)
     block2_low_price_margin: float = 10.0  # Block1 최고가 저가 마진 (%)
     block2_min_candles_after_block1: int = 4  # Block1 시작 후 최소 캔들 수
+    block2_max_candles_after_block1: Optional[int] = None  # Block1 시작 후 최대 캔들 수
 
     # Block2 전용 파라미터 (Optional, 없으면 Block1 값 사용)
     block2_entry_surge_rate: Optional[float] = None
@@ -52,6 +53,7 @@ class SeedCondition:
     block3_volume_ratio: float = 15.0  # Block2 최고 거래량 대비 (%)
     block3_low_price_margin: float = 10.0  # Block2 최고가 저가 마진 (%)
     block3_min_candles_after_block2: int = 4  # Block2 시작 후 최소 캔들 수
+    block3_max_candles_after_block2: Optional[int] = None  # Block2 시작 후 최대 캔들 수
 
     # Block3 전용 파라미터 (Optional, 없으면 Block1 값 사용)
     block3_entry_surge_rate: Optional[float] = None
@@ -71,6 +73,7 @@ class SeedCondition:
     block4_volume_ratio: float = 20.0  # Block3 최고 거래량 대비 (%)
     block4_low_price_margin: float = 10.0  # Block3 최고가 저가 마진 (%)
     block4_min_candles_after_block3: int = 4  # Block3 시작 후 최소 캔들 수
+    block4_max_candles_after_block3: Optional[int] = None  # Block3 시작 후 최대 캔들 수
 
     # Block4 전용 파라미터 (Optional, 없으면 Block1 값 사용)
     block4_entry_surge_rate: Optional[float] = None

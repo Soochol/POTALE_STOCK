@@ -30,19 +30,17 @@ for stock in stocks:  # 메인 루프
 from src.domain.entities import Stock
 from typing import List, Tuple, Optional
 from datetime import date, timedelta
-from src.domain.entities.block1_condition import Block1Condition
-from src.domain.entities.block2_condition import Block2Condition
-from src.domain.entities.block3_condition import Block3Condition
-from src.domain.entities.block1_detection import Block1Detection
-from src.domain.entities.block2_detection import Block2Detection
-from src.domain.entities.block3_detection import Block3Detection
+from src.domain.entities.conditions.block_conditions import Block1Condition, Block2Condition, Block3Condition
+from src.domain.entities.detections.block1_detection import Block1Detection
+from src.domain.entities.detections.block2_detection import Block2Detection
+from src.domain.entities.detections.block3_detection import Block3Detection
 from src.application.services.indicators.block1_indicator_calculator import Block1IndicatorCalculator
 from src.application.services.checkers.block1_checker import Block1Checker
 from src.application.services.checkers.block2_checker import Block2Checker
 from src.application.services.checkers.block3_checker import Block3Checker
-from src.infrastructure.repositories.block1_repository import Block1Repository
-from src.infrastructure.repositories.block2_repository import Block2Repository
-from src.infrastructure.repositories.block3_repository import Block3Repository
+from src.infrastructure.repositories.detection.block1_repository import Block1Repository
+from src.infrastructure.repositories.detection.block2_repository import Block2Repository
+from src.infrastructure.repositories.detection.block3_repository import Block3Repository
 
 class DetectBlocksIntegratedUseCase:
     """

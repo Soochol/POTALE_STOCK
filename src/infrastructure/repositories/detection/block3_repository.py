@@ -1,7 +1,8 @@
 """
 Block3 Repository - 블록3 탐지 결과 저장/조회 Repository
 """
-from typing import Optional
+import uuid
+from typing import Optional, List
 from datetime import date
 from ....domain.entities import Block3Detection as Block3DetectionEntity
 from ...database.models import Block3Detection as Block3DetectionModel
@@ -96,7 +97,9 @@ class Block3Repository(
             peak_volume=entity.peak_volume,
             duration_days=entity.duration_days,
             exit_reason=entity.exit_reason,
-            condition_name=entity.condition_name
+            condition_name=entity.condition_name,
+            pattern_id=entity.pattern_id,
+            detection_type=entity.detection_type
         )
 
     def _model_to_entity(self, model: Block3DetectionModel) -> Block3DetectionEntity:
@@ -109,17 +112,42 @@ class Block3Repository(
             status=model.status,
             entry_close=model.entry_close,
             entry_rate=model.entry_rate,
-            prev_block2_id=model.prev_block2_id,
-            prev_block2_peak_price=model.prev_block2_peak_price,
-            prev_block2_peak_volume=model.prev_block2_peak_volume,
+            prev_block_id=model.prev_block2_id,
+            prev_block_peak_price=model.prev_block2_peak_price,
+            prev_block_peak_volume=model.prev_block2_peak_volume,
             peak_price=model.peak_price,
             peak_date=model.peak_date,
             peak_gain_ratio=model.peak_gain_ratio,
             peak_volume=model.peak_volume,
             duration_days=model.duration_days,
             exit_reason=model.exit_reason,
+            pattern_id=model.pattern_id,
+            detection_type=model.detection_type,
             id=model.id
         )
         # block3_id 추가
         entity.block3_id = model.block3_id
         return entity
+
+    def find_by_pattern_and_condition(
+        self,
+        pattern_id: int,
+        condition_name: str
+    ) -> List[Block3DetectionEntity]:
+        """
+        특정 패턴의 특정 조건(seed/redetection) Block3 조회
+
+        Args:
+            pattern_id: 패턴 ID
+            condition_name: 조건 이름 ('seed' 또는 'redetection')
+
+        Returns:
+            Block3Detection 엔티티 리스트
+        """
+        with self.db.session_scope() as session:
+            models = session.query(Block3DetectionModel).filter(
+                Block3DetectionModel.pattern_id == pattern_id,
+                Block3DetectionModel.condition_name == condition_name
+            ).order_by(Block3DetectionModel.started_at).all()
+
+            return [self._model_to_entity(model) for model in models]

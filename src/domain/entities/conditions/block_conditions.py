@@ -79,6 +79,7 @@ class Block2Condition:
     block2_volume_ratio: Optional[float] = None  # 블록1 최고 거래량의 N% (단위: %)
     block2_low_price_margin: Optional[float] = None  # 저가 마진 (단위: %)
     block2_min_candles_after_block1: Optional[int] = None  # 블록1 시작 후 최소 캔들 수
+    block2_max_candles_after_block1: Optional[int] = None  # 블록1 시작 후 최대 캔들 수
 
     def validate(self) -> bool:
         """조건 유효성 검사"""
@@ -134,11 +135,13 @@ class Block3Condition:
     block2_volume_ratio: Optional[float] = None
     block2_low_price_margin: Optional[float] = None
     block2_min_candles_after_block1: Optional[int] = None
+    block2_max_candles_after_block1: Optional[int] = None
 
     # ===== Block3 전용 조건 =====
     block3_volume_ratio: Optional[float] = None
     block3_low_price_margin: Optional[float] = None
     block3_min_candles_after_block2: Optional[int] = None
+    block3_max_candles_after_block2: Optional[int] = None
 
     def validate(self) -> bool:
         """조건 유효성 검사"""
@@ -201,16 +204,19 @@ class Block4Condition:
     block2_volume_ratio: Optional[float] = None
     block2_low_price_margin: Optional[float] = None
     block2_min_candles_after_block1: Optional[int] = None
+    block2_max_candles_after_block1: Optional[int] = None
 
     # ===== Block3 조건 (독립적인 값) =====
     block3_volume_ratio: Optional[float] = None
     block3_low_price_margin: Optional[float] = None
     block3_min_candles_after_block2: Optional[int] = None
+    block3_max_candles_after_block2: Optional[int] = None
 
     # ===== Block4 전용 조건 =====
     block4_volume_ratio: Optional[float] = None
     block4_low_price_margin: Optional[float] = None
     block4_min_candles_after_block3: Optional[int] = None
+    block4_max_candles_after_block3: Optional[int] = None
 
     def validate(self) -> bool:
         """조건 유효성 검사"""

@@ -1,7 +1,7 @@
 """
 Block1 Repository - 블록1 탐지 결과 저장/조회 Repository
 """
-from typing import Optional
+from typing import Optional, List
 from datetime import date
 from ....domain.entities import Block1Detection as Block1DetectionEntity
 from ...database.models import Block1Detection as Block1DetectionModel
@@ -44,7 +44,9 @@ class Block1Repository(BaseDetectionRepository[Block1DetectionEntity, Block1Dete
             peak_date=entity.peak_date,
             exit_reason=entity.exit_reason,
             exit_price=entity.exit_price,
-            condition_name=entity.condition_name
+            condition_name=entity.condition_name,
+            pattern_id=entity.pattern_id,
+            detection_type=entity.detection_type
         )
 
     def _model_to_entity(self, model: Block1DetectionModel) -> Block1DetectionEntity:
@@ -69,5 +71,30 @@ class Block1Repository(BaseDetectionRepository[Block1DetectionEntity, Block1Dete
             exit_reason=model.exit_reason,
             exit_price=model.exit_price,
             condition_name=model.condition_name,
+            pattern_id=model.pattern_id,
+            detection_type=model.detection_type,
             created_at=model.created_at.date() if model.created_at else None
         )
+
+    def find_by_pattern_and_condition(
+        self,
+        pattern_id: int,
+        condition_name: str
+    ) -> List[Block1DetectionEntity]:
+        """
+        특정 패턴의 특정 조건(seed/redetection) Block1 조회
+
+        Args:
+            pattern_id: 패턴 ID
+            condition_name: 조건 이름 ('seed' 또는 'redetection')
+
+        Returns:
+            Block1Detection 엔티티 리스트
+        """
+        with self.db.session_scope() as session:
+            models = session.query(Block1DetectionModel).filter(
+                Block1DetectionModel.pattern_id == pattern_id,
+                Block1DetectionModel.condition_name == condition_name
+            ).order_by(Block1DetectionModel.started_at).all()
+
+            return [self._model_to_entity(model) for model in models]

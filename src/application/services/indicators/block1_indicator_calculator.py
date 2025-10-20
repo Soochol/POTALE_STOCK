@@ -59,8 +59,14 @@ class Block1IndicatorCalculator:
         df = self._calculate_rate(df)
         df = self._calculate_deviation(df, ma_period)
         df = self._calculate_trading_value(df)
-        df = self._calculate_volume_high(df, months=volume_months)
-        df = self._calculate_new_high(df, months=new_high_months)
+
+        # volume_months가 None이 아닐 때만 계산
+        if volume_months is not None:
+            df = self._calculate_volume_high(df, months=volume_months)
+
+        # new_high_months가 None이 아닐 때만 계산
+        if new_high_months is not None:
+            df = self._calculate_new_high(df, months=new_high_months)
 
         # 삼선전환도 계산
         tlb_bars = self.tlb_calculator.calculate(

@@ -10,10 +10,10 @@ from datetime import timedelta
 from src.application.services.detectors.pattern_seed_detector import PatternSeedDetector
 from src.application.services.detectors.pattern_redetector import PatternRedetector
 from src.application.services.indicators.block1_indicator_calculator import Block1IndicatorCalculator
-from src.infrastructure.repositories.block_pattern_repository import BlockPatternRepository
-from src.infrastructure.repositories.block1_repository import Block1Repository
-from src.infrastructure.repositories.block2_repository import Block2Repository
-from src.infrastructure.repositories.block3_repository import Block3Repository
+from src.infrastructure.repositories.pattern.block_pattern_repository import BlockPatternRepository
+from src.infrastructure.repositories.detection.block1_repository import Block1Repository
+from src.infrastructure.repositories.detection.block2_repository import Block2Repository
+from src.infrastructure.repositories.detection.block3_repository import Block3Repository
 from src.infrastructure.database.connection import DatabaseConnection
 
 class DetectPatternsUseCase:
@@ -208,13 +208,12 @@ class DetectPatternsUseCase:
                 stocks=stocks_with_indicators,
                 seed_block1=seed_block1,
                 condition=redetection_condition,
+                pattern_id=pattern_id,
                 redetection_start=redetection_start,
                 redetection_end=redetection_end
             )
 
             for block1 in block1_redetections:
-                block1.pattern_id = pattern_id
-                block1.detection_type = "redetection"
                 self.block1_repo.save(block1)
 
             print(f"      Block1 재탐지: {len(block1_redetections)}개")
@@ -226,13 +225,12 @@ class DetectPatternsUseCase:
                 seed_block1=seed_block1,
                 seed_block2=seed_block2,
                 condition=redetection_condition,
+                pattern_id=pattern_id,
                 redetection_start=redetection_start,
                 redetection_end=redetection_end
             )
 
             for block2 in block2_redetections:
-                block2.pattern_id = pattern_id
-                block2.detection_type = "redetection"
                 self.block2_repo.save(block2)
 
             print(f"      Block2 재탐지: {len(block2_redetections)}개")
@@ -244,13 +242,12 @@ class DetectPatternsUseCase:
                 seed_block2=seed_block2,
                 seed_block3=seed_block3,
                 condition=redetection_condition,
+                pattern_id=pattern_id,
                 redetection_start=redetection_start,
                 redetection_end=redetection_end
             )
 
             for block3 in block3_redetections:
-                block3.pattern_id = pattern_id
-                block3.detection_type = "redetection"
                 self.block3_repo.save(block3)
 
             print(f"      Block3 재탐지: {len(block3_redetections)}개")
