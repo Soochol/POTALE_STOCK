@@ -4,7 +4,7 @@ Stock Repository Interface - 주식 데이터 저장소 인터페이스
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from datetime import date
-from ..entities.stock import Stock
+from ..entities import Stock
 
 
 class IStockRepository(ABC):

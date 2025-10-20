@@ -3,14 +3,17 @@ Block2 Repository - 블록2 탐지 결과 저장/조회 Repository
 """
 from typing import Optional
 from datetime import date
-from ...domain.entities.block2_detection import Block2Detection as Block2DetectionEntity
-from ..database.models import Block2Detection as Block2DetectionModel
-from ..database.connection import DatabaseConnection
-from .common import BaseDetectionRepository
-import uuid
+from ....domain.entities import Block2Detection as Block2DetectionEntity
+from ...database.models import Block2Detection as Block2DetectionModel
+from ...database.connection import DatabaseConnection
+from ..common import BaseDetectionRepository, UUIDMixin, DurationCalculatorMixin
 
 
-class Block2Repository(BaseDetectionRepository[Block2DetectionEntity, Block2DetectionModel]):
+class Block2Repository(
+    BaseDetectionRepository[Block2DetectionEntity, Block2DetectionModel],
+    UUIDMixin,
+    DurationCalculatorMixin
+):
     """블록2 탐지 결과 Repository"""
 
     def __init__(self, db_connection: DatabaseConnection):
@@ -26,15 +29,13 @@ class Block2Repository(BaseDetectionRepository[Block2DetectionEntity, Block2Dete
         Returns:
             저장된 블록2 탐지 결과
         """
-        # block2_id 자동 생성 (없는 경우)
-        if not hasattr(detection, 'block2_id') or not detection.block2_id:
-            detection.block2_id = str(uuid.uuid4())
-
+        # block2_id 자동 생성 (Mixin 사용)
+        self.ensure_block_id(detection, 'block2_id')
         return super().save(detection)
 
     def _get_block_id(self, entity: Block2DetectionEntity) -> str:
         """엔티티에서 block2_id 추출"""
-        return getattr(entity, 'block2_id', str(uuid.uuid4()))
+        return getattr(entity, 'block2_id', self.generate_uuid())
 
     def _get_model_block_id_field(self):
         """모델의 block2_id 필드 반환"""
@@ -87,15 +88,17 @@ class Block2Repository(BaseDetectionRepository[Block2DetectionEntity, Block2Dete
         Returns:
             업데이트 성공 여부
         """
-        # duration_days 계산 (ended_at 있으면)
+        # duration_days 계산 (Mixin 사용)
         duration_days = None
         if ended_at:
             with self.db.session_scope() as session:
-                model = session.query(Block2DetectionModel).filter(
-                    Block2DetectionModel.block2_id == block2_id
-                ).first()
-                if model and model.started_at:
-                    duration_days = (ended_at - model.started_at).days + 1
+                duration_days = self.calculate_duration_days(
+                    session,
+                    Block2DetectionModel,
+                    Block2DetectionModel.block2_id,
+                    block2_id,
+                    ended_at
+                )
 
         return super().update_status(
             block2_id, status, ended_at, exit_reason,

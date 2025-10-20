@@ -3,7 +3,7 @@ Condition Repository Interface - 조건 저장소 인터페이스
 """
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from ..entities.condition import Condition
+from ..entities import Condition
 
 
 class IConditionRepository(ABC):

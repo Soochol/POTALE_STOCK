@@ -1,19 +1,18 @@
 """
 SQLite Stock Repository - SQLite를 사용한 주식 데이터 저장소 구현
 """
+from src.domain.entities import Stock
 from datetime import date
 from typing import List, Optional
 from sqlalchemy import and_, func
 from sqlalchemy.dialects.sqlite import insert
 from rich.console import Console
 
-from ...domain.entities.stock import Stock
-from ...domain.repositories.stock_repository import IStockRepository
-from ..database.connection import DatabaseConnection, get_db_session
-from ..database.models import StockInfo, StockPrice, MarketData
+from ....domain.repositories.stock_repository import IStockRepository
+from ...database.connection import DatabaseConnection, get_db_session
+from ...database.models import StockInfo, StockPrice, MarketData
 
 console = Console()
-
 
 class SqliteStockRepository(IStockRepository):
     """SQLite를 사용한 주식 데이터 저장소"""

@@ -3,10 +3,10 @@ Block1 Repository - 블록1 탐지 결과 저장/조회 Repository
 """
 from typing import Optional
 from datetime import date
-from ...domain.entities.block1_detection import Block1Detection as Block1DetectionEntity
-from ..database.models import Block1Detection as Block1DetectionModel
-from ..database.connection import DatabaseConnection
-from .common import BaseDetectionRepository
+from ....domain.entities import Block1Detection as Block1DetectionEntity
+from ...database.models import Block1Detection as Block1DetectionModel
+from ...database.connection import DatabaseConnection
+from ..common import BaseDetectionRepository
 
 
 class Block1Repository(BaseDetectionRepository[Block1DetectionEntity, Block1DetectionModel]):

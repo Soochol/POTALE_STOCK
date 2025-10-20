@@ -3,12 +3,11 @@ Block Pattern Repository
 
 블록 패턴 저장/조회
 """
+from src.domain.entities import BlockPattern
 from typing import Optional, List
 from datetime import date, timedelta
-from src.domain.entities.block_pattern import BlockPattern
 from src.infrastructure.database.connection import DatabaseConnection
 from src.infrastructure.database.models import BlockPattern as BlockPatternModel
-
 
 class BlockPatternRepository:
     """블록 패턴 Repository"""

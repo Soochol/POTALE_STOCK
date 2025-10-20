@@ -1,45 +1,79 @@
 """
 Infrastructure Repositories
 데이터 저장/조회를 위한 Repository 클래스들
+
+새로운 구조:
+- detection/: 블록 탐지 결과 Repository (Block1/2/3/4)
+- preset/: 조건 프리셋 Repository (Seed/Redetection)
+- pattern/: 블록 패턴 Repository
+- stock/: 주식 데이터 Repository
+- condition/: 조건 Repository (Legacy)
+- common/: 공통 베이스 클래스 및 유틸리티
 """
-# Common utilities
+
+# Common utilities (직접 export)
 from .common import (
     BaseDetectionRepository,
     BaseConditionPresetRepository,
+    UUIDMixin,
+    DurationCalculatorMixin,
+    ConditionPresetMapperMixin,
+    DetectionQueryBuilder,
+    with_session,
     bool_to_int,
     int_to_bool,
 )
 
-# Stock & Condition repositories
-from .sqlite_stock_repository import SqliteStockRepository
-from .yaml_condition_repository import YamlConditionRepository
+# Detection Repositories (새 구조에서 import, backward compatibility 유지)
+from .detection import (
+    Block1Repository,
+    Block2Repository,
+    Block3Repository,
+    Block4Repository,
+)
 
-# Block Detection repositories
-from .block1_repository import Block1Repository
-from .block2_repository import Block2Repository
-from .block3_repository import Block3Repository
+# Preset Repositories
+from .preset import (
+    SeedConditionPresetRepository,
+    RedetectionConditionPresetRepository,
+)
 
-# Condition Preset repositories (통합된 Seed/Redetection 방식 사용)
-from .seed_condition_preset_repository import SeedConditionPresetRepository
-from .redetection_condition_preset_repository import RedetectionConditionPresetRepository
-from .block_pattern_repository import BlockPatternRepository
+# Pattern Repositories
+from .pattern import BlockPatternRepository
+
+# Stock Repositories
+from .stock import SqliteStockRepository
+
+# Condition Repositories (Legacy)
+from .condition import YamlConditionRepository
 
 __all__ = [
-    # Common
+    # Common - Base Classes
     'BaseDetectionRepository',
     'BaseConditionPresetRepository',
+    # Common - Mixins
+    'UUIDMixin',
+    'DurationCalculatorMixin',
+    'ConditionPresetMapperMixin',
+    # Common - Query Builders
+    'DetectionQueryBuilder',
+    # Common - Decorators
+    'with_session',
+    # Common - Converters
     'bool_to_int',
     'int_to_bool',
-    # Stock & Condition
-    'SqliteStockRepository',
-    'YamlConditionRepository',
-    # Block Detection
+    # Detection
     'Block1Repository',
     'Block2Repository',
     'Block3Repository',
-    # Condition Preset (통합)
+    'Block4Repository',
+    # Preset
     'SeedConditionPresetRepository',
     'RedetectionConditionPresetRepository',
     # Pattern
     'BlockPatternRepository',
+    # Stock
+    'SqliteStockRepository',
+    # Condition (Legacy)
+    'YamlConditionRepository',
 ]

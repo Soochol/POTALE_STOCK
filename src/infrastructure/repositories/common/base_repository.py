@@ -3,9 +3,10 @@ Base Repository Classes
 공통 Repository 베이스 클래스
 """
 from abc import ABC, abstractmethod
-from typing import TypeVar, Generic, Optional, List, Type
+from typing import TypeVar, Generic, Optional, List, Type, Callable, Any
 from datetime import date, datetime
 from sqlalchemy.orm import Session
+from functools import wraps
 
 from ...database.connection import DatabaseConnection
 
@@ -13,6 +14,32 @@ from ...database.connection import DatabaseConnection
 # Type Variables
 EntityType = TypeVar('EntityType')
 ModelType = TypeVar('ModelType')
+
+
+def with_session(func: Callable) -> Callable:
+    """
+    SQLAlchemy Session을 자동으로 관리하는 Decorator
+
+    데코레이팅된 메서드의 첫 번째 인자로 session을 주입합니다.
+    메서드는 self 다음에 session 파라미터를 받아야 합니다.
+
+    Example:
+        >>> @with_session
+        ... def find_by_id(self, session: Session, block_id: str):
+        ...     return session.query(self.model_class).filter(...).first()
+
+        >>> # 사용 시 session 파라미터는 생략
+        >>> result = repo.find_by_id("block_123")
+
+    Note:
+        현재 구현은 참고용이며, 실제 적용 시 기존 코드 수정이 필요합니다.
+        점진적 마이그레이션을 위해 선택적으로 사용하세요.
+    """
+    @wraps(func)
+    def wrapper(self, *args, **kwargs) -> Any:
+        with self.db.session_scope() as session:
+            return func(self, session, *args, **kwargs)
+    return wrapper
 
 
 class BaseDetectionRepository(ABC, Generic[EntityType, ModelType]):
@@ -42,7 +69,15 @@ class BaseDetectionRepository(ABC, Generic[EntityType, ModelType]):
 
     @abstractmethod
     def _get_model_block_id_field(self):
-        """모델의 block_id 필드 반환 (Block1DetectionModel.block1_id 등)"""
+        """
+        모델의 block_id 필드 반환 (Block1DetectionModel.block1_id 등)
+
+        Returns:
+            SQLAlchemy InstrumentedAttribute: 모델의 block_id 필드
+
+        Example:
+            >>> return Block1DetectionModel.block1_id
+        """
         pass
 
     def save(self, detection: EntityType) -> EntityType:
@@ -246,7 +281,7 @@ class BaseDetectionRepository(ABC, Generic[EntityType, ModelType]):
 class BaseConditionPresetRepository(ABC):
     """
     조건 프리셋 Repository 베이스 클래스
-    Block1/2/3 Condition Preset Repository의 공통 로직
+    Block1/2/3/4 Condition Preset Repository의 공통 로직
     """
 
     def __init__(self, db_connection: DatabaseConnection, model_class: Type):
@@ -254,14 +289,106 @@ class BaseConditionPresetRepository(ABC):
         self.model_class = model_class
 
     @abstractmethod
-    def _condition_to_dict(self, condition) -> dict:
-        """조건 엔티티를 딕셔너리로 변환 (서브클래스에서 구현)"""
+    def _build_model_fields(self, condition, name: str, description: Optional[str]) -> dict:
+        """
+        Condition 엔티티를 DB 모델 필드 딕셔너리로 변환 (서브클래스에서 구현)
+
+        Args:
+            condition: Condition 엔티티 (SeedCondition/RedetectionCondition)
+            name: 프리셋 이름
+            description: 프리셋 설명
+
+        Returns:
+            dict: 모델 생성에 필요한 필드 딕셔너리
+        """
         pass
 
     @abstractmethod
-    def _dict_to_condition(self, data: dict):
-        """딕셔너리를 조건 엔티티로 변환 (서브클래스에서 구현)"""
+    def _build_entity_from_preset(self, preset):
+        """
+        DB Preset 모델을 Condition 엔티티로 변환 (서브클래스에서 구현)
+
+        Args:
+            preset: DB Preset 모델 (SeedConditionPreset/RedetectionConditionPreset)
+
+        Returns:
+            Condition 엔티티 (SeedCondition/RedetectionCondition)
+        """
         pass
+
+    def save(self, name: str, condition, description: Optional[str] = None) -> str:
+        """
+        조건 프리셋 저장 (공통 로직)
+
+        Args:
+            name: 프리셋 이름
+            condition: Condition 엔티티
+            description: 프리셋 설명
+
+        Returns:
+            str: 저장된 프리셋 이름
+
+        Example:
+            >>> repo.save("preset1", seed_condition, "Test preset")
+            'preset1'
+        """
+        with self.db.session_scope() as session:
+            # 기존 프리셋 확인
+            existing = session.query(self.model_class).filter_by(name=name).first()
+
+            # 필드 딕셔너리 빌드
+            fields = self._build_model_fields(condition, name, description)
+
+            if existing:
+                # 업데이트
+                for key, value in fields.items():
+                    if key != 'id' and hasattr(existing, key):
+                        setattr(existing, key, value)
+                existing.updated_at = datetime.now()
+            else:
+                # 신규 생성
+                preset = self.model_class(**fields)
+                session.add(preset)
+
+            session.commit()
+            return name
+
+    def load(self, name: str) -> Optional[object]:
+        """
+        조건 프리셋 로드 (공통 로직)
+
+        Args:
+            name: 프리셋 이름
+
+        Returns:
+            Condition 엔티티 또는 None
+
+        Example:
+            >>> condition = repo.load("preset1")
+            >>> print(condition.base.block1_entry_surge_rate)  # 20.0
+        """
+        with self.db.session_scope() as session:
+            preset = session.query(self.model_class).filter_by(name=name).first()
+
+            if not preset:
+                return None
+
+            return self._build_entity_from_preset(preset)
+
+    def list_all(self) -> List[str]:
+        """
+        모든 활성 프리셋 이름 조회
+
+        Returns:
+            List[str]: 프리셋 이름 리스트
+
+        Example:
+            >>> names = repo.list_all()
+            >>> print(names)  # ['preset1', 'preset2']
+        """
+        with self.db.session_scope() as session:
+            presets = session.query(self.model_class).filter_by(is_active=1).all()
+            return [p.name for p in presets]
 
     def exists(self, name: str) -> bool:
         """
@@ -271,7 +398,7 @@ class BaseConditionPresetRepository(ABC):
             name: 프리셋 이름
 
         Returns:
-            존재 여부
+            bool: 존재 여부
         """
         with self.db.session_scope() as session:
             count = session.query(self.model_class).filter_by(
@@ -288,7 +415,7 @@ class BaseConditionPresetRepository(ABC):
             name: 프리셋 이름
 
         Returns:
-            삭제 성공 여부
+            bool: 삭제 성공 여부
         """
         with self.db.session_scope() as session:
             preset = session.query(self.model_class).filter_by(name=name).first()
@@ -301,41 +428,3 @@ class BaseConditionPresetRepository(ABC):
 
             session.commit()
             return True
-
-    def list_all(self, active_only: bool = True) -> List[dict]:
-        """
-        모든 프리셋 조회
-
-        Args:
-            active_only: True이면 활성 프리셋만, False면 모두
-
-        Returns:
-            프리셋 정보 리스트
-        """
-        with self.db.session_scope() as session:
-            query = session.query(self.model_class)
-
-            if active_only:
-                query = query.filter_by(is_active=1)
-
-            presets = query.order_by(self.model_class.name).all()
-
-            return [
-                {
-                    'id': p.id,
-                    'name': p.name,
-                    'description': p.description,
-                    'is_active': p.is_active,
-                    'created_at': p.created_at,
-                    'updated_at': p.updated_at,
-                    **self._preset_to_dict(p)
-                }
-                for p in presets
-            ]
-
-    def _preset_to_dict(self, preset) -> dict:
-        """
-        Preset 모델을 딕셔너리로 변환 (list_all에서 사용)
-        서브클래스에서 오버라이드 가능
-        """
-        return {}
