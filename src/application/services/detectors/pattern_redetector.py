@@ -189,11 +189,9 @@ class PatternRedetector:
         # Block2 전용 파라미터가 있으면 사용, 없으면 Block1 값으로 fallback
         block2_condition = Block2Condition(
             base=self._create_base_for_block(condition, 2),
-            # Block2 추가 조건 (4개 필드)
+            # Block2 추가 조건 (2개 필드)
             block2_volume_ratio=condition.block2_volume_ratio,
-            block2_low_price_margin=condition.block2_low_price_margin,
-            block2_min_candles_after_block1=condition.block2_min_candles_after_block1,
-            block2_max_candles_after_block1=condition.block2_max_candles_after_block1
+            block2_low_price_margin=condition.block2_low_price_margin
         )
 
         # 가격 범위 계산 (Block2 Seed 기준)
@@ -231,7 +229,7 @@ class PatternRedetector:
                 condition=block2_condition,
                 stock=stock,
                 all_stocks=stocks,
-                prev_block1=seed_block1
+                prev_seed_block1=seed_block1
             ):
                 # Block2 재탐지 생성
                 indicators = stock.indicators if hasattr(stock, 'indicators') else {}
@@ -258,6 +256,7 @@ class PatternRedetector:
     def redetect_block3(
         self,
         stocks: List[Stock],
+        seed_block1: Block1Detection,
         seed_block2: Block2Detection,
         seed_block3: Block3Detection,
         condition: RedetectionCondition,
@@ -270,6 +269,7 @@ class PatternRedetector:
 
         Args:
             stocks: 주식 데이터 리스트
+            seed_block1: Block1 Seed (Block2 조건 체크용 - volume_ratio)
             seed_block2: Block2 Seed (저가 마진 체크용)
             seed_block3: Block3 Seed (가격 범위 기준)
             condition: 재탐지 조건
@@ -285,16 +285,12 @@ class PatternRedetector:
         # Block3 전용 파라미터가 있으면 사용, 없으면 Block1 값으로 fallback
         block3_condition = Block3Condition(
             base=self._create_base_for_block(condition, 3),
-            # Block2 추가 조건 (4개 필드)
+            # Block2 추가 조건 (2개 필드)
             block2_volume_ratio=condition.block2_volume_ratio,
             block2_low_price_margin=condition.block2_low_price_margin,
-            block2_min_candles_after_block1=condition.block2_min_candles_after_block1,
-            block2_max_candles_after_block1=condition.block2_max_candles_after_block1,
-            # Block3 추가 조건 (4개 필드)
+            # Block3 추가 조건 (2개 필드)
             block3_volume_ratio=condition.block3_volume_ratio,
-            block3_low_price_margin=condition.block3_low_price_margin,
-            block3_min_candles_after_block2=condition.block3_min_candles_after_block2,
-            block3_max_candles_after_block2=condition.block3_max_candles_after_block2
+            block3_low_price_margin=condition.block3_low_price_margin
         )
 
         # 가격 범위 계산 (Block3 Seed 기준)
@@ -332,8 +328,8 @@ class PatternRedetector:
                 condition=block3_condition,
                 stock=stock,
                 all_stocks=stocks,
-                prev_block1=None,
-                prev_block2=seed_block2
+                prev_seed_block1=seed_block1,  # Block2 조건용 (volume_ratio 체크)
+                prev_seed_block2=seed_block2   # Block3 조건용 (저가 마진 체크)
             ):
                 # Block3 재탐지 생성
                 indicators = stock.indicators if hasattr(stock, 'indicators') else {}
@@ -360,6 +356,8 @@ class PatternRedetector:
     def redetect_block4(
         self,
         stocks: List[Stock],
+        seed_block1: Block1Detection,
+        seed_block2: Block2Detection,
         seed_block3: Block3Detection,
         seed_block4: Block4Detection,
         condition: RedetectionCondition,
@@ -372,6 +370,8 @@ class PatternRedetector:
 
         Args:
             stocks: 주식 데이터 리스트
+            seed_block1: Block1 Seed (Block2 조건 체크용 - volume_ratio)
+            seed_block2: Block2 Seed (Block3 조건 체크용 - volume_ratio)
             seed_block3: Block3 Seed (저가 마진 체크용)
             seed_block4: Block4 Seed (가격 범위 기준)
             condition: 재탐지 조건
@@ -388,21 +388,15 @@ class PatternRedetector:
         # Block4 전용 파라미터가 있으면 사용, 없으면 Block1 값으로 fallback
         block4_condition = Block4Condition(
             base=self._create_base_for_block(condition, 4),
-            # Block2 추가 조건 (4개 필드)
+            # Block2 추가 조건 (2개 필드)
             block2_volume_ratio=condition.block2_volume_ratio,
             block2_low_price_margin=condition.block2_low_price_margin,
-            block2_min_candles_after_block1=condition.block2_min_candles_after_block1,
-            block2_max_candles_after_block1=condition.block2_max_candles_after_block1,
-            # Block3 추가 조건 (4개 필드)
+            # Block3 추가 조건 (2개 필드)
             block3_volume_ratio=condition.block3_volume_ratio,
             block3_low_price_margin=condition.block3_low_price_margin,
-            block3_min_candles_after_block2=condition.block3_min_candles_after_block2,
-            block3_max_candles_after_block2=condition.block3_max_candles_after_block2,
-            # Block4 추가 조건 (4개 필드)
+            # Block4 추가 조건 (2개 필드)
             block4_volume_ratio=condition.block4_volume_ratio,
-            block4_low_price_margin=condition.block4_low_price_margin,
-            block4_min_candles_after_block3=condition.block4_min_candles_after_block3,
-            block4_max_candles_after_block3=condition.block4_max_candles_after_block3
+            block4_low_price_margin=condition.block4_low_price_margin
         )
 
         # 가격 범위 계산 (Block4 Seed 기준)
@@ -440,9 +434,9 @@ class PatternRedetector:
                 condition=block4_condition,
                 stock=stock,
                 all_stocks=stocks,
-                prev_block1=None,  # Block4Checker가 필요로 하지 않음
-                prev_block2=None,  # Block4Checker가 필요로 하지 않음
-                prev_block3=seed_block3
+                prev_seed_block1=seed_block1,  # Block2 조건용 (volume_ratio 체크)
+                prev_seed_block2=seed_block2,  # Block3 조건용 (volume_ratio 체크)
+                prev_seed_block3=seed_block3   # Block4 조건용 (저가 마진 체크)
             ):
                 # Block4 재탐지 생성
                 indicators = stock.indicators if hasattr(stock, 'indicators') else {}

@@ -139,20 +139,14 @@ class RedetectionConditionPreset(Base):
     # Block2 추가 조건
     block2_volume_ratio = Column(Float, comment='Block1 최고 거래량 대비 비율 (%)')
     block2_low_price_margin = Column(Float, comment='Block1 최고가 저가 마진 (%)')
-    block2_min_candles_after_block1 = Column(Integer, comment='Block1 시작 후 최소 캔들 수')
-    block2_max_candles_after_block1 = Column(Integer, nullable=True, comment='Block1 시작 후 최대 캔들 수')
 
     # Block3 추가 조건
     block3_volume_ratio = Column(Float, comment='Block2 최고 거래량 대비 비율 (%)')
     block3_low_price_margin = Column(Float, comment='Block2 최고가 저가 마진 (%)')
-    block3_min_candles_after_block2 = Column(Integer, comment='Block2 시작 후 최소 캔들 수')
-    block3_max_candles_after_block2 = Column(Integer, nullable=True, comment='Block2 시작 후 최대 캔들 수')
 
     # Block4 추가 조건
     block4_volume_ratio = Column(Float, comment='Block3 최고 거래량 대비 비율 (%)')
     block4_low_price_margin = Column(Float, comment='Block3 최고가 저가 마진 (%)')
-    block4_min_candles_after_block3 = Column(Integer, comment='Block3 시작 후 최소 캔들 수')
-    block4_max_candles_after_block3 = Column(Integer, nullable=True, comment='Block3 시작 후 최대 캔들 수')
 
     # Block2 전용 파라미터 (Optional)
     block2_entry_surge_rate = Column(Float, comment='Block2 전용 진입 급등률 (%)')

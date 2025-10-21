@@ -48,16 +48,10 @@ class RedetectionConditionPresetRepository(BaseConditionPresetRepository, Condit
         fields.update({
             'block2_volume_ratio': condition.block2_volume_ratio,
             'block2_low_price_margin': condition.block2_low_price_margin,
-            'block2_min_candles_after_block1': condition.block2_min_candles_after_block1,
-            'block2_max_candles_after_block1': condition.block2_max_candles_after_block1,
             'block3_volume_ratio': condition.block3_volume_ratio,
             'block3_low_price_margin': condition.block3_low_price_margin,
-            'block3_min_candles_after_block2': condition.block3_min_candles_after_block2,
-            'block3_max_candles_after_block2': condition.block3_max_candles_after_block2,
             'block4_volume_ratio': condition.block4_volume_ratio,
             'block4_low_price_margin': condition.block4_low_price_margin,
-            'block4_min_candles_after_block3': condition.block4_min_candles_after_block3,
-            'block4_max_candles_after_block3': condition.block4_max_candles_after_block3,
         })
 
         # Block2/3/4 전용 파라미터 (Optional)
