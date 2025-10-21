@@ -3,7 +3,7 @@ Block Detection Models
 블록1/2/3/4 탐지 결과 모델
 """
 from datetime import datetime
-from sqlalchemy import Column, Integer, BigInteger, Float, String, Date, DateTime, Index, ForeignKey
+from sqlalchemy import Column, Integer, BigInteger, Float, String, Date, DateTime, Index, ForeignKey, CheckConstraint
 from sqlalchemy.orm import relationship
 
 from .base import Base
@@ -60,14 +60,27 @@ class Block1Detection(Base):
     stock_info = relationship("StockInfo")
     pattern = relationship("BlockPattern", back_populates="block1_detections", foreign_keys=[pattern_id])
 
-    # 인덱스
+    # 인덱스 및 제약조건
     __table_args__ = (
+        # 인덱스
         Index('ix_block1_ticker_started', 'ticker', 'started_at'),
         Index('ix_block1_status', 'status'),
         Index('ix_block1_started', 'started_at'),
         Index('ix_block1_id', 'block1_id', unique=True),
         Index('ix_block1_pattern', 'pattern_id'),
         Index('ix_block1_detection_type', 'detection_type'),
+        Index('ix_block1_pattern_condition', 'pattern_id', 'condition_name'),
+        Index('ix_block1_status_started', 'status', 'started_at'),
+        # 제약조건
+        CheckConstraint('entry_high >= entry_low', name='ck_block1_high_low'),
+        CheckConstraint('entry_high >= entry_close', name='ck_block1_high_close'),
+        CheckConstraint('entry_close >= entry_low', name='ck_block1_close_low'),
+        CheckConstraint('entry_open > 0', name='ck_block1_open_positive'),
+        CheckConstraint('entry_high > 0', name='ck_block1_high_positive'),
+        CheckConstraint('entry_low > 0', name='ck_block1_low_positive'),
+        CheckConstraint('entry_close > 0', name='ck_block1_close_positive'),
+        CheckConstraint('entry_volume >= 0', name='ck_block1_volume_nonnegative'),
+        CheckConstraint("ended_at IS NULL OR started_at <= ended_at", name='ck_block1_dates_valid'),
     )
 
     def __repr__(self):
@@ -122,8 +135,9 @@ class Block2Detection(Base):
     prev_block1 = relationship("Block1Detection", foreign_keys=[prev_block1_id])
     pattern = relationship("BlockPattern", back_populates="block2_detections", foreign_keys=[pattern_id])
 
-    # 인덱스
+    # 인덱스 및 제약조건
     __table_args__ = (
+        # 인덱스
         Index('ix_block2_ticker_started', 'ticker', 'started_at'),
         Index('ix_block2_status', 'status'),
         Index('ix_block2_started', 'started_at'),
@@ -131,6 +145,12 @@ class Block2Detection(Base):
         Index('ix_block2_prev_block1', 'prev_block1_id'),
         Index('ix_block2_pattern', 'pattern_id'),
         Index('ix_block2_detection_type', 'detection_type'),
+        Index('ix_block2_pattern_condition', 'pattern_id', 'condition_name'),
+        Index('ix_block2_status_started', 'status', 'started_at'),
+        # 제약조건
+        CheckConstraint('entry_close > 0', name='ck_block2_close_positive'),
+        CheckConstraint("ended_at IS NULL OR started_at <= ended_at", name='ck_block2_dates_valid'),
+        CheckConstraint('peak_price IS NULL OR peak_price >= entry_close', name='ck_block2_peak_valid'),
     )
 
     def __repr__(self):
@@ -185,8 +205,9 @@ class Block3Detection(Base):
     prev_block2 = relationship("Block2Detection", foreign_keys=[prev_block2_id])
     pattern = relationship("BlockPattern", back_populates="block3_detections", foreign_keys=[pattern_id])
 
-    # 인덱스
+    # 인덱스 및 제약조건
     __table_args__ = (
+        # 인덱스
         Index('ix_block3_ticker_started', 'ticker', 'started_at'),
         Index('ix_block3_status', 'status'),
         Index('ix_block3_started', 'started_at'),
@@ -194,6 +215,12 @@ class Block3Detection(Base):
         Index('ix_block3_prev_block2', 'prev_block2_id'),
         Index('ix_block3_pattern', 'pattern_id'),
         Index('ix_block3_detection_type', 'detection_type'),
+        Index('ix_block3_pattern_condition', 'pattern_id', 'condition_name'),
+        Index('ix_block3_status_started', 'status', 'started_at'),
+        # 제약조건
+        CheckConstraint('entry_close > 0', name='ck_block3_close_positive'),
+        CheckConstraint("ended_at IS NULL OR started_at <= ended_at", name='ck_block3_dates_valid'),
+        CheckConstraint('peak_price IS NULL OR peak_price >= entry_close', name='ck_block3_peak_valid'),
     )
 
     def __repr__(self):
@@ -248,8 +275,9 @@ class Block4Detection(Base):
     prev_block3 = relationship("Block3Detection", foreign_keys=[prev_block3_id])
     pattern = relationship("BlockPattern", back_populates="block4_detections", foreign_keys=[pattern_id])
 
-    # 인덱스
+    # 인덱스 및 제약조건
     __table_args__ = (
+        # 인덱스
         Index('ix_block4_ticker_started', 'ticker', 'started_at'),
         Index('ix_block4_status', 'status'),
         Index('ix_block4_started', 'started_at'),
@@ -257,6 +285,12 @@ class Block4Detection(Base):
         Index('ix_block4_prev_block3', 'prev_block3_id'),
         Index('ix_block4_pattern', 'pattern_id'),
         Index('ix_block4_detection_type', 'detection_type'),
+        Index('ix_block4_pattern_condition', 'pattern_id', 'condition_name'),
+        Index('ix_block4_status_started', 'status', 'started_at'),
+        # 제약조건
+        CheckConstraint('entry_close > 0', name='ck_block4_close_positive'),
+        CheckConstraint("ended_at IS NULL OR started_at <= ended_at", name='ck_block4_dates_valid'),
+        CheckConstraint('peak_price IS NULL OR peak_price >= entry_close', name='ck_block4_peak_valid'),
     )
 
     def __repr__(self):

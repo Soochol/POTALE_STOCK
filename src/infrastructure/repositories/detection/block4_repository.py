@@ -3,6 +3,7 @@ Block4 Repository - 블록4 탐지 결과 저장/조회 Repository
 """
 import uuid
 from typing import Optional, List
+from sqlalchemy.orm import joinedload
 from datetime import date
 from ....domain.entities import Block4Detection as Block4DetectionEntity
 from ...database.models import Block4Detection as Block4DetectionModel
@@ -118,7 +119,9 @@ class Block4Repository(
             Block4Detection 엔티티 리스트
         """
         with self.db.session_scope() as session:
-            models = session.query(Block4DetectionModel).filter(
+            models = session.query(Block4DetectionModel)
+                .options(joinedload(Block4DetectionModel.stock_info))
+                .filter(
                 Block4DetectionModel.pattern_id == pattern_id,
                 Block4DetectionModel.condition_name == condition_name
             ).order_by(Block4DetectionModel.started_at).all()

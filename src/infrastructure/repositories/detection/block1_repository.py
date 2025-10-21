@@ -3,6 +3,7 @@ Block1 Repository - 블록1 탐지 결과 저장/조회 Repository
 """
 from typing import Optional, List
 from datetime import date
+from sqlalchemy.orm import joinedload
 from ....domain.entities import Block1Detection as Block1DetectionEntity
 from ...database.models import Block1Detection as Block1DetectionModel
 from ...database.connection import DatabaseConnection
@@ -92,9 +93,11 @@ class Block1Repository(BaseDetectionRepository[Block1DetectionEntity, Block1Dete
             Block1Detection 엔티티 리스트
         """
         with self.db.session_scope() as session:
-            models = session.query(Block1DetectionModel).filter(
-                Block1DetectionModel.pattern_id == pattern_id,
-                Block1DetectionModel.condition_name == condition_name
-            ).order_by(Block1DetectionModel.started_at).all()
+            models = session.query(Block1DetectionModel)\
+                .options(joinedload(Block1DetectionModel.stock_info))\
+                .filter(
+                    Block1DetectionModel.pattern_id == pattern_id,
+                    Block1DetectionModel.condition_name == condition_name
+                ).order_by(Block1DetectionModel.started_at).all()
 
             return [self._model_to_entity(model) for model in models]

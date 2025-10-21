@@ -3,6 +3,7 @@ Block2 Repository - 블록2 탐지 결과 저장/조회 Repository
 """
 import uuid
 from typing import Optional, List
+from sqlalchemy.orm import joinedload
 from datetime import date
 from ....domain.entities import Block2Detection as Block2DetectionEntity
 from ...database.models import Block2Detection as Block2DetectionModel
@@ -173,7 +174,9 @@ class Block2Repository(
             Block2Detection 엔티티 리스트
         """
         with self.db.session_scope() as session:
-            models = session.query(Block2DetectionModel).filter(
+            models = session.query(Block2DetectionModel)
+                .options(joinedload(Block2DetectionModel.stock_info))
+                .filter(
                 Block2DetectionModel.pattern_id == pattern_id,
                 Block2DetectionModel.condition_name == condition_name
             ).order_by(Block2DetectionModel.started_at).all()
