@@ -22,6 +22,7 @@ class ConcreteBlockChecker(BaseBlockChecker):
 def sample_stock_with_indicators():
     """Create a sample stock with indicators"""
     stock = Stock(
+            name="삼성전자",
         ticker="005930",
         date=date(2024, 1, 1),
         open=75000.0,
@@ -63,6 +64,7 @@ def all_stocks():
     stocks = []
     for i in range(10):
         stock = Stock(
+            name="삼성전자",
             ticker="005930",
             date=date(2024, 1, i + 1),
             open=75000.0,
@@ -298,6 +300,7 @@ class TestBaseBlockCheckerIntegration:
         """Test handling of stock without indicators"""
         checker = ConcreteBlockChecker()
         stock = Stock(
+            name="삼성전자",
             ticker="005930",
             date=date(2024, 1, 1),
             open=75000.0,

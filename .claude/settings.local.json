@@ -39,7 +39,8 @@
       "Bash(.venvScriptspython.exe migrationsmigrate_add_peak_volume_to_block1.py)",
       "Bash(\".venv/Scripts/python.exe\" migrations/migrate_add_peak_volume_to_block1.py)",
       "Bash(\".venv/Scripts/python.exe\" -m pip install pytest pytest-cov pytest-asyncio pytest-mock faker --quiet)",
-      "Bash(\".venv/Scripts/python.exe\" -m pytest tests/unit/entities/test_block1_detection.py -v)"
+      "Bash(\".venv/Scripts/python.exe\" -m pytest tests/unit/entities/test_block1_detection.py -v)",
+      "Bash(\".venv/Scripts/python.exe\" -m pytest:*)"
     ],
     "deny": [],
     "ask": []

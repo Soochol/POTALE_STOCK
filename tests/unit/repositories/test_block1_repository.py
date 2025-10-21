@@ -5,9 +5,17 @@ Tests Entity/Model conversion and repository methods.
 """
 import pytest
 from datetime import date, datetime
+from unittest.mock import Mock, MagicMock
 from src.domain.entities import Block1Detection
 from src.infrastructure.repositories.detection.block1_repository import Block1Repository
 from src.infrastructure.database.models import Block1Detection as Block1DetectionModel
+
+
+@pytest.fixture
+def mock_db_connection():
+    """Create a mock DatabaseConnection"""
+    mock_db = MagicMock()
+    return mock_db
 
 
 @pytest.mark.unit
@@ -15,9 +23,9 @@ from src.infrastructure.database.models import Block1Detection as Block1Detectio
 class TestBlock1RepositoryConversion:
     """Test Entity ↔ Model conversion"""
 
-    def test_entity_to_model_conversion(self, sample_block1_detection):
+    def test_entity_to_model_conversion(self, sample_block1_detection, mock_db_connection):
         """Test converting Block1Detection entity to database model"""
-        repo = Block1Repository()
+        repo = Block1Repository(mock_db_connection)
         entity = sample_block1_detection
 
         model = repo._entity_to_model(entity)
@@ -38,9 +46,9 @@ class TestBlock1RepositoryConversion:
         assert model.pattern_id == entity.pattern_id
         assert model.detection_type == entity.detection_type
 
-    def test_model_to_entity_conversion(self):
+    def test_model_to_entity_conversion(self, mock_db_connection):
         """Test converting database model to Block1Detection entity"""
-        repo = Block1Repository()
+        repo = Block1Repository(mock_db_connection)
 
         # Create a model instance
         model = Block1DetectionModel(
@@ -87,9 +95,9 @@ class TestBlock1RepositoryConversion:
         assert entity.created_at == model.created_at
         assert isinstance(entity.created_at, datetime)
 
-    def test_round_trip_conversion(self, sample_block1_detection):
+    def test_round_trip_conversion(self, sample_block1_detection, mock_db_connection):
         """Test entity → model → entity preserves data"""
-        repo = Block1Repository()
+        repo = Block1Repository(mock_db_connection)
         original = sample_block1_detection
 
         # Convert to model and back
@@ -107,9 +115,9 @@ class TestBlock1RepositoryConversion:
         assert restored.pattern_id == original.pattern_id
         assert restored.detection_type == original.detection_type
 
-    def test_null_entry_trading_value_preserved(self):
+    def test_null_entry_trading_value_preserved(self, mock_db_connection):
         """Test that NULL entry_trading_value is preserved (not converted to 0.0)"""
-        repo = Block1Repository()
+        repo = Block1Repository(mock_db_connection)
 
         # Create entity with None trading_value
         entity = Block1Detection(
@@ -133,9 +141,9 @@ class TestBlock1RepositoryConversion:
         restored = repo._model_to_entity(model)
         assert restored.entry_trading_value is None  # Should remain None, not 0.0
 
-    def test_datetime_created_at_preserved(self):
+    def test_datetime_created_at_preserved(self, mock_db_connection):
         """Test that created_at datetime is preserved (not converted to date)"""
-        repo = Block1Repository()
+        repo = Block1Repository(mock_db_connection)
 
         now = datetime(2024, 1, 1, 15, 30, 45)
         model = Block1DetectionModel(
@@ -164,9 +172,9 @@ class TestBlock1RepositoryConversion:
 class TestBlock1RepositoryFieldMapping:
     """Test specific field mappings and edge cases"""
 
-    def test_completed_block_fields(self):
+    def test_completed_block_fields(self, mock_db_connection):
         """Test that completed block fields are properly mapped"""
-        repo = Block1Repository()
+        repo = Block1Repository(mock_db_connection)
 
         entity = Block1Detection(
             ticker="005930",
@@ -190,9 +198,9 @@ class TestBlock1RepositoryFieldMapping:
         assert model.exit_reason == "ma_break"
         assert model.exit_price == 73000.0
 
-    def test_optional_indicator_fields(self):
+    def test_optional_indicator_fields(self, mock_db_connection):
         """Test that optional indicator fields can be None"""
-        repo = Block1Repository()
+        repo = Block1Repository(mock_db_connection)
 
         entity = Block1Detection(
             ticker="005930",
@@ -214,9 +222,9 @@ class TestBlock1RepositoryFieldMapping:
         assert model.entry_rate is None
         assert model.entry_deviation is None
 
-    def test_peak_fields_all_none(self):
+    def test_peak_fields_all_none(self, mock_db_connection):
         """Test entity with no peak information"""
-        repo = Block1Repository()
+        repo = Block1Repository(mock_db_connection)
 
         entity = Block1Detection(
             ticker="005930",
@@ -244,9 +252,9 @@ class TestBlock1RepositoryFieldMapping:
 class TestBlock1RepositoryGetIdField:
     """Test _get_id_field method"""
 
-    def test_get_id_field_returns_block1_id(self):
+    def test_get_id_field_returns_block1_id(self, mock_db_connection):
         """Test that _get_id_field returns block1_id column"""
-        repo = Block1Repository()
+        repo = Block1Repository(mock_db_connection)
 
         id_field = repo._get_id_field()
 

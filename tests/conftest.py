@@ -236,6 +236,7 @@ def sample_stock_data():
         current_date = base_date + timedelta(days=i)
         stock = Stock(
             ticker="005930",
+            name="삼성전자",
             date=current_date,
             open=75000 + i * 100,
             high=76000 + i * 100,
