@@ -13,9 +13,10 @@ from typing import List, Dict, Optional
 
 from .async_collectors.price_collector import AsyncPriceCollector
 from .async_collectors.investor_collector import AsyncInvestorCollector
+from .stock_info_fetcher import fetch_stock_info
 from ..common.types import AsyncCollectionResult
 from ..common.config import DEFAULT_CONFIG
-from ...database.models import StockPrice, InvestorTrading
+from ...database.models import StockPrice, InvestorTrading, StockInfo
 from sqlalchemy.dialects.sqlite import insert
 
 
@@ -210,7 +211,7 @@ class AsyncUnifiedCollector:
         collect_investor: bool
     ) -> AsyncCollectionResult:
         """
-        단일 종목 수집 실제 구현 (순차: 가격 → 투자자)
+        단일 종목 수집 실제 구현 (순차: 종목정보 → 가격 → 투자자)
 
         Args:
             session: aiohttp 세션
@@ -226,6 +227,11 @@ class AsyncUnifiedCollector:
         price_count = 0
         investor_count = 0
         error_messages = []
+
+        # 0. 종목 정보 수집 (stock_info 테이블용)
+        stock_info = await fetch_stock_info(session, ticker)
+        if stock_info:
+            await self.write_queue.put(('stock_info', ticker, stock_info))
 
         # 1. 가격 데이터 수집
         price_result = await self.price_collector.collect(
@@ -317,17 +323,27 @@ class AsyncUnifiedCollector:
 
         Args:
             session: DB 세션
-            batch: (table_type, records) 튜플 리스트
+            batch: (table_type, ...) 튜플 리스트
         """
         # 타입별로 그룹핑
+        stock_info_items = []
         price_records = []
         investor_records = []
 
-        for table_type, records in batch:
-            if table_type == 'price':
-                price_records.extend(records)
-            elif table_type == 'investor':
-                investor_records.extend(records)
+        for item in batch:
+            if item[0] == 'stock_info':
+                # ('stock_info', ticker, stock_info_dict)
+                stock_info_items.append((item[1], item[2]))
+            elif item[0] == 'price':
+                # ('price', records)
+                price_records.extend(item[1])
+            elif item[0] == 'investor':
+                # ('investor', records)
+                investor_records.extend(item[1])
+
+        # StockInfo 먼저 저장 (FK 제약 조건 만족)
+        if stock_info_items:
+            self._upsert_stock_info_batch(session, stock_info_items)
 
         # Price 데이터 저장
         if price_records:
@@ -403,4 +419,53 @@ class AsyncUnifiedCollector:
         except Exception as e:
             session.rollback()
             print(f"[Error] Bulk upsert investor failed: {e}")
+            raise
+
+    def _upsert_stock_info_batch(self, session, items: List[tuple]):
+        """
+        StockInfo 대량 upsert (INSERT OR REPLACE)
+
+        Args:
+            session: DB 세션
+            items: [(ticker, {'name': str, 'market': str}), ...] 리스트
+        """
+        if not items:
+            return
+
+        try:
+            # 중복 제거 (같은 ticker가 여러번 나올 수 있음)
+            unique_items = {}
+            for ticker, info in items:
+                if ticker not in unique_items:
+                    unique_items[ticker] = info
+
+            # StockInfo 레코드 생성
+            records = []
+            for ticker, info in unique_items.items():
+                records.append({
+                    'ticker': ticker,
+                    'name': info.get('name', ticker),
+                    'market': info.get('market', 'UNKNOWN'),
+                    'is_active': 1
+                })
+
+            if not records:
+                return
+
+            stmt = insert(StockInfo).values(records)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=['ticker'],
+                set_={
+                    'name': stmt.excluded.name,
+                    'market': stmt.excluded.market,
+                    'updated_at': datetime.now()
+                }
+            )
+
+            session.execute(stmt)
+            session.commit()
+
+        except Exception as e:
+            session.rollback()
+            print(f"[Error] Bulk upsert stock_info failed: {e}")
             raise

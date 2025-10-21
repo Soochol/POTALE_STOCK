@@ -22,7 +22,9 @@
       "Bash(sqlite3 data/database/stock_data.db \"SELECT pattern_id, ticker, seed_block1_id FROM block_pattern WHERE ticker=''025980'' ORDER BY pattern_id DESC LIMIT 5;\")",
       "Bash(sqlite3 data/database/stock_data.db \"SELECT pattern_id, COUNT(*) FROM block2_detection WHERE condition_name=''redetection'' AND pattern_id IS NOT NULL GROUP BY pattern_id ORDER BY pattern_id;\")",
       "Bash(sqlite3 data/database/stock_data.db \"SELECT pattern_id, COUNT(*) FROM block3_detection WHERE condition_name=''redetection'' AND pattern_id IS NOT NULL GROUP BY pattern_id ORDER BY pattern_id;\")",
-      "Bash(git add -A)"
+      "Bash(git add -A)",
+      "Bash(del \"data\\database\\stock_data.db\")",
+      "Bash(if not exist .vscode mkdir .vscode)"
     ],
     "deny": [],
     "ask": []
