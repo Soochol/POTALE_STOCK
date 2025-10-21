@@ -274,7 +274,7 @@ def print_conditions_table(
             f"{block2.get('tolerance_pct', 10.0):.1f}%",
             f"{block3.get('tolerance_pct', 10.0):.1f}%",
             f"{block4.get('tolerance_pct', 10.0):.1f}%",
-            "재탐지 가격 범위 (±)"
+            "자기 Seed 블록 가격 기준 (±)"
         )
 
         console.print(table4)
