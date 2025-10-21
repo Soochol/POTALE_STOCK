@@ -108,8 +108,8 @@ def print_conditions_table(
 
     # 등락률
     print(
-        "│"
-        + " 등락률".center(14)
+        "│ "
+        + "entry_surge_rate".ljust(13)
         + "│"
         + f"{block1['entry_surge_rate']:>6.1f}%".center(12)
         + "│"
@@ -130,8 +130,8 @@ def print_conditions_table(
     # 거래량 비율
     volume_ratio_desc = " 시드 블록 최고 거래량 대비" if condition_type == "redetection" else " 이전 블록 최고 거래량 대비"
     print(
-        "│"
-        + " 거래량 비율".center(14)
+        "│ "
+        + "volume_ratio".ljust(13)
         + "│"
         + "  -".center(12)
         + "│"
@@ -148,8 +148,8 @@ def print_conditions_table(
     # 저가 마진
     low_price_desc = " 시드 블록 최고가 대비 마진" if condition_type == "redetection" else " 이전 블록 최고가 대비 마진"
     print(
-        "│"
-        + " 저가 마진".center(14)
+        "│ "
+        + "low_price_margin".ljust(13)
         + "│"
         + "  -".center(12)
         + "│"
@@ -165,8 +165,8 @@ def print_conditions_table(
 
     # MA 기간
     print(
-        "│"
-        + " MA 기간".center(14)
+        "│ "
+        + "entry_ma_period".ljust(13)
         + "│"
         + f"{block1['entry_ma_period']:>4d}일".center(12)
         + "│"
@@ -182,8 +182,8 @@ def print_conditions_table(
 
     # 고가 > MA
     print(
-        "│"
-        + " 고가 > MA".center(14)
+        "│ "
+        + "high_above_ma".ljust(13)
         + "│"
         + (
             "   예".center(12)
@@ -217,7 +217,7 @@ def print_conditions_table(
     if condition_type == "seed":
         print(
             "│"
-            + " 최소 캔들".center(14)
+            + " min_candles".ljust(14)
             + "│"
             + "  -".center(12)
             + "│"
@@ -237,7 +237,7 @@ def print_conditions_table(
 
         print(
             "│"
-            + " 최대 캔들".center(14)
+            + " max_candles".ljust(14)
             + "│"
             + "  -".center(12)
             + "│"
@@ -320,7 +320,7 @@ def print_conditions_table(
     # 이격도
     print(
         "│"
-        + " 이격도".center(14)
+        + " max_deviation".ljust(14)
         + "│"
         + f"{block1['entry_max_deviation_ratio']:>6.1f}%".center(12)
         + "│"
@@ -341,7 +341,7 @@ def print_conditions_table(
     # 거래대금
     print(
         "│"
-        + " 거래대금".center(14)
+        + " min_trading".ljust(14)
         + "│"
         + f"{block1['entry_min_trading_value']:>5.0f}억".center(12)
         + "│"
@@ -365,7 +365,7 @@ def print_conditions_table(
 
     print(
         "│"
-        + " 신고 거래량".center(14)
+        + " volume_high".ljust(14)
         + "│"
         + format_months(block1["entry_volume_high_months"]).center(12)
         + "│"
@@ -386,7 +386,7 @@ def print_conditions_table(
     # 거래량 급증
     print(
         "│"
-        + " 거래량 급증".center(14)
+        + " volume_spike".ljust(14)
         + "│"
         + f"{block1['entry_volume_spike_ratio']:>6.1f}%".center(12)
         + "│"
@@ -407,7 +407,7 @@ def print_conditions_table(
     # 신고가
     print(
         "│"
-        + " 신고가".center(14)
+        + " price_high".ljust(14)
         + "│"
         + format_months(block1["entry_price_high_months"]).center(12)
         + "│"
@@ -499,7 +499,7 @@ def print_conditions_table(
     }
     print(
         "│"
-        + " 종료 타입".center(14)
+        + " exit_type".ljust(14)
         + "│"
         + exit_types.get(
             block1.get("exit_condition_type", "ma_break"), "MA돌파"
@@ -524,7 +524,7 @@ def print_conditions_table(
     # 종료 MA
     print(
         "│"
-        + " 종료 MA".center(14)
+        + " exit_ma".ljust(14)
         + "│"
         + f"{block1['exit_ma_period']:>4d}일".center(12)
         + "│"
@@ -541,7 +541,7 @@ def print_conditions_table(
     # 쿨다운
     print(
         "│"
-        + " 쿨다운".center(14)
+        + " cooldown".ljust(14)
         + "│"
         + f"{block1['cooldown_days']:>4d}일".center(12)
         + "│"
@@ -625,7 +625,7 @@ def print_conditions_table(
         # Tolerance
         print(
             "│"
-            + " Tolerance".center(14)
+            + " tolerance_pct".ljust(14)
             + "│"
             + f"{block1.get('tolerance_pct', 0):>6.1f}%".center(12)
             + "│"
