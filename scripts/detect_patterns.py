@@ -52,7 +52,18 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.tree import Tree
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
+from rich import box
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
+from loguru import logger
+
+# Loguru 설정
+logger.remove()  # 기본 핸들러 제거
+logger.add(
+    sys.stdout,
+    format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
+    level="INFO",
+    colorize=True
+)
 
 from src.infrastructure.database.connection import get_db_connection, DatabaseConnection
 from src.infrastructure.repositories.stock.sqlite_stock_repository import SqliteStockRepository
@@ -219,9 +230,15 @@ def create_pattern_tree(pattern: Dict, pattern_num: int, block1_repo, block2_rep
 
 def create_summary_table(patterns: List[Dict], total_stats: Dict) -> Table:
     """패턴 요약 테이블 생성"""
-    table = Table(title="패턴 탐지 요약", show_header=True, header_style="bold cyan")
-    table.add_column("항목", style="cyan", width=20)
-    table.add_column("값", style="green", width=30)
+    table = Table(
+        title="패턴 탐지 요약",
+        show_header=True,
+        header_style="bold magenta",
+        title_style="bold cyan",
+        box=box.ROUNDED
+    )
+    table.add_column("항목", style="bold cyan", width=20)
+    table.add_column("값", style="bold green", width=30)
 
     table.add_row("총 패턴 수", f"{len(patterns)}개")
     table.add_row("Block1 재탐지", f"{total_stats.get('block1_redetections', 0)}개")
@@ -277,6 +294,7 @@ def detect_patterns_for_ticker(
     console.print(f"[bold cyan]{'=' * 80}[/bold cyan]\n")
 
     # 1. 데이터 로드
+    logger.info(f"종목 {ticker} 데이터 로드 시작")
     console.print("[cyan]1. 종목 데이터 로드...[/cyan]")
 
     # 날짜 범위 자동 감지
@@ -294,8 +312,10 @@ def detect_patterns_for_ticker(
             if stocks:
                 actual_fromdate = stocks[0].date
                 actual_todate = stocks[-1].date
+                logger.success(f"{ticker}: {len(stocks):,}건 로드 완료 ({actual_fromdate} ~ {actual_todate})")
                 console.print(f"   [green]OK[/green] {ticker}: {len(stocks):,}건 ({actual_fromdate} ~ {actual_todate})")
             else:
+                logger.error(f"{ticker}: 데이터 없음")
                 console.print(f"   [red]ERROR[/red] {ticker}: 데이터 없음")
                 return None
     else:
@@ -307,20 +327,24 @@ def detect_patterns_for_ticker(
         return None
 
     # 2. 프리셋 로드
+    logger.info("프리셋 로드 중...")
     console.print(f"\n[cyan]2. 프리셋 로드...[/cyan]")
     seed_condition = seed_repo.load(seed_preset)
     redetect_condition = redetect_repo.load(redetect_preset)
 
     if not seed_condition or not redetect_condition:
+        logger.error(f"프리셋을 찾을 수 없습니다: Seed={seed_preset}, Redetect={redetect_preset}")
         console.print(f"   [red]ERROR[/red] 프리셋을 찾을 수 없습니다.")
         console.print(f"   - Seed: {seed_preset}")
         console.print(f"   - Redetect: {redetect_preset}\n")
         return None
 
+    logger.success(f"프리셋 로드 완료: {seed_preset} / {redetect_preset}")
     console.print(f"   [green]OK[/green] Seed 조건: {seed_preset}")
     console.print(f"   [green]OK[/green] 재탐지 조건: {redetect_preset}")
 
     # 3. 패턴 탐지 실행
+    logger.info("패턴 탐지 시작...")
     console.print(f"\n[cyan]3. 패턴 탐지 실행...[/cyan]")
     console.print(f"   (Block1/2/3/4 Seed + 5년 재탐지)\n")
 
@@ -461,8 +485,10 @@ def main():
     console.print("=" * 80 + "\n")
 
     # DB 연결
+    logger.info("데이터베이스 연결 중...")
     console.print("[cyan]데이터베이스 연결...[/cyan]")
     db = get_db_connection(args.db)
+    logger.success(f"DB 연결 완료: {args.db}")
     console.print(f"   [green]OK[/green] DB 연결 완료: {args.db}\n")
 
     # Repository 초기화

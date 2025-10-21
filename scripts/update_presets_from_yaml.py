@@ -15,6 +15,10 @@ import argparse
 from pathlib import Path
 from rich.console import Console
 from rich.table import Table
+from rich import box
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
+from rich.panel import Panel
+from loguru import logger
 
 # 프로젝트 루트를 Python 경로에 추가
 project_root = Path(__file__).parent.parent
@@ -24,6 +28,16 @@ sys.path.insert(0, str(project_root))
 if sys.platform == "win32":
     os.system("chcp 65001 > nul")
     sys.stdout.reconfigure(encoding="utf-8")
+
+# Loguru 설정
+logger.remove()  # 기본 핸들러 제거
+logger.add(
+    sys.stdout,
+    format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
+    level="INFO",
+    colorize=True
+)
+
 from src.infrastructure.database.connection import DatabaseConnection
 from src.infrastructure.repositories.preset.seed_condition_preset_repository import (
     SeedConditionPresetRepository,
@@ -65,42 +79,71 @@ def print_conditions_table(
     volume_ratio_desc = "시드 블록 최고 거래량 대비" if condition_type == "redetection" else "이전 블록 최고 거래량 대비"
     low_price_desc = "시드 블록 최고가 대비 마진" if condition_type == "redetection" else "이전 블록 최고가 대비 마진"
 
+    # Helper: 값에 따라 색상 적용
+    def color_value(text, numeric_val, threshold_high=None, threshold_low=None):
+        """높을수록 엄격한 값은 빨강, 낮을수록 완화된 값은 초록"""
+        if threshold_high and numeric_val >= threshold_high:
+            return f"[red]{text}[/red]"
+        elif threshold_low and numeric_val <= threshold_low:
+            return f"[green]{text}[/green]"
+        else:
+            return f"[yellow]{text}[/yellow]"
+
     # 테이블 1: 주요 진입 조건
-    table1 = Table(title="주요 진입 조건", show_header=True, header_style="bold magenta", title_style="bold cyan")
-    table1.add_column("변수명", justify="left", style="cyan", no_wrap=True, width=18)
+    table1 = Table(
+        title="주요 진입 조건",
+        show_header=True,
+        header_style="bold magenta",
+        title_style="bold cyan",
+        box=box.ROUNDED  # 더 부드러운 박스 스타일
+    )
+    table1.add_column("변수명", justify="left", style="bold cyan", no_wrap=True, width=18)
     table1.add_column("Block1", justify="center", width=12)
     table1.add_column("Block2", justify="center", width=12)
     table1.add_column("Block3", justify="center", width=12)
     table1.add_column("Block4", justify="center", width=12)
     table1.add_column("설명", justify="left", width=32)
 
-    # 등락률
+    # 등락률 (높을수록 엄격 = 빨강, 낮을수록 완화 = 초록)
+    b1_surge = block1['entry_surge_rate']
+    b2_surge = block2.get('entry_surge_rate', block1['entry_surge_rate'])
+    b3_surge = block3.get('entry_surge_rate', block1['entry_surge_rate'])
+    b4_surge = block4.get('entry_surge_rate', 2.0)
+
     table1.add_row(
         "entry_surge_rate",
-        f"{block1['entry_surge_rate']:.1f}%",
-        f"{block2.get('entry_surge_rate', block1['entry_surge_rate']):.1f}%",
-        f"{block3.get('entry_surge_rate', block1['entry_surge_rate']):.1f}%",
-        f"{block4.get('entry_surge_rate', 2.0):.1f}%",
+        color_value(f"{b1_surge:.1f}%", b1_surge, threshold_high=15, threshold_low=8),
+        color_value(f"{b2_surge:.1f}%", b2_surge, threshold_high=15, threshold_low=8),
+        color_value(f"{b3_surge:.1f}%", b3_surge, threshold_high=15, threshold_low=8),
+        color_value(f"{b4_surge:.1f}%", b4_surge, threshold_high=15, threshold_low=8),
         "진입 조건 (당일 등락률)"
     )
 
-    # 거래량 비율
+    # 거래량 비율 (낮을수록 엄격 = 빨강)
+    b2_vol = block2['volume_ratio']
+    b3_vol = block3['volume_ratio']
+    b4_vol = block4['volume_ratio']
+
     table1.add_row(
         "volume_ratio",
-        "-",
-        f"{block2['volume_ratio']:.1f}%",
-        f"{block3['volume_ratio']:.1f}%",
-        f"{block4['volume_ratio']:.1f}%",
+        "[dim]-[/dim]",
+        color_value(f"{b2_vol:.1f}%", b2_vol, threshold_low=10),
+        color_value(f"{b3_vol:.1f}%", b3_vol, threshold_low=10),
+        color_value(f"{b4_vol:.1f}%", b4_vol, threshold_low=10),
         volume_ratio_desc
     )
 
-    # 저가 마진
+    # 저가 마진 (높을수록 완화 = 초록)
+    b2_margin = block2['low_price_margin']
+    b3_margin = block3['low_price_margin']
+    b4_margin = block4['low_price_margin']
+
     table1.add_row(
         "low_price_margin",
-        "-",
-        f"{block2['low_price_margin']:.1f}%",
-        f"{block3['low_price_margin']:.1f}%",
-        f"{block4['low_price_margin']:.1f}%",
+        "[dim]-[/dim]",
+        color_value(f"{b2_margin:.1f}%", b2_margin, threshold_low=5),
+        color_value(f"{b3_margin:.1f}%", b3_margin, threshold_low=5),
+        color_value(f"{b4_margin:.1f}%", b4_margin, threshold_low=5),
         low_price_desc
     )
 
@@ -151,8 +194,14 @@ def print_conditions_table(
     print()  # 빈 줄
 
     # 테이블 2: 상세 진입 조건
-    table2 = Table(title="상세 진입 조건", show_header=True, header_style="bold magenta", title_style="bold cyan")
-    table2.add_column("변수명", justify="left", style="cyan", no_wrap=True, width=18)
+    table2 = Table(
+        title="상세 진입 조건",
+        show_header=True,
+        header_style="bold magenta",
+        title_style="bold cyan",
+        box=box.ROUNDED
+    )
+    table2.add_column("변수명", justify="left", style="bold cyan", no_wrap=True, width=18)
     table2.add_column("Block1", justify="center", width=12)
     table2.add_column("Block2", justify="center", width=12)
     table2.add_column("Block3", justify="center", width=12)
@@ -181,7 +230,7 @@ def print_conditions_table(
 
     # 신고 거래량
     def format_months(val):
-        return f"{val}개월" if val is not None else "비활성화"
+        return f"[yellow]{val}개월[/yellow]" if val is not None else "[dim]비활성화[/dim]"
 
     table2.add_row(
         "volume_high",
@@ -216,8 +265,14 @@ def print_conditions_table(
     print()  # 빈 줄
 
     # 테이블 3: 종료 조건
-    table3 = Table(title="종료 조건", show_header=True, header_style="bold magenta", title_style="bold cyan")
-    table3.add_column("변수명", justify="left", style="cyan", no_wrap=True, width=18)
+    table3 = Table(
+        title="종료 조건",
+        show_header=True,
+        header_style="bold magenta",
+        title_style="bold cyan",
+        box=box.ROUNDED
+    )
+    table3.add_column("변수명", justify="left", style="bold cyan", no_wrap=True, width=18)
     table3.add_column("Block1", justify="center", width=12)
     table3.add_column("Block2", justify="center", width=12)
     table3.add_column("Block3", justify="center", width=12)
@@ -259,8 +314,14 @@ def print_conditions_table(
     # 재탐지 전용 테이블 (재탐지 모드일 때만)
     if condition_type == "redetection":
         print()  # 빈 줄
-        table4 = Table(title="재탐지 전용 조건", show_header=True, header_style="bold magenta", title_style="bold cyan")
-        table4.add_column("변수명", justify="left", style="cyan", no_wrap=True, width=18)
+        table4 = Table(
+            title="재탐지 전용 조건",
+            show_header=True,
+            header_style="bold magenta",
+            title_style="bold cyan",
+            box=box.ROUNDED
+        )
+        table4.add_column("변수명", justify="left", style="bold cyan", no_wrap=True, width=18)
         table4.add_column("Block1", justify="center", width=12)
         table4.add_column("Block2", justify="center", width=12)
         table4.add_column("Block3", justify="center", width=12)
@@ -283,12 +344,15 @@ def update_seed_conditions(
     db: DatabaseConnection, json_data: dict, dry_run: bool = False
 ):
     """Seed 조건 업데이트 (블록별 섹션 구조 지원)"""
-    print_table_header("Seed Condition Presets 업데이트", 100)
+    console = Console()
+    console.print(Panel("[bold cyan]Seed Condition Presets 업데이트[/bold cyan]", border_style="cyan"))
+    print()
 
     repo = SeedConditionPresetRepository(db)
 
-    for name, preset_data in json_data.items():
-        print(f"[{name}] {preset_data.get('description', 'N/A')}")
+    for idx, (name, preset_data) in enumerate(json_data.items(), 1):
+        logger.info(f"[{idx}/{len(json_data)}] 처리 중: {name}")
+        console.print(f"[bold yellow]{name}[/bold yellow] - {preset_data.get('description', 'N/A')}")
         print()
 
         # 새 구조: block1, block2, block3, block4 섹션이 있는 경우
@@ -424,7 +488,7 @@ def update_seed_conditions(
                 )
 
                 repo.save(name, condition, preset_data.get("description", ""))
-                print("  ✓ DB 저장 완료")
+                logger.success(f"DB 저장 완료: {name}")
                 print()
             else:
                 print(f"\n  [DRY RUN] 저장 건너뜀")
@@ -441,12 +505,15 @@ def update_redetection_conditions(
     db: DatabaseConnection, json_data: dict, dry_run: bool = False
 ):
     """재탐지 조건 업데이트 (블록별 섹션 구조 지원)"""
-    print_table_header("Redetection Condition Presets 업데이트", 100)
+    console = Console()
+    console.print(Panel("[bold green]Redetection Condition Presets 업데이트[/bold green]", border_style="green"))
+    print()
 
     repo = RedetectionConditionPresetRepository(db)
 
-    for name, preset_data in json_data.items():
-        print(f"[{name}] {preset_data.get('description', 'N/A')}")
+    for idx, (name, preset_data) in enumerate(json_data.items(), 1):
+        logger.info(f"[{idx}/{len(json_data)}] 처리 중: {name}")
+        console.print(f"[bold yellow]{name}[/bold yellow] - {preset_data.get('description', 'N/A')}")
         print()
 
         # 새 구조: block1, block2, block3, block4 섹션이 있는 경우
@@ -574,7 +641,7 @@ def update_redetection_conditions(
                 )
 
                 repo.save(name, condition, preset_data.get("description", ""))
-                print("  ✓ DB 저장 완료")
+                logger.success(f"DB 저장 완료: {name}")
                 print()
             else:
                 print(f"\n  [DRY RUN] 저장 건너뜀")
@@ -611,11 +678,17 @@ def main():
 
     args = parser.parse_args()
 
+    console = Console()
+
     # DB 연결
+    logger.info("데이터베이스 연결 중...")
     db = DatabaseConnection("data/database/stock_data.db")
+    logger.success("데이터베이스 연결 완료")
+    print()
 
     if args.dry_run:
-        print("\n[!] DRY RUN 모드: 실제로 DB에 저장하지 않습니다.\n")
+        logger.warning("DRY RUN 모드: 실제로 DB에 저장하지 않습니다")
+        print()
 
     # Seed 조건 업데이트
     if not args.redetect_only:
@@ -634,12 +707,18 @@ def main():
             print(f"[!] 파일을 찾을 수 없습니다: {args.redetect_file}")
 
     print()
-    print("╔" + "═" * 68 + "╗")
     if args.dry_run:
-        print("║" + " DRY RUN 완료! (실제 저장은 하지 않았습니다)".center(68) + "║")
+        console.print(Panel(
+            "[bold yellow]DRY RUN 완료![/bold yellow]\n실제 저장은 하지 않았습니다",
+            title="완료",
+            border_style="yellow"
+        ))
     else:
-        print("║" + " ✓ Preset 업데이트 완료!".center(68) + "║")
-    print("╚" + "═" * 68 + "╝")
+        console.print(Panel(
+            "[bold green]✓ Preset 업데이트 완료![/bold green]",
+            title="완료",
+            border_style="green"
+        ))
     print()
 
 
