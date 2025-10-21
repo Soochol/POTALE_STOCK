@@ -30,6 +30,9 @@ class BlockPattern:
     redetection_start: date  # 재탐지 시작일 (Block1 Seed 시작일)
     redetection_end: date  # 재탐지 종료일 (시작일 + 5년)
 
+    # Block4 Seed (선택적) - Optional 필드는 맨 뒤로
+    seed_block4_id: Optional[str] = None  # Block4 Seed의 block4_id (선택적)
+
     def __repr__(self):
         return (
             f"<BlockPattern("

@@ -61,14 +61,18 @@ from src.infrastructure.repositories.preset.redetection_condition_preset_reposit
 from src.infrastructure.repositories.detection.block1_repository import Block1Repository
 from src.infrastructure.repositories.detection.block2_repository import Block2Repository
 from src.infrastructure.repositories.detection.block3_repository import Block3Repository
+from src.infrastructure.repositories.detection.block4_repository import Block4Repository
 from src.application.use_cases.pattern_detection.detect_patterns import DetectPatternsUseCase
 
 console = Console()
 
 
-def create_pattern_tree(pattern: Dict, pattern_num: int, block1_repo, block2_repo, block3_repo) -> Tree:
+def create_pattern_tree(pattern: Dict, pattern_num: int, block1_repo, block2_repo, block3_repo, block4_repo) -> Tree:
     """패턴 정보를 트리 형태로 생성"""
     tree = Tree(f"[bold cyan]Pattern #{pattern_num}[/bold cyan]")
+
+    # Pattern ID 추출 (모든 블록에서 사용)
+    pattern_id = pattern.get('pattern_id')
 
     # Block1 Seed
     block1_seed = pattern.get('seed_block1')
@@ -82,7 +86,6 @@ def create_pattern_tree(pattern: Dict, pattern_num: int, block1_repo, block2_rep
             b1_branch.add(f"최고가: {block1_seed.peak_price:,.0f}원 ([green]+{gain:.1f}%[/green])")
 
         # Block1 재탐지 상세
-        pattern_id = pattern.get('pattern_id')
         if pattern_id:
             block1_redetections = block1_repo.find_by_pattern_and_condition(pattern_id, 'redetection')
             if block1_redetections:
@@ -187,8 +190,29 @@ def create_pattern_tree(pattern: Dict, pattern_num: int, block1_repo, block2_rep
             gain = (block4_seed.peak_price - block4_seed.entry_close) / block4_seed.entry_close * 100
             b4_branch.add(f"최고가: {block4_seed.peak_price:,.0f}원 ([green]+{gain:.1f}%[/green])")
 
-        block4_redetections = pattern.get('block4_redetections', [])
-        b4_branch.add(f"Block4 재탐지: [cyan]{len(block4_redetections)}개[/cyan]")
+        # Block4 재탐지 상세
+        if pattern_id:
+            block4_redetections = block4_repo.find_by_pattern_and_condition(pattern_id, 'redetection')
+            if block4_redetections:
+                redetect_branch = b4_branch.add(f"Block4 재탐지: [cyan]{len(block4_redetections)}개[/cyan]")
+                for idx, redetection in enumerate(block4_redetections, 1):
+                    # 수익률 계산
+                    gain_str = ""
+                    if hasattr(redetection, 'peak_price') and redetection.peak_price and redetection.entry_close:
+                        gain = (redetection.peak_price - redetection.entry_close) / redetection.entry_close * 100
+                        gain_str = f" ([green]+{gain:.1f}%[/green])"
+
+                    # 상세 정보
+                    detail = (
+                        f"[{idx}] {redetection.started_at} ~ {redetection.ended_at or '진행중'} | "
+                        f"{redetection.entry_close:,.0f}원"
+                    )
+                    if hasattr(redetection, 'peak_price') and redetection.peak_price:
+                        detail += f" → {redetection.peak_price:,.0f}원{gain_str}"
+
+                    redetect_branch.add(detail)
+            else:
+                b4_branch.add(f"Block4 재탐지: [cyan]0개[/cyan]")
 
     return tree
 
@@ -448,6 +472,7 @@ def main():
     block1_repo = Block1Repository(db)
     block2_repo = Block2Repository(db)
     block3_repo = Block3Repository(db)
+    block4_repo = Block4Repository(db)
 
     # 각 종목별로 탐지 실행
     all_results = {}
@@ -508,7 +533,7 @@ def main():
         # 각 패턴 상세
         for idx, pattern in enumerate(patterns, 1):
             pattern_tree = create_pattern_tree(
-                pattern, idx, block1_repo, block2_repo, block3_repo
+                pattern, idx, block1_repo, block2_repo, block3_repo, block4_repo
             )
             console.print(pattern_tree)
             console.print()

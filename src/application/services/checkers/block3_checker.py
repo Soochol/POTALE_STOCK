@@ -100,43 +100,48 @@ class Block3Checker:
                 return False
 
         # Block2 추가 조건 검사
-        if prev_block1 is not None:
-            if condition.block2_volume_ratio is not None and prev_block1.peak_volume is not None:
+        # None 처리: condition 값 또는 prev_block1 데이터가 None이면 스킵
+        if condition.block2_volume_ratio is not None:
+            if prev_block1 is not None and prev_block1.peak_volume is not None:
                 ratio = condition.block2_volume_ratio / 100.0
                 required_volume = prev_block1.peak_volume * ratio
                 if stock.volume < required_volume:
                     return False
 
-            if condition.block2_low_price_margin is not None and prev_block1.peak_price is not None:
+        if condition.block2_low_price_margin is not None:
+            if prev_block1 is not None and prev_block1.peak_price is not None:
                 margin = condition.block2_low_price_margin / 100.0
                 threshold_price = stock.low * (1 + margin)
                 if threshold_price <= prev_block1.peak_price:
                     return False
 
         # 2. 블록3 추가 조건 검사
-        # 추가 조건을 위해서는 prev_block2가 필요 (독립적으로 시작하는 경우 prev_block2가 없을 수 있음)
-        if prev_block2 is None:
-            # 독립적으로 시작하는 경우: 블록2 조건만 만족하면 OK
-            # (실제로는 직전 블록2를 찾아서 전달해야 하지만, 없으면 추가 조건 스킵)
-            return True
+        # None의 의미: 조건값이 None이면 해당 조건 스킵 (pass)
+        # prev_block2가 None이어도 검사 진행 (단, 값이 없으면 해당 조건 스킵)
 
         # 추가 조건 1: 블록 거래량 조건 (선택적)
         # 당일_거래량 >= 블록2_최고_거래량 × (block_volume_ratio/100)
         # block_volume_ratio는 % 단위 (예: 15 = 15%)
-        if condition.block3_volume_ratio is not None and prev_block2.peak_volume is not None:
-            ratio = condition.block3_volume_ratio / 100.0
-            required_volume = prev_block2.peak_volume * ratio
-            if stock.volume < required_volume:
-                return False
+        # None 처리: condition 값 또는 prev_block2 데이터가 None이면 스킵
+        if condition.block3_volume_ratio is not None:
+            if prev_block2 is not None and prev_block2.peak_volume is not None:
+                ratio = condition.block3_volume_ratio / 100.0
+                required_volume = prev_block2.peak_volume * ratio
+                if stock.volume < required_volume:
+                    return False
+            # prev_block2가 None이거나 peak_volume이 None이면 이 조건 스킵 (pass)
 
         # 추가 조건 2: 저가 마진 조건 (선택적)
         # 당일_저가 × (1 + low_price_margin/100) > 블록2_peak_price
         # low_price_margin은 % 단위 (예: 10 = 10%)
-        if condition.block3_low_price_margin is not None and prev_block2.peak_price is not None:
-            margin = condition.block3_low_price_margin / 100.0
-            threshold_price = stock.low * (1 + margin)
-            if threshold_price <= prev_block2.peak_price:
-                return False
+        # None 처리: condition 값 또는 prev_block2 데이터가 None이면 스킵
+        if condition.block3_low_price_margin is not None:
+            if prev_block2 is not None and prev_block2.peak_price is not None:
+                margin = condition.block3_low_price_margin / 100.0
+                threshold_price = stock.low * (1 + margin)
+                if threshold_price <= prev_block2.peak_price:
+                    return False
+            # prev_block2가 None이거나 peak_price가 None이면 이 조건 스킵 (pass)
 
         # 모든 조건 만족
         return True

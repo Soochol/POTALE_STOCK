@@ -2,7 +2,7 @@
 Block4 Repository - 블록4 탐지 결과 저장/조회 Repository
 """
 import uuid
-from typing import Optional
+from typing import Optional, List
 from datetime import date
 from ....domain.entities import Block4Detection as Block4DetectionEntity
 from ...database.models import Block4Detection as Block4DetectionModel
@@ -97,8 +97,33 @@ class Block4Repository(
             peak_volume=entity.peak_volume,
             duration_days=entity.duration_days,
             exit_reason=entity.exit_reason,
-            condition_name=entity.condition_name
+            condition_name=entity.condition_name,
+            pattern_id=entity.pattern_id,
+            detection_type=entity.detection_type
         )
+
+    def find_by_pattern_and_condition(
+        self,
+        pattern_id: int,
+        condition_name: str
+    ) -> List[Block4DetectionEntity]:
+        """
+        특정 패턴의 특정 조건(seed/redetection) Block4 조회
+
+        Args:
+            pattern_id: 패턴 ID
+            condition_name: 조건 이름 ('seed' 또는 'redetection')
+
+        Returns:
+            Block4Detection 엔티티 리스트
+        """
+        with self.db.session_scope() as session:
+            models = session.query(Block4DetectionModel).filter(
+                Block4DetectionModel.pattern_id == pattern_id,
+                Block4DetectionModel.condition_name == condition_name
+            ).order_by(Block4DetectionModel.started_at).all()
+
+            return [self._model_to_entity(model) for model in models]
 
     def _model_to_entity(self, model: Block4DetectionModel) -> Block4DetectionEntity:
         """DB 모델을 엔티티로 변환"""
@@ -110,9 +135,9 @@ class Block4Repository(
             status=model.status,
             entry_close=model.entry_close,
             entry_rate=model.entry_rate,
-            prev_block3_id=model.prev_block3_id,
-            prev_block3_peak_price=model.prev_block3_peak_price,
-            prev_block3_peak_volume=model.prev_block3_peak_volume,
+            prev_block_id=model.prev_block3_id,
+            prev_block_peak_price=model.prev_block3_peak_price,
+            prev_block_peak_volume=model.prev_block3_peak_volume,
             peak_price=model.peak_price,
             peak_date=model.peak_date,
             peak_gain_ratio=model.peak_gain_ratio,

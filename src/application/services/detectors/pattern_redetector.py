@@ -363,6 +363,7 @@ class PatternRedetector:
         seed_block3: Block3Detection,
         seed_block4: Block4Detection,
         condition: RedetectionCondition,
+        pattern_id: int,
         redetection_start: date,
         redetection_end: date
     ) -> List[Block4Detection]:
@@ -374,6 +375,7 @@ class PatternRedetector:
             seed_block3: Block3 Seed (저가 마진 체크용)
             seed_block4: Block4 Seed (가격 범위 기준)
             condition: 재탐지 조건
+            pattern_id: 패턴 ID
             redetection_start: 재탐지 시작일
             redetection_end: 재탐지 종료일
 
@@ -455,7 +457,8 @@ class PatternRedetector:
                     prev_block_peak_price=seed_block3.peak_price,
                     peak_price=stock.high,
                     peak_date=stock.date,
-                    condition_name="redetection"
+                    condition_name="redetection",
+                    pattern_id=pattern_id
                 )
 
                 redetections.append(block4)
