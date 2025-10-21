@@ -66,7 +66,9 @@ class Block2Checker:
 
         # 조건 3: 이격도 (MA를 100으로 봤을 때 종가 비율)
         if condition.base.block1_entry_max_deviation_ratio is not None:
-            deviation = indicators.get('deviation', 100)
+            # 동적 필드 이름: deviation_60, deviation_120 등
+            deviation_field = f'deviation_{condition.base.block1_entry_ma_period}'
+            deviation = indicators.get(deviation_field, 100)
             if deviation > condition.base.block1_entry_max_deviation_ratio:
                 return False
 

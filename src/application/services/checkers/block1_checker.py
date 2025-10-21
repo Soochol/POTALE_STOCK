@@ -64,7 +64,9 @@ class Block1Checker:
 
         # 조건 3: 이격도 (MA를 100으로 봤을 때 종가 비율)
         if condition.base.block1_entry_max_deviation_ratio is not None:
-            deviation = indicators.get('deviation', 100)
+            # 동적 필드 이름: deviation_60, deviation_120 등
+            deviation_field = f'deviation_{condition.base.block1_entry_ma_period}'
+            deviation = indicators.get(deviation_field, 100)
             # deviation_threshold = 115 의미: MA를 100으로 봤을 때 115 이하
             if deviation > condition.base.block1_entry_max_deviation_ratio:
                 return False
@@ -283,6 +285,13 @@ class Block1Checker:
                 ma_value = value
                 break
 
+        # deviation 필드는 사용된 MA 기간에 따라 동적으로 조회
+        deviation = None
+        for key, value in indicators.items():
+            if key.startswith('deviation_'):
+                deviation = value
+                break
+
         return Block1Detection(
             ticker=stock.ticker,
             block1_id="",  # UUID는 __post_init__에서 생성
@@ -296,7 +305,7 @@ class Block1Checker:
             entry_trading_value=trading_value_100m,
             entry_ma_value=ma_value,
             entry_rate=indicators.get('rate'),
-            entry_deviation=indicators.get('deviation'),
+            entry_deviation=deviation,
             condition_name=condition_name,
             created_at=date.today()
         )
