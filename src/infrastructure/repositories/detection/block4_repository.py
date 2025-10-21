@@ -119,12 +119,12 @@ class Block4Repository(
             Block4Detection 엔티티 리스트
         """
         with self.db.session_scope() as session:
-            models = session.query(Block4DetectionModel)
-                .options(joinedload(Block4DetectionModel.stock_info))
+            models = session.query(Block4DetectionModel)\
+                .options(joinedload(Block4DetectionModel.stock_info))\
                 .filter(
-                Block4DetectionModel.pattern_id == pattern_id,
-                Block4DetectionModel.condition_name == condition_name
-            ).order_by(Block4DetectionModel.started_at).all()
+                    Block4DetectionModel.pattern_id == pattern_id,
+                    Block4DetectionModel.condition_name == condition_name
+                ).order_by(Block4DetectionModel.started_at).all()
 
             return [self._model_to_entity(model) for model in models]
 

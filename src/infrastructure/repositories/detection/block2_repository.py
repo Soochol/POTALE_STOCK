@@ -175,11 +175,11 @@ class Block2Repository(
             Block2Detection 엔티티 리스트
         """
         with self.db.session_scope() as session:
-            models = session.query(Block2DetectionModel)
-                .options(joinedload(Block2DetectionModel.stock_info))
+            models = session.query(Block2DetectionModel)\
+                .options(joinedload(Block2DetectionModel.stock_info))\
                 .filter(
-                Block2DetectionModel.pattern_id == pattern_id,
-                Block2DetectionModel.condition_name == condition_name
-            ).order_by(Block2DetectionModel.started_at).all()
+                    Block2DetectionModel.pattern_id == pattern_id,
+                    Block2DetectionModel.condition_name == condition_name
+                ).order_by(Block2DetectionModel.started_at).all()
 
             return [self._model_to_entity(model) for model in models]

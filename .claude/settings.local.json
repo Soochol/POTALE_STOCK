@@ -24,7 +24,22 @@
       "Bash(sqlite3 data/database/stock_data.db \"SELECT pattern_id, COUNT(*) FROM block3_detection WHERE condition_name=''redetection'' AND pattern_id IS NOT NULL GROUP BY pattern_id ORDER BY pattern_id;\")",
       "Bash(git add -A)",
       "Bash(del \"data\\database\\stock_data.db\")",
-      "Bash(if not exist .vscode mkdir .vscode)"
+      "Bash(if not exist .vscode mkdir .vscode)",
+      "Bash(git checkout:*)",
+      "Bash(if [ -d \"migrations\" ])",
+      "Bash(then echo \"migrations folder exists\")",
+      "Bash(else mkdir migrations)",
+      "Bash(for file in src/infrastructure/repositories/detection/block{2,3,4}_repository.py)",
+      "Bash(do)",
+      "Bash(if grep -q \"from sqlalchemy.orm import joinedload\" \"$file\")",
+      "Bash(then)",
+      "Bash(echo:*)",
+      "Bash(else)",
+      "Bash(done)",
+      "Bash(.venvScriptspython.exe migrationsmigrate_add_peak_volume_to_block1.py)",
+      "Bash(\".venv/Scripts/python.exe\" migrations/migrate_add_peak_volume_to_block1.py)",
+      "Bash(\".venv/Scripts/python.exe\" -m pip install pytest pytest-cov pytest-asyncio pytest-mock faker --quiet)",
+      "Bash(\".venv/Scripts/python.exe\" -m pytest tests/unit/entities/test_block1_detection.py -v)"
     ],
     "deny": [],
     "ask": []

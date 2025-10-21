@@ -49,9 +49,15 @@ Thumbs.db
 *.log
 logs/
 
-# 테스트 파일
-test_*.py
+# 테스트 파일 (루트 레벨만, tests/ 폴더는 제외)
+/test_*.py
 test_*.txt
+!tests/**/*.py
+
+# 테스트 커버리지
+.coverage
+htmlcov/
+.pytest_cache/
 
 # Temporary/junk files
 =*
