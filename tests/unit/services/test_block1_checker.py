@@ -21,17 +21,17 @@ def block1_checker():
 def sample_condition():
     """Create a sample Block1Condition"""
     base = BaseEntryCondition(
-        name="test_condition",
         block1_entry_surge_rate=5.0,
         block1_entry_ma_period=20,
         block1_entry_high_above_ma=True,
         block1_entry_max_deviation_ratio=115.0,
         block1_entry_min_trading_value=100.0,
         block1_entry_volume_high_months=3,
-        block1_entry_min_volume_ratio=150.0
+        block1_entry_volume_spike_ratio=1.5
     )
 
     condition = Mock(spec=Block1Condition)
+    condition.name = "test_condition"
     condition.base = base
     return condition
 
@@ -205,17 +205,17 @@ class TestBlock1CheckerEntry:
         """Test that None conditions are properly skipped"""
         # Create condition with all None values
         base = BaseEntryCondition(
-            name="test_condition",
             block1_entry_surge_rate=None,
             block1_entry_ma_period=None,
             block1_entry_high_above_ma=False,
             block1_entry_max_deviation_ratio=None,
             block1_entry_min_trading_value=None,
             block1_entry_volume_high_months=None,
-            block1_entry_min_volume_ratio=None
+            block1_entry_volume_spike_ratio=None
         )
 
         condition = Mock(spec=Block1Condition)
+        condition.name = "test_condition"
         condition.base = base
 
         result = block1_checker.check_entry(
@@ -253,15 +253,16 @@ class TestBlock1CheckerExit:
     @pytest.fixture
     def exit_condition(self):
         """Create exit condition"""
+        from src.domain.entities.conditions.base_entry_condition import Block1ExitConditionType
+
         condition = Mock()
-        condition.exit_ma_break = True
-        condition.exit_three_line_reversal = True
-        condition.exit_body_middle_break = True
         condition.base = Mock()
         condition.base.block1_entry_ma_period = 20
+        condition.base.block1_exit_ma_period = None  # Will use entry_ma_period
+        condition.base.block1_exit_condition_type = Block1ExitConditionType.MA_BREAK
         return condition
 
-    def test_check_exit_ma_break(self, block1_checker, active_block1_detection, exit_condition):
+    def test_check_exit_ma_break(self, block1_checker, active_block1_detection, exit_condition, all_stocks_list):
         """Test exit check for MA break condition"""
         stock = Stock(
             name="삼성전자",
@@ -284,7 +285,8 @@ class TestBlock1CheckerExit:
         result = block1_checker.check_exit(
             condition=exit_condition,
             detection=detection,
-            current_stock=stock
+            current_stock=stock,
+            all_stocks=all_stocks_list
         )
 
         # Should detect MA break exit
@@ -292,9 +294,11 @@ class TestBlock1CheckerExit:
         assert "ma_break" in result.lower()
 
     def test_check_exit_body_middle_break(
-        self, block1_checker, active_block1_detection, exit_condition
+        self, block1_checker, active_block1_detection, all_stocks_list
     ):
         """Test exit check for body middle break condition"""
+        from src.domain.entities.conditions.base_entry_condition import Block1ExitConditionType
+
         stock = Stock(
             name="삼성전자",
             ticker="005930",
@@ -311,14 +315,21 @@ class TestBlock1CheckerExit:
             'MA_20': 70000.0  # Above close, so no MA break
         }
 
+        # Create condition with BODY_MIDDLE exit type
+        body_middle_condition = Mock()
+        body_middle_condition.base = Mock()
+        body_middle_condition.base.block1_entry_ma_period = 20
+        body_middle_condition.base.block1_exit_condition_type = Block1ExitConditionType.BODY_MIDDLE
+
         detection = active_block1_detection
         # Entry body middle = (75000 + 75500) / 2 = 75250
         # Close (72500) < 75250, so should exit
 
         result = block1_checker.check_exit(
-            condition=exit_condition,
+            condition=body_middle_condition,
             detection=detection,
-            current_stock=stock
+            current_stock=stock,
+            all_stocks=all_stocks_list
         )
 
         # Should detect body middle break
@@ -326,7 +337,7 @@ class TestBlock1CheckerExit:
         assert "body_middle" in result.lower()
 
     def test_check_exit_no_exit_conditions_met(
-        self, block1_checker, active_block1_detection, exit_condition
+        self, block1_checker, active_block1_detection, exit_condition, all_stocks_list
     ):
         """Test exit check when no conditions are met (continues)"""
         stock = Stock(
@@ -350,7 +361,8 @@ class TestBlock1CheckerExit:
         result = block1_checker.check_exit(
             condition=exit_condition,
             detection=detection,
-            current_stock=stock
+            current_stock=stock,
+            all_stocks=all_stocks_list
         )
 
         # No exit condition met
@@ -497,7 +509,8 @@ class TestBlock1CheckerIntegration:
         exit_reason = block1_checker.check_exit(
             condition=exit_condition,
             detection=detection,
-            current_stock=exit_stock
+            current_stock=exit_stock,
+            all_stocks=all_stocks_list
         )
 
         assert exit_reason is not None

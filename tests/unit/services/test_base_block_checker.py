@@ -86,24 +86,28 @@ def all_stocks():
 class TestBaseBlockCheckerSurgeRate:
     """Test surge rate condition checking"""
 
-    def test_surge_rate_pass(self, sample_stock_with_indicators, base_condition, all_stocks):
+    def test_surge_rate_pass(self, sample_stock_with_indicators, base_condition):
         """Test surge rate check passes when above threshold"""
         checker = ConcreteBlockChecker()
         stock = sample_stock_with_indicators
 
-        # stock.indicators.surge_rate = 6.0
+        # stock.indicators['rate'] = 6.0
         # base_condition.block1_entry_surge_rate = 5.0
-        result = checker.check_common_entry_conditions(stock, base_condition, all_stocks)
+        result = checker._check_surge_rate(
+            stock, stock.indicators, base_condition.block1_entry_surge_rate
+        )
 
         assert result is True
 
-    def test_surge_rate_fail(self, sample_stock_with_indicators, base_condition, all_stocks):
+    def test_surge_rate_fail(self, sample_stock_with_indicators, base_condition):
         """Test surge rate check fails when below threshold"""
         checker = ConcreteBlockChecker()
         stock = sample_stock_with_indicators
-        stock.indicators.surge_rate = 3.0  # Below threshold
+        stock.indicators['rate'] = 3.0  # Below threshold
 
-        result = checker.check_common_entry_conditions(stock, base_condition, all_stocks)
+        result = checker._check_surge_rate(
+            stock, stock.indicators, base_condition.block1_entry_surge_rate
+        )
 
         assert result is False
 
@@ -250,11 +254,13 @@ class TestBaseBlockCheckerVolumeConditions:
         checker = ConcreteBlockChecker()
         stock = sample_stock_with_indicators
 
-        # base_condition.block1_entry_volume_spike_ratio = 150.0
-        # stock.volume = 10000000, prev.volume = 9000000
-        # Required: 9000000 * 1.5 = 13500000, actual = 10000000 (may fail)
-        # Let's adjust to make it pass
-        stock.volume = 15000000
+        # Change stock date to later date so previous day exists in all_stocks
+        stock.date = date(2024, 1, 5)  # all_stocks has data from 2024-1-1 to 2024-1-10
+
+        # base_condition.block1_entry_volume_spike_ratio = 150.0 (means 150%, i.e., 1.5x)
+        # Previous day (2024-1-4) volume = 8000000 + 3*100000 = 8300000
+        # Required: 8300000 * 1.5 = 12450000
+        stock.volume = 13000000  # Above required
 
         result = checker._check_volume_spike(
             stock, stock.indicators,

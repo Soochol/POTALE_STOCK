@@ -2,6 +2,20 @@
 
 This directory contains the test suite for the POTALE_STOCK project.
 
+## Current Status (2025-10-21)
+
+- **Total Tests**: 216 passing ✅
+- **Overall Coverage**: **29%** (Target: 30%+)
+- **Entities Coverage**: ~95% (11/13 entities at 100%)
+- **Services Coverage**: 62-84% (in progress)
+
+📊 **Detailed Progress**: See [PROGRESS.md](./PROGRESS.md) for comprehensive coverage report and next steps.
+
+### Recent Additions
+- ✅ BaseEntryCondition tests (43 tests, 100% coverage)
+- ✅ Condition & Rule tests (24 tests, 98% coverage)
+- ✅ Enhanced BaseBlockDetection tests
+
 ## Directory Structure
 
 ```

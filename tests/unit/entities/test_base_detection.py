@@ -5,7 +5,8 @@ Tests the common functionality shared by Block2/3/4 entities.
 """
 import pytest
 from datetime import date, datetime
-from src.domain.entities import Block2Detection
+from src.domain.entities import Block2Detection, Block3Detection, Block4Detection
+from src.domain.entities.detections.base_detection import BaseBlockDetection
 
 
 @pytest.mark.unit
@@ -275,13 +276,18 @@ class TestBaseBlockDetectionRepresentation:
     def test_repr_with_peak_gain(self, sample_block2_detection):
         """Test __repr__ when peak_gain_ratio exists"""
         detection = sample_block2_detection
+        # Set peak_price to calculate peak_gain_ratio
+        detection.entry_close = 75000.0
+        detection.peak_price = 80000.0
 
         repr_str = repr(detection)
 
-        assert "Block2Detection" in repr_str
-        assert detection.ticker in repr_str
-        assert str(detection.started_at) in repr_str
-        assert detection.status in repr_str
+        # Test that repr includes class name, ticker, status (dataclass default repr)
+        assert "Block2Detection(" in repr_str
+        assert "ticker='005930'" in repr_str
+        assert "status='active'" in repr_str
+        # peak_gain_ratio should be calculated
+        assert "peak_gain_ratio=" in repr_str
 
     def test_repr_without_peak_gain(self):
         """Test __repr__ when peak_gain_ratio is None"""
@@ -291,9 +297,233 @@ class TestBaseBlockDetectionRepresentation:
             started_at=date(2024, 1, 1),
             entry_close=75000.0
         )
-        detection.peak_gain_ratio = None
+        detection.peak_price = None
 
         repr_str = repr(detection)
 
-        assert "Block2Detection" in repr_str
-        assert "N/A" in repr_str or "None" in repr_str.lower()
+        # Test that repr includes class name and ticker (dataclass default repr)
+        assert "Block2Detection(" in repr_str
+        assert "ticker='005930'" in repr_str
+        # When peak_price is None, peak_gain_ratio is None
+        assert "peak_gain_ratio=None" in repr_str
+
+
+@pytest.mark.unit
+@pytest.mark.entity
+class TestBlock2DetectionCompatibility:
+    """Test Block2Detection compatibility aliases"""
+
+    def test_prev_block1_id_getter(self):
+        """Test prev_block1_id property getter"""
+        detection = Block2Detection(
+            ticker="005930",
+            condition_name="test",
+            started_at=date(2024, 1, 1),
+            entry_close=75000.0,
+            prev_block_id=1
+        )
+
+        # Should return prev_block_id value
+        assert detection.prev_block1_id == 1
+
+    def test_prev_block1_id_setter(self):
+        """Test prev_block1_id property setter"""
+        detection = Block2Detection(
+            ticker="005930",
+            condition_name="test",
+            started_at=date(2024, 1, 1),
+            entry_close=75000.0
+        )
+
+        detection.prev_block1_id = 5
+
+        # Should set prev_block_id value
+        assert detection.prev_block_id == 5
+        assert detection.prev_block1_id == 5
+
+    def test_prev_block1_peak_price_getter(self):
+        """Test prev_block1_peak_price property getter"""
+        detection = Block2Detection(
+            ticker="005930",
+            condition_name="test",
+            started_at=date(2024, 1, 1),
+            entry_close=75000.0,
+            prev_block_peak_price=80000.0
+        )
+
+        assert detection.prev_block1_peak_price == 80000.0
+
+    def test_prev_block1_peak_price_setter(self):
+        """Test prev_block1_peak_price property setter"""
+        detection = Block2Detection(
+            ticker="005930",
+            condition_name="test",
+            started_at=date(2024, 1, 1),
+            entry_close=75000.0
+        )
+
+        detection.prev_block1_peak_price = 85000.0
+
+        assert detection.prev_block_peak_price == 85000.0
+        assert detection.prev_block1_peak_price == 85000.0
+
+    def test_prev_block1_peak_volume_getter(self):
+        """Test prev_block1_peak_volume property getter"""
+        detection = Block2Detection(
+            ticker="005930",
+            condition_name="test",
+            started_at=date(2024, 1, 1),
+            entry_close=75000.0,
+            prev_block_peak_volume=15000000
+        )
+
+        assert detection.prev_block1_peak_volume == 15000000
+
+    def test_prev_block1_peak_volume_setter(self):
+        """Test prev_block1_peak_volume property setter"""
+        detection = Block2Detection(
+            ticker="005930",
+            condition_name="test",
+            started_at=date(2024, 1, 1),
+            entry_close=75000.0
+        )
+
+        detection.prev_block1_peak_volume = 20000000
+
+        assert detection.prev_block_peak_volume == 20000000
+        assert detection.prev_block1_peak_volume == 20000000
+
+
+@pytest.mark.unit
+@pytest.mark.entity
+class TestBlock3DetectionCompatibility:
+    """Test Block3Detection compatibility aliases"""
+
+    def test_prev_block2_id_aliases(self):
+        """Test prev_block2_id property getter/setter"""
+        detection = Block3Detection(
+            ticker="005930",
+            condition_name="test",
+            started_at=date(2024, 1, 1),
+            entry_close=75000.0
+        )
+
+        # Setter
+        detection.prev_block2_id = 10
+
+        # Getter
+        assert detection.prev_block2_id == 10
+        assert detection.prev_block_id == 10
+
+    def test_prev_block2_peak_price_aliases(self):
+        """Test prev_block2_peak_price property getter/setter"""
+        detection = Block3Detection(
+            ticker="005930",
+            condition_name="test",
+            started_at=date(2024, 1, 1),
+            entry_close=75000.0
+        )
+
+        detection.prev_block2_peak_price = 90000.0
+
+        assert detection.prev_block2_peak_price == 90000.0
+        assert detection.prev_block_peak_price == 90000.0
+
+    def test_prev_block2_peak_volume_aliases(self):
+        """Test prev_block2_peak_volume property getter/setter"""
+        detection = Block3Detection(
+            ticker="005930",
+            condition_name="test",
+            started_at=date(2024, 1, 1),
+            entry_close=75000.0
+        )
+
+        detection.prev_block2_peak_volume = 25000000
+
+        assert detection.prev_block2_peak_volume == 25000000
+        assert detection.prev_block_peak_volume == 25000000
+
+
+@pytest.mark.unit
+@pytest.mark.entity
+class TestBlock4DetectionCompatibility:
+    """Test Block4Detection compatibility aliases"""
+
+    def test_prev_block3_id_aliases(self):
+        """Test prev_block3_id property getter/setter"""
+        detection = Block4Detection(
+            ticker="005930",
+            condition_name="test",
+            started_at=date(2024, 1, 1),
+            entry_close=75000.0
+        )
+
+        detection.prev_block3_id = 15
+
+        assert detection.prev_block3_id == 15
+        assert detection.prev_block_id == 15
+
+    def test_prev_block3_peak_price_aliases(self):
+        """Test prev_block3_peak_price property getter/setter"""
+        detection = Block4Detection(
+            ticker="005930",
+            condition_name="test",
+            started_at=date(2024, 1, 1),
+            entry_close=75000.0
+        )
+
+        detection.prev_block3_peak_price = 95000.0
+
+        assert detection.prev_block3_peak_price == 95000.0
+        assert detection.prev_block_peak_price == 95000.0
+
+    def test_prev_block3_peak_volume_aliases(self):
+        """Test prev_block3_peak_volume property getter/setter"""
+        detection = Block4Detection(
+            ticker="005930",
+            condition_name="test",
+            started_at=date(2024, 1, 1),
+            entry_close=75000.0
+        )
+
+        detection.prev_block3_peak_volume = 30000000
+
+        assert detection.prev_block3_peak_volume == 30000000
+        assert detection.prev_block_peak_volume == 30000000
+
+
+@pytest.mark.unit
+@pytest.mark.entity
+class TestBaseBlockDetectionDirect:
+    """Test BaseBlockDetection class directly"""
+
+    def test_base_detection_get_block_name(self):
+        """Test BaseBlockDetection._get_block_name() returns 'BaseBlock'"""
+        # Create a concrete instance for testing
+        detection = Block2Detection(
+            ticker="005930",
+            condition_name="test",
+            started_at=date(2024, 1, 1),
+            entry_close=75000.0
+        )
+
+        # Call parent method directly (normally overridden)
+        base_name = BaseBlockDetection._get_block_name(detection)
+        assert base_name == "BaseBlock"
+
+    def test_base_detection_repr_with_none_peak_gain(self):
+        """Test BaseBlockDetection.__repr__ when peak_gain_ratio is None"""
+        detection = Block2Detection(
+            ticker="005930",
+            condition_name="test",
+            started_at=date(2024, 1, 1),
+            entry_close=75000.0
+        )
+
+        # peak_price is None by default, so peak_gain_ratio is None
+        repr_str = BaseBlockDetection.__repr__(detection)
+
+        assert "<" in repr_str
+        assert "Detection(" in repr_str
+        assert "ticker=005930" in repr_str
+        assert "peak_gain=N/A" in repr_str

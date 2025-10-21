@@ -297,3 +297,72 @@ class TestBlock1DetectionMetadata:
         )
 
         assert detection.entry_trading_value is None
+
+
+@pytest.mark.unit
+@pytest.mark.entity
+class TestBlock1DetectionRepresentation:
+    """Test Block1Detection __repr__"""
+
+    def test_repr_format(self):
+        """Test __repr__ string format"""
+        detection = Block1Detection(
+            ticker="005930",
+            condition_name="test_condition",
+            started_at=date(2024, 1, 1),
+            entry_open=75000.0,
+            entry_high=76000.0,
+            entry_low=74500.0,
+            entry_close=75500.0,
+            entry_volume=10000000
+        )
+        detection.status = "completed"
+        detection.ended_at = date(2024, 1, 10)
+        detection.peak_price = 80000.0
+
+        repr_str = repr(detection)
+
+        assert "<Block1Detection(" in repr_str
+        assert "ticker=005930" in repr_str
+        assert "started=2024-01-01" in repr_str
+        assert "status=completed" in repr_str
+        assert "9일" in repr_str  # duration_days
+        assert "80,000" in repr_str and "원" in repr_str  # peak_price
+
+    def test_repr_without_duration(self):
+        """Test __repr__ when duration_days is None"""
+        detection = Block1Detection(
+            ticker="005930",
+            condition_name="test_condition",
+            started_at=date(2024, 1, 1),
+            entry_open=75000.0,
+            entry_high=76000.0,
+            entry_low=74500.0,
+            entry_close=75500.0,
+            entry_volume=10000000
+        )
+
+        repr_str = repr(detection)
+
+        assert "<Block1Detection(" in repr_str
+        # No duration info when ended_at is None
+        assert "일" not in repr_str or "None" in repr_str
+
+    def test_repr_without_peak_price(self):
+        """Test __repr__ when peak_price is None"""
+        detection = Block1Detection(
+            ticker="005930",
+            condition_name="test_condition",
+            started_at=date(2024, 1, 1),
+            entry_open=75000.0,
+            entry_high=76000.0,
+            entry_low=74500.0,
+            entry_close=75500.0,
+            entry_volume=10000000
+        )
+
+        repr_str = repr(detection)
+
+        assert "<Block1Detection(" in repr_str
+        # No peak info when peak_price is None
+        assert "최고가" not in repr_str or "None" in repr_str

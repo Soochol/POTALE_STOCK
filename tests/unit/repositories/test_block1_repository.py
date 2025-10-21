@@ -250,13 +250,13 @@ class TestBlock1RepositoryFieldMapping:
 @pytest.mark.unit
 @pytest.mark.repository
 class TestBlock1RepositoryGetIdField:
-    """Test _get_id_field method"""
+    """Test _get_model_block_id_field method"""
 
     def test_get_id_field_returns_block1_id(self, mock_db_connection):
-        """Test that _get_id_field returns block1_id column"""
+        """Test that _get_model_block_id_field returns block1_id column"""
         repo = Block1Repository(mock_db_connection)
 
-        id_field = repo._get_id_field()
+        id_field = repo._get_model_block_id_field()
 
         # Should return the SQLAlchemy column for block1_id
         assert id_field.name == "block1_id"
