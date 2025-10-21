@@ -129,6 +129,16 @@ class RedetectionConditionPreset(Base):
     block3_tolerance_pct = Column(Float, nullable=False, default=20.0, comment='Block3 재탐지 가격 범위 (±%)')
     block4_tolerance_pct = Column(Float, nullable=False, default=25.0, comment='Block4 재탐지 가격 범위 (±%)')
 
+    # 재탐지 전용: 기간 범위 (Seed 발생일 기준)
+    block1_redetection_min_days_after_seed = Column(Integer, nullable=False, default=0, comment='Block1 Seed + 최소일수')
+    block1_redetection_max_days_after_seed = Column(Integer, nullable=False, default=1825, comment='Block1 Seed + 최대일수 (5년)')
+    block2_redetection_min_days_after_seed = Column(Integer, nullable=False, default=0, comment='Block2 Seed + 최소일수')
+    block2_redetection_max_days_after_seed = Column(Integer, nullable=False, default=1825, comment='Block2 Seed + 최대일수 (5년)')
+    block3_redetection_min_days_after_seed = Column(Integer, nullable=False, default=0, comment='Block3 Seed + 최소일수')
+    block3_redetection_max_days_after_seed = Column(Integer, nullable=False, default=1825, comment='Block3 Seed + 최대일수 (5년)')
+    block4_redetection_min_days_after_seed = Column(Integer, nullable=False, default=0, comment='Block4 Seed + 최소일수')
+    block4_redetection_max_days_after_seed = Column(Integer, nullable=False, default=1825, comment='Block4 Seed + 최대일수 (5년)')
+
     # 종료 조건
     block1_exit_condition_type = Column(String(50), nullable=False, comment='종료 조건 타입')
     block1_exit_ma_period = Column(Integer, comment='종료용 이동평균선 기간')

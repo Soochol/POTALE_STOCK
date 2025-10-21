@@ -28,12 +28,16 @@ class RedetectionCondition:
     # ===== Block1 기본 조건 (완화) =====
     base: BaseEntryCondition
     block1_tolerance_pct: float = 10.0  # Block1 재탐지 가격 범위 (±%)
+    block1_redetection_min_days_after_seed: int = 0  # Block1 Seed 발생일 + 최소일수
+    block1_redetection_max_days_after_seed: int = 1825  # Block1 Seed 발생일 + 최대일수 (5년)
 
     # ===== Block2 조건 =====
     # Block2 추가 조건
     block2_volume_ratio: float = 15.0  # Block1 최고 거래량 대비 (%)
     block2_low_price_margin: float = 10.0  # Block1 최고가 저가 마진 (%)
     block2_tolerance_pct: float = 15.0  # Block2 재탐지 가격 범위 (±%)
+    block2_redetection_min_days_after_seed: int = 0  # Block2 Seed 발생일 + 최소일수
+    block2_redetection_max_days_after_seed: int = 1825  # Block2 Seed 발생일 + 최대일수 (5년)
 
     # Block2 전용 파라미터 (Optional, 없으면 Block1 값 사용)
     block2_entry_surge_rate: Optional[float] = None
@@ -53,6 +57,8 @@ class RedetectionCondition:
     block3_volume_ratio: float = 15.0  # Block2 최고 거래량 대비 (%)
     block3_low_price_margin: float = 10.0  # Block2 최고가 저가 마진 (%)
     block3_tolerance_pct: float = 20.0  # Block3 재탐지 가격 범위 (±%)
+    block3_redetection_min_days_after_seed: int = 0  # Block3 Seed 발생일 + 최소일수
+    block3_redetection_max_days_after_seed: int = 1825  # Block3 Seed 발생일 + 최대일수 (5년)
 
     # Block3 전용 파라미터 (Optional, 없으면 Block1 값 사용)
     block3_entry_surge_rate: Optional[float] = None
@@ -72,6 +78,8 @@ class RedetectionCondition:
     block4_volume_ratio: float = 20.0  # Block3 최고 거래량 대비 (%)
     block4_low_price_margin: float = 10.0  # Block3 최고가 저가 마진 (%)
     block4_tolerance_pct: float = 25.0  # Block4 재탐지 가격 범위 (±%)
+    block4_redetection_min_days_after_seed: int = 0  # Block4 Seed 발생일 + 최소일수
+    block4_redetection_max_days_after_seed: int = 1825  # Block4 Seed 발생일 + 최대일수 (5년)
 
     # Block4 전용 파라미터 (Optional, 없으면 Block1 값 사용)
     block4_entry_surge_rate: Optional[float] = None

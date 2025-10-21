@@ -68,6 +68,20 @@ class DetectPatternsUseCase:
         # ========================================
         print("\n[Step 0] Indicator 계산 중...")
 
+        # Block1/2/3/4의 모든 entry_ma_period와 exit_ma_period 수집 (중복 제거)
+        ma_periods_set = set()
+        for attr in ['block1_entry_ma_period', 'block1_exit_ma_period',
+                     'block2_entry_ma_period', 'block2_exit_ma_period',
+                     'block3_entry_ma_period', 'block3_exit_ma_period',
+                     'block4_entry_ma_period', 'block4_exit_ma_period']:
+            if attr.startswith('block1_'):
+                period = getattr(seed_condition.base, attr, None)
+            else:
+                period = getattr(seed_condition, attr, None)
+            if period is not None:
+                ma_periods_set.add(period)
+        ma_periods_list = sorted(list(ma_periods_set)) if ma_periods_set else None
+
         # Block1/2/3/4의 모든 entry_volume_high_months 수집 (중복 제거)
         volume_months_set = set()
         for attr in ['block1_entry_volume_high_months', 'block2_entry_volume_high_months',
@@ -95,12 +109,13 @@ class DetectPatternsUseCase:
         calculator = Block1IndicatorCalculator()
         stocks_with_indicators = calculator.calculate(
             stocks=stocks,
-            ma_period=seed_condition.base.block1_entry_ma_period,
-            exit_ma_period=seed_condition.base.block1_exit_ma_period,
+            ma_periods=ma_periods_list,
             volume_months=volume_months_list,
             new_high_months=new_high_months_list
         )
         print(f"  {len(stocks_with_indicators)}건의 데이터에 indicator 추가 완료")
+        if ma_periods_list:
+            print(f"  MA 계산: {ma_periods_list}일")
         if volume_months_list:
             print(f"  volume_high 계산: {volume_months_list}개월")
         if new_high_months_list:
@@ -229,9 +244,41 @@ class DetectPatternsUseCase:
             # ========================================
             print(f"  [2-4] Pattern 생성 중...")
 
-            redetection_start = seed_block1.started_at
-            redetection_end = redetection_start + timedelta(days=5 * 365)
+            # 재탐지 기간 계산 (각 Block Seed 발생일 기준)
+            # Block1 재탐지 기간
+            block1_redetection_start = seed_block1.started_at + timedelta(
+                days=redetection_condition.block1_redetection_min_days_after_seed
+            )
+            block1_redetection_end = seed_block1.started_at + timedelta(
+                days=redetection_condition.block1_redetection_max_days_after_seed
+            )
 
+            # Block2 재탐지 기간
+            block2_redetection_start = seed_block2.started_at + timedelta(
+                days=redetection_condition.block2_redetection_min_days_after_seed
+            )
+            block2_redetection_end = seed_block2.started_at + timedelta(
+                days=redetection_condition.block2_redetection_max_days_after_seed
+            )
+
+            # Block3 재탐지 기간
+            block3_redetection_start = seed_block3.started_at + timedelta(
+                days=redetection_condition.block3_redetection_min_days_after_seed
+            )
+            block3_redetection_end = seed_block3.started_at + timedelta(
+                days=redetection_condition.block3_redetection_max_days_after_seed
+            )
+
+            # Block4 재탐지 기간 (Block4 Seed가 있는 경우에만)
+            if seed_block4:
+                block4_redetection_start = seed_block4.started_at + timedelta(
+                    days=redetection_condition.block4_redetection_min_days_after_seed
+                )
+                block4_redetection_end = seed_block4.started_at + timedelta(
+                    days=redetection_condition.block4_redetection_max_days_after_seed
+                )
+
+            # Pattern 객체 생성 (전체 재탐지 기간은 Block1 기준 사용)
             pattern = BlockPattern(
                 pattern_id=None,
                 ticker=ticker,
@@ -239,15 +286,19 @@ class DetectPatternsUseCase:
                 seed_block2_id=block2_id,
                 seed_block3_id=block3_id,
                 seed_block4_id=block4_id,  # Block4 Seed ID (있으면 값, 없으면 None)
-                redetection_start=redetection_start,
-                redetection_end=redetection_end
+                redetection_start=block1_redetection_start,
+                redetection_end=block1_redetection_end
             )
 
             pattern_id = self.pattern_repo.save(pattern)
             pattern.pattern_id = pattern_id
 
             print(f"    Pattern #{pattern_id} 생성 완료")
-            print(f"    재탐지 기간: {redetection_start} ~ {redetection_end}")
+            print(f"    Block1 재탐지 기간: {block1_redetection_start} ~ {block1_redetection_end}")
+            print(f"    Block2 재탐지 기간: {block2_redetection_start} ~ {block2_redetection_end}")
+            print(f"    Block3 재탐지 기간: {block3_redetection_start} ~ {block3_redetection_end}")
+            if seed_block4:
+                print(f"    Block4 재탐지 기간: {block4_redetection_start} ~ {block4_redetection_end}")
 
             # Seed들의 pattern_id 업데이트
             seed_block1.pattern_id = pattern_id
@@ -262,9 +313,9 @@ class DetectPatternsUseCase:
                 self.block4_repo.save(seed_block4)
 
             # ========================================
-            # Step 2-5: 5년 재탐지
+            # Step 2-5: 재탐지 (각 Block Seed 발생일 기준)
             # ========================================
-            print(f"  [2-5] 5년 재탐지 실행 중...")
+            print(f"  [2-5] 재탐지 실행 중...")
 
             # Block1 재탐지
             print(f"    Block1 재탐지 중...")
@@ -273,8 +324,8 @@ class DetectPatternsUseCase:
                 seed_block1=seed_block1,
                 condition=redetection_condition,
                 pattern_id=pattern_id,
-                redetection_start=redetection_start,
-                redetection_end=redetection_end
+                redetection_start=block1_redetection_start,
+                redetection_end=block1_redetection_end
             )
 
             for block1 in block1_redetections:
@@ -290,8 +341,8 @@ class DetectPatternsUseCase:
                 seed_block2=seed_block2,
                 condition=redetection_condition,
                 pattern_id=pattern_id,
-                redetection_start=redetection_start,
-                redetection_end=redetection_end
+                redetection_start=block2_redetection_start,
+                redetection_end=block2_redetection_end
             )
 
             for block2 in block2_redetections:
@@ -308,8 +359,8 @@ class DetectPatternsUseCase:
                 seed_block3=seed_block3,
                 condition=redetection_condition,
                 pattern_id=pattern_id,
-                redetection_start=redetection_start,
-                redetection_end=redetection_end
+                redetection_start=block3_redetection_start,
+                redetection_end=block3_redetection_end
             )
 
             for block3 in block3_redetections:
@@ -317,7 +368,7 @@ class DetectPatternsUseCase:
 
             print(f"      Block3 재탐지: {len(block3_redetections)}개")
 
-            # Block4 재탐지 (Block3 Seed가 있는 경우에만)
+            # Block4 재탐지 (Block4 Seed가 있는 경우에만)
             block4_redetections = []
             if seed_block4:
                 print(f"    Block4 재탐지 중...")
@@ -329,8 +380,8 @@ class DetectPatternsUseCase:
                     seed_block4=seed_block4,
                     condition=redetection_condition,
                     pattern_id=pattern_id,
-                    redetection_start=redetection_start,
-                    redetection_end=redetection_end
+                    redetection_start=block4_redetection_start,
+                    redetection_end=block4_redetection_end
                 )
 
                 for block4 in block4_redetections:

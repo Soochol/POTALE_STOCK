@@ -8,17 +8,17 @@ Preset 데이터를 YAML 파일에서 읽어서 DB에 업데이트
     python update_presets_from_yaml.py --dry-run          # 실제 저장 없이 미리보기만
 """
 
-import sys
-import os
-import yaml
 import argparse
+import os
+import sys
 from pathlib import Path
-from rich.console import Console
-from rich.table import Table
-from rich import box
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
-from rich.panel import Panel
+
+import yaml
 from loguru import logger
+from rich import box
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
 # 프로젝트 루트를 Python 경로에 추가
 project_root = Path(__file__).parent.parent
@@ -54,13 +54,27 @@ from src.domain.entities.conditions.base_entry_condition import (
 
 
 def load_yaml_file(file_path: str) -> dict:
-    """YAML 파일 로드"""
+    """
+    YAML 파일 로드
+
+    Args:
+        file_path: YAML 파일 경로
+
+    Returns:
+        YAML 파일 내용
+    """
     with open(file_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
-def print_table_header(title: str, width: int = 100):
-    """테이블 헤더 출력"""
+def print_table_header(title: str, width: int = 100) -> None:
+    """
+    테이블 헤더 출력
+
+    Args:
+        title: 테이블 제목
+        width: 테이블 너비 (기본값: 100)
+    """
     print()
     print("╔" + "═" * (width - 2) + "╗")
     print("║" + title.center(width - 2) + "║")
@@ -69,15 +83,36 @@ def print_table_header(title: str, width: int = 100):
 
 
 def print_conditions_table(
-    block1: dict, block2: dict, block3: dict, block4: dict, condition_type: str = "seed"
-):
-    """조건을 상세 테이블 형식으로 출력 (모든 항목) - Rich Table 사용"""
+    block1: dict,
+    block2: dict,
+    block3: dict,
+    block4: dict,
+    condition_type: str = "seed",
+) -> None:
+    """
+    조건을 상세 테이블 형식으로 출력 (모든 항목) - Rich Table 사용
+
+    Args:
+        block1: Block1 조건 딕셔너리
+        block2: Block2 조건 딕셔너리
+        block3: Block3 조건 딕셔너리
+        block4: Block4 조건 딕셔너리
+        condition_type: 조건 타입 ("seed" 또는 "redetection")
+    """
 
     console = Console()
 
     # 설명 텍스트 (조건 타입에 따라 다름)
-    volume_ratio_desc = "시드 블록 최고 거래량 대비" if condition_type == "redetection" else "이전 블록 최고 거래량 대비"
-    low_price_desc = "시드 블록 최고가 대비 마진" if condition_type == "redetection" else "이전 블록 최고가 대비 마진"
+    volume_ratio_desc = (
+        "시드 블록 최고 거래량 대비"
+        if condition_type == "redetection"
+        else "이전 블록 최고 거래량 대비"
+    )
+    low_price_desc = (
+        "시드 블록 최고가 대비 마진"
+        if condition_type == "redetection"
+        else "이전 블록 최고가 대비 마진"
+    )
 
     # Helper: 값에 따라 색상 적용
     def color_value(text, numeric_val, threshold_high=None, threshold_low=None):
@@ -97,7 +132,9 @@ def print_conditions_table(
         title_style="bold cyan",
         box=box.ROUNDED  # 더 부드러운 박스 스타일
     )
-    table1.add_column("변수명", justify="left", style="bold cyan", no_wrap=True, width=18)
+    table1.add_column(
+        "변수명", justify="left", style="bold cyan", no_wrap=True, width=18
+    )
     table1.add_column("Block1", justify="center", width=12)
     table1.add_column("Block2", justify="center", width=12)
     table1.add_column("Block3", justify="center", width=12)
@@ -112,11 +149,19 @@ def print_conditions_table(
 
     table1.add_row(
         "entry_surge_rate",
-        color_value(f"{b1_surge:.1f}%", b1_surge, threshold_high=15, threshold_low=8),
-        color_value(f"{b2_surge:.1f}%", b2_surge, threshold_high=15, threshold_low=8),
-        color_value(f"{b3_surge:.1f}%", b3_surge, threshold_high=15, threshold_low=8),
-        color_value(f"{b4_surge:.1f}%", b4_surge, threshold_high=15, threshold_low=8),
-        "진입 조건 (당일 등락률)"
+        color_value(
+            f"{b1_surge:.1f}%", b1_surge, threshold_high=15, threshold_low=8
+        ),
+        color_value(
+            f"{b2_surge:.1f}%", b2_surge, threshold_high=15, threshold_low=8
+        ),
+        color_value(
+            f"{b3_surge:.1f}%", b3_surge, threshold_high=15, threshold_low=8
+        ),
+        color_value(
+            f"{b4_surge:.1f}%", b4_surge, threshold_high=15, threshold_low=8
+        ),
+        "진입 조건 (당일 등락률)",
     )
 
     # 거래량 비율 (낮을수록 엄격 = 빨강)
@@ -130,7 +175,7 @@ def print_conditions_table(
         color_value(f"{b2_vol:.1f}%", b2_vol, threshold_low=10),
         color_value(f"{b3_vol:.1f}%", b3_vol, threshold_low=10),
         color_value(f"{b4_vol:.1f}%", b4_vol, threshold_low=10),
-        volume_ratio_desc
+        volume_ratio_desc,
     )
 
     # 저가 마진 (높을수록 완화 = 초록)
@@ -144,7 +189,7 @@ def print_conditions_table(
         color_value(f"{b2_margin:.1f}%", b2_margin, threshold_low=5),
         color_value(f"{b3_margin:.1f}%", b3_margin, threshold_low=5),
         color_value(f"{b4_margin:.1f}%", b4_margin, threshold_low=5),
-        low_price_desc
+        low_price_desc,
     )
 
     # MA 기간
@@ -201,7 +246,9 @@ def print_conditions_table(
         title_style="bold cyan",
         box=box.ROUNDED
     )
-    table2.add_column("변수명", justify="left", style="bold cyan", no_wrap=True, width=18)
+    table2.add_column(
+        "변수명", justify="left", style="bold cyan", no_wrap=True, width=18
+    )
     table2.add_column("Block1", justify="center", width=12)
     table2.add_column("Block2", justify="center", width=12)
     table2.add_column("Block3", justify="center", width=12)
@@ -209,28 +256,35 @@ def print_conditions_table(
     table2.add_column("설명", justify="left", width=32)
 
     # 이격도
+    default_deviation = block1.get('entry_max_deviation_ratio', 500.0)
     table2.add_row(
         "max_deviation",
-        f"{block1.get('entry_max_deviation_ratio', 500.0):.1f}%",
-        f"{block2.get('entry_max_deviation_ratio', block1.get('entry_max_deviation_ratio', 500.0)):.1f}%",
-        f"{block3.get('entry_max_deviation_ratio', block1.get('entry_max_deviation_ratio', 500.0)):.1f}%",
+        f"{default_deviation:.1f}%",
+        f"{block2.get('entry_max_deviation_ratio', default_deviation):.1f}%",
+        f"{block3.get('entry_max_deviation_ratio', default_deviation):.1f}%",
         f"{block4.get('entry_max_deviation_ratio', 500.0):.1f}%",
-        "최대 이격도"
+        "최대 이격도",
     )
 
     # 거래대금
+    default_trading = block1.get('entry_min_trading_value', 0.0)
     table2.add_row(
         "min_trading",
-        f"{block1.get('entry_min_trading_value', 0.0):.0f}억",
-        f"{block2.get('entry_min_trading_value', block1.get('entry_min_trading_value', 0.0)):.0f}억",
-        f"{block3.get('entry_min_trading_value', block1.get('entry_min_trading_value', 0.0)):.0f}억",
+        f"{default_trading:.0f}억",
+        f"{block2.get('entry_min_trading_value', default_trading):.0f}억",
+        f"{block3.get('entry_min_trading_value', default_trading):.0f}억",
         f"{block4.get('entry_min_trading_value', 0.0):.0f}억",
-        "최소 거래대금"
+        "최소 거래대금",
     )
 
     # 신고 거래량
     def format_months(val):
-        return f"[yellow]{val}개월[/yellow]" if val is not None else "[dim]비활성화[/dim]"
+        """개월 수 포맷팅"""
+        return (
+            f"[yellow]{val}개월[/yellow]"
+            if val is not None
+            else "[dim]비활성화[/dim]"
+        )
 
     table2.add_row(
         "volume_high",
@@ -242,13 +296,14 @@ def print_conditions_table(
     )
 
     # 거래량 급증
+    default_spike = block1.get('entry_volume_spike_ratio', 0.0)
     table2.add_row(
         "volume_spike",
-        f"{block1.get('entry_volume_spike_ratio', 0.0):.1f}%",
-        f"{block2.get('entry_volume_spike_ratio', block1.get('entry_volume_spike_ratio', 0.0)):.1f}%",
-        f"{block3.get('entry_volume_spike_ratio', block1.get('entry_volume_spike_ratio', 0.0)):.1f}%",
+        f"{default_spike:.1f}%",
+        f"{block2.get('entry_volume_spike_ratio', default_spike):.1f}%",
+        f"{block3.get('entry_volume_spike_ratio', default_spike):.1f}%",
         f"{block4.get('entry_volume_spike_ratio', 0.0):.1f}%",
-        "전일 거래량 대비"
+        "전일 거래량 대비",
     )
 
     # 신고가
@@ -272,7 +327,9 @@ def print_conditions_table(
         title_style="bold cyan",
         box=box.ROUNDED
     )
-    table3.add_column("변수명", justify="left", style="bold cyan", no_wrap=True, width=18)
+    table3.add_column(
+        "변수명", justify="left", style="bold cyan", no_wrap=True, width=18
+    )
     table3.add_column("Block1", justify="center", width=12)
     table3.add_column("Block2", justify="center", width=12)
     table3.add_column("Block3", justify="center", width=12)
@@ -280,13 +337,18 @@ def print_conditions_table(
     table3.add_column("설명", justify="left", width=32)
 
     # 종료 타입
+    def format_exit_type(block):
+        """종료 타입 포맷팅"""
+        exit_type = block.get('exit_condition_type', 'ma_break')
+        return "MA돌파" if exit_type == 'ma_break' else exit_type
+
     table3.add_row(
         "exit_type",
-        "MA돌파" if block1.get('exit_condition_type') == 'ma_break' else block1.get('exit_condition_type', ''),
-        "MA돌파" if block2.get('exit_condition_type', 'ma_break') == 'ma_break' else block2.get('exit_condition_type', ''),
-        "MA돌파" if block3.get('exit_condition_type', 'ma_break') == 'ma_break' else block3.get('exit_condition_type', ''),
-        "MA돌파" if block4.get('exit_condition_type', 'ma_break') == 'ma_break' else block4.get('exit_condition_type', ''),
-        "종료 조건 방식"
+        format_exit_type(block1),
+        format_exit_type(block2),
+        format_exit_type(block3),
+        format_exit_type(block4),
+        "종료 조건 방식",
     )
 
     # 종료 MA
@@ -321,7 +383,9 @@ def print_conditions_table(
             title_style="bold cyan",
             box=box.ROUNDED
         )
-        table4.add_column("변수명", justify="left", style="bold cyan", no_wrap=True, width=18)
+        table4.add_column(
+            "변수명", justify="left", style="bold cyan", no_wrap=True, width=18
+        )
         table4.add_column("Block1", justify="center", width=12)
         table4.add_column("Block2", justify="center", width=12)
         table4.add_column("Block3", justify="center", width=12)
@@ -338,14 +402,46 @@ def print_conditions_table(
             "자기 Seed 블록 가격 기준 (±)"
         )
 
+        # 재탐지 최소 기간 (Seed 발생일 기준)
+        table4.add_row(
+            "redetection_min_days",
+            f"{block1.get('redetection_min_days_after_seed', 0)}일",
+            f"{block2.get('redetection_min_days_after_seed', 0)}일",
+            f"{block3.get('redetection_min_days_after_seed', 0)}일",
+            f"{block4.get('redetection_min_days_after_seed', 0)}일",
+            "각 Seed 발생일 + 최소일수"
+        )
+
+        # 재탐지 최대 기간 (Seed 발생일 기준)
+        table4.add_row(
+            "redetection_max_days",
+            f"{block1.get('redetection_max_days_after_seed', 1825)}일",
+            f"{block2.get('redetection_max_days_after_seed', 1825)}일",
+            f"{block3.get('redetection_max_days_after_seed', 1825)}일",
+            f"{block4.get('redetection_max_days_after_seed', 1825)}일",
+            "각 Seed 발생일 + 최대일수 (5년=1825일)"
+        )
+
         console.print(table4)
 
 def update_seed_conditions(
     db: DatabaseConnection, json_data: dict, dry_run: bool = False
-):
-    """Seed 조건 업데이트 (블록별 섹션 구조 지원)"""
+) -> None:
+    """
+    Seed 조건 업데이트 (블록별 섹션 구조 지원)
+
+    Args:
+        db: 데이터베이스 연결 객체
+        json_data: YAML에서 로드한 조건 데이터
+        dry_run: True일 경우 실제 저장하지 않음
+    """
     console = Console()
-    console.print(Panel("[bold cyan]Seed Condition Presets 업데이트[/bold cyan]", border_style="cyan"))
+    console.print(
+        Panel(
+            "[bold cyan]Seed Condition Presets 업데이트[/bold cyan]",
+            border_style="cyan",
+        )
+    )
     print()
 
     repo = SeedConditionPresetRepository(db)
@@ -503,10 +599,22 @@ def update_seed_conditions(
 
 def update_redetection_conditions(
     db: DatabaseConnection, json_data: dict, dry_run: bool = False
-):
-    """재탐지 조건 업데이트 (블록별 섹션 구조 지원)"""
+) -> None:
+    """
+    재탐지 조건 업데이트 (블록별 섹션 구조 지원)
+
+    Args:
+        db: 데이터베이스 연결 객체
+        json_data: YAML에서 로드한 조건 데이터
+        dry_run: True일 경우 실제 저장하지 않음
+    """
     console = Console()
-    console.print(Panel("[bold green]Redetection Condition Presets 업데이트[/bold green]", border_style="green"))
+    console.print(
+        Panel(
+            "[bold green]Redetection Condition Presets 업데이트[/bold green]",
+            border_style="green",
+        )
+    )
     print()
 
     repo = RedetectionConditionPresetRepository(db)
@@ -554,6 +662,15 @@ def update_redetection_conditions(
                     block2_tolerance_pct=block2["tolerance_pct"],
                     block3_tolerance_pct=block3["tolerance_pct"],
                     block4_tolerance_pct=block4["tolerance_pct"],
+                    # 재탐지 기간 범위 (Seed 발생일 기준)
+                    block1_redetection_min_days_after_seed=block1["redetection_min_days_after_seed"],
+                    block1_redetection_max_days_after_seed=block1["redetection_max_days_after_seed"],
+                    block2_redetection_min_days_after_seed=block2["redetection_min_days_after_seed"],
+                    block2_redetection_max_days_after_seed=block2["redetection_max_days_after_seed"],
+                    block3_redetection_min_days_after_seed=block3["redetection_min_days_after_seed"],
+                    block3_redetection_max_days_after_seed=block3["redetection_max_days_after_seed"],
+                    block4_redetection_min_days_after_seed=block4["redetection_min_days_after_seed"],
+                    block4_redetection_max_days_after_seed=block4["redetection_max_days_after_seed"],
                     block2_volume_ratio=block2["volume_ratio"],
                     block2_low_price_margin=block2["low_price_margin"],
                     block3_volume_ratio=block3["volume_ratio"],
@@ -654,7 +771,8 @@ def update_redetection_conditions(
             # ... 구 형식 처리 생략 (필요 시 유지)
 
 
-def main():
+def main() -> None:
+    """메인 함수: YAML 파일에서 Preset 데이터를 읽어 DB 업데이트"""
     parser = argparse.ArgumentParser(
         description="YAML 파일에서 Preset 데이터를 읽어 DB 업데이트"
     )

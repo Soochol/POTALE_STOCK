@@ -44,6 +44,18 @@ class RedetectionConditionPresetRepository(BaseConditionPresetRepository, Condit
             'block4_tolerance_pct': condition.block4_tolerance_pct,
         })
 
+        # 재탐지 전용: 기간 범위 필드 (Seed 발생일 기준)
+        fields.update({
+            'block1_redetection_min_days_after_seed': condition.block1_redetection_min_days_after_seed,
+            'block1_redetection_max_days_after_seed': condition.block1_redetection_max_days_after_seed,
+            'block2_redetection_min_days_after_seed': condition.block2_redetection_min_days_after_seed,
+            'block2_redetection_max_days_after_seed': condition.block2_redetection_max_days_after_seed,
+            'block3_redetection_min_days_after_seed': condition.block3_redetection_min_days_after_seed,
+            'block3_redetection_max_days_after_seed': condition.block3_redetection_max_days_after_seed,
+            'block4_redetection_min_days_after_seed': condition.block4_redetection_min_days_after_seed,
+            'block4_redetection_max_days_after_seed': condition.block4_redetection_max_days_after_seed,
+        })
+
         # Block2/3/4 진입 조건 매핑
         fields.update({
             'block2_volume_ratio': condition.block2_volume_ratio,
@@ -92,6 +104,15 @@ class RedetectionConditionPresetRepository(BaseConditionPresetRepository, Condit
             block2_tolerance_pct=preset.block2_tolerance_pct,
             block3_tolerance_pct=preset.block3_tolerance_pct,
             block4_tolerance_pct=preset.block4_tolerance_pct,
+            # 재탐지 전용: 기간 범위 (Seed 발생일 기준)
+            block1_redetection_min_days_after_seed=preset.block1_redetection_min_days_after_seed,
+            block1_redetection_max_days_after_seed=preset.block1_redetection_max_days_after_seed,
+            block2_redetection_min_days_after_seed=preset.block2_redetection_min_days_after_seed,
+            block2_redetection_max_days_after_seed=preset.block2_redetection_max_days_after_seed,
+            block3_redetection_min_days_after_seed=preset.block3_redetection_min_days_after_seed,
+            block3_redetection_max_days_after_seed=preset.block3_redetection_max_days_after_seed,
+            block4_redetection_min_days_after_seed=preset.block4_redetection_min_days_after_seed,
+            block4_redetection_max_days_after_seed=preset.block4_redetection_max_days_after_seed,
             block2_volume_ratio=preset.block2_volume_ratio,
             block2_low_price_margin=preset.block2_low_price_margin,
             block3_volume_ratio=preset.block3_volume_ratio,
