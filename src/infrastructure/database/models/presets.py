@@ -17,13 +17,13 @@ class SeedConditionPreset(Base):
     description = Column(String(500), comment='프리셋 설명')
 
     # Block1 진입 조건
-    block1_entry_surge_rate = Column(Float, nullable=False, comment='진입 급등률 (%)')
-    block1_entry_ma_period = Column(Integer, nullable=False, comment='진입 이동평균선 기간')
+    block1_entry_surge_rate = Column(Float, nullable=True, comment='진입 급등률 (%) (None=조건 비활성화)')
+    block1_entry_ma_period = Column(Integer, nullable=False, comment='진입 이동평균선 기간 (필수)')
     block1_entry_high_above_ma = Column(Integer, default=1, comment='고가가 이평선 위에 있어야 함')
-    block1_entry_max_deviation_ratio = Column(Float, nullable=False, comment='최대 이격도 비율')
-    block1_entry_min_trading_value = Column(Float, nullable=False, comment='최소 거래대금 (억원)')
+    block1_entry_max_deviation_ratio = Column(Float, nullable=True, comment='최대 이격도 비율 (None=조건 비활성화)')
+    block1_entry_min_trading_value = Column(Float, nullable=True, comment='최소 거래대금 (억원) (None=조건 비활성화)')
     block1_entry_volume_high_months = Column(Integer, nullable=True, comment='N개월 신고거래량 (None=조건 비활성화)')
-    block1_entry_volume_spike_ratio = Column(Float, nullable=False, comment='전날 대비 거래량 비율 (%)')
+    block1_entry_volume_spike_ratio = Column(Float, nullable=True, comment='전날 대비 거래량 비율 (%) (None=조건 비활성화)')
     block1_entry_price_high_months = Column(Integer, nullable=True, comment='N개월 신고가 (None=조건 비활성화)')
 
     # 종료 조건
@@ -114,13 +114,13 @@ class RedetectionConditionPreset(Base):
     description = Column(String(500), comment='프리셋 설명')
 
     # Block1 진입 조건 (완화)
-    block1_entry_surge_rate = Column(Float, nullable=False, comment='진입 급등률 (%) - 완화')
-    block1_entry_ma_period = Column(Integer, nullable=False, comment='진입 이동평균선 기간')
+    block1_entry_surge_rate = Column(Float, nullable=True, comment='진입 급등률 (%) - 완화 (None=조건 비활성화)')
+    block1_entry_ma_period = Column(Integer, nullable=False, comment='진입 이동평균선 기간 (필수)')
     block1_entry_high_above_ma = Column(Integer, default=1, comment='고가가 이평선 위에 있어야 함')
-    block1_entry_max_deviation_ratio = Column(Float, nullable=False, comment='최대 이격도 비율')
-    block1_entry_min_trading_value = Column(Float, nullable=False, comment='최소 거래대금 (억원)')
+    block1_entry_max_deviation_ratio = Column(Float, nullable=True, comment='최대 이격도 비율 (None=조건 비활성화)')
+    block1_entry_min_trading_value = Column(Float, nullable=True, comment='최소 거래대금 (억원) (None=조건 비활성화)')
     block1_entry_volume_high_months = Column(Integer, nullable=True, comment='N개월 신고거래량 (None=조건 비활성화)')
-    block1_entry_volume_spike_ratio = Column(Float, nullable=False, comment='전날 대비 거래량 비율 (%) - 완화')
+    block1_entry_volume_spike_ratio = Column(Float, nullable=True, comment='전날 대비 거래량 비율 (%) - 완화 (None=조건 비활성화)')
     block1_entry_price_high_months = Column(Integer, nullable=True, comment='N개월 신고가 (None=조건 비활성화)')
 
     # 재탐지 전용: 가격 범위 Tolerance
