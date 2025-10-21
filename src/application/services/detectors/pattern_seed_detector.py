@@ -44,7 +44,12 @@ class PatternSeedDetector:
     ) -> BaseEntryCondition:
         """
         BlockN용 BaseEntryCondition 생성
-        BlockN 전용 파라미터가 있으면 사용, 없으면 Block1 값으로 fallback
+
+        YAML에서 모든 Block(1/2/3/4)의 모든 필드를 명시적으로 설정하므로
+        fallback 로직을 사용하지 않고 BlockN의 값을 그대로 사용합니다.
+
+        예: Block3.entry_volume_high_months = null → None으로 설정 (조건 비활성화)
+            이전 로직은 null을 "미설정"으로 간주하여 Block1 값으로 fallback했음 (버그)
 
         Args:
             condition: Seed 조건
@@ -57,17 +62,17 @@ class PatternSeedDetector:
         prefix = f"block{block_num}_"
 
         return BaseEntryCondition(
-            block1_entry_surge_rate=getattr(condition, f"{prefix}entry_surge_rate") if getattr(condition, f"{prefix}entry_surge_rate") is not None else condition.base.block1_entry_surge_rate,
-            block1_entry_ma_period=getattr(condition, f"{prefix}entry_ma_period") if getattr(condition, f"{prefix}entry_ma_period") is not None else condition.base.block1_entry_ma_period,
-            block1_entry_high_above_ma=getattr(condition, f"{prefix}entry_high_above_ma") if getattr(condition, f"{prefix}entry_high_above_ma") is not None else condition.base.block1_entry_high_above_ma,
-            block1_entry_max_deviation_ratio=getattr(condition, f"{prefix}entry_max_deviation_ratio") if getattr(condition, f"{prefix}entry_max_deviation_ratio") is not None else condition.base.block1_entry_max_deviation_ratio,
-            block1_entry_min_trading_value=getattr(condition, f"{prefix}entry_min_trading_value") if getattr(condition, f"{prefix}entry_min_trading_value") is not None else condition.base.block1_entry_min_trading_value,
-            block1_entry_volume_high_months=getattr(condition, f"{prefix}entry_volume_high_months") if getattr(condition, f"{prefix}entry_volume_high_months") is not None else condition.base.block1_entry_volume_high_months,
-            block1_entry_volume_spike_ratio=getattr(condition, f"{prefix}entry_volume_spike_ratio") if getattr(condition, f"{prefix}entry_volume_spike_ratio") is not None else condition.base.block1_entry_volume_spike_ratio,
-            block1_entry_price_high_months=getattr(condition, f"{prefix}entry_price_high_months") if getattr(condition, f"{prefix}entry_price_high_months") is not None else condition.base.block1_entry_price_high_months,
-            block1_exit_condition_type=getattr(condition, f"{prefix}exit_condition_type") if getattr(condition, f"{prefix}exit_condition_type") is not None else condition.base.block1_exit_condition_type,
-            block1_exit_ma_period=getattr(condition, f"{prefix}exit_ma_period") if getattr(condition, f"{prefix}exit_ma_period") is not None else condition.base.block1_exit_ma_period,
-            block1_cooldown_days=getattr(condition, f"{prefix}cooldown_days") if getattr(condition, f"{prefix}cooldown_days") is not None else condition.base.block1_cooldown_days
+            block1_entry_surge_rate=getattr(condition, f"{prefix}entry_surge_rate"),
+            block1_entry_ma_period=getattr(condition, f"{prefix}entry_ma_period"),
+            block1_entry_high_above_ma=getattr(condition, f"{prefix}entry_high_above_ma"),
+            block1_entry_max_deviation_ratio=getattr(condition, f"{prefix}entry_max_deviation_ratio"),
+            block1_entry_min_trading_value=getattr(condition, f"{prefix}entry_min_trading_value"),
+            block1_entry_volume_high_months=getattr(condition, f"{prefix}entry_volume_high_months"),
+            block1_entry_volume_spike_ratio=getattr(condition, f"{prefix}entry_volume_spike_ratio"),
+            block1_entry_price_high_months=getattr(condition, f"{prefix}entry_price_high_months"),
+            block1_exit_condition_type=getattr(condition, f"{prefix}exit_condition_type"),
+            block1_exit_ma_period=getattr(condition, f"{prefix}exit_ma_period"),
+            block1_cooldown_days=getattr(condition, f"{prefix}cooldown_days")
         )
 
     def find_all_block1_seeds(
@@ -177,7 +182,7 @@ class PatternSeedDetector:
                 condition=block2_condition,
                 stock=stock,
                 all_stocks=stocks,
-                prev_block1=block1
+                prev_seed_block1=block1
             ):
                 continue
 
@@ -213,6 +218,7 @@ class PatternSeedDetector:
                     prev_block_peak_price=block1.peak_price,
                     peak_price=stock.high,
                     peak_date=stock.date,
+                    peak_volume=stock.volume,  # 진입일 거래량으로 초기화
                     condition_name="seed"
                 )
 
@@ -222,6 +228,7 @@ class PatternSeedDetector:
 
     def find_first_block3_after_block2(
         self,
+        block1: Block1Detection,
         block2: Block2Detection,
         stocks: List[Stock],
         condition: SeedCondition
@@ -230,6 +237,7 @@ class PatternSeedDetector:
         Block2 이후 첫 번째 Block3 Seed 찾기
 
         Args:
+            block1: Block1 Seed (Block2 volume_ratio 체크용)
             block2: Block2 Seed
             stocks: 주식 데이터 리스트
             condition: Seed 조건
@@ -267,8 +275,8 @@ class PatternSeedDetector:
                 condition=block3_condition,
                 stock=stock,
                 all_stocks=stocks,
-                prev_block1=None,
-                prev_block2=block2
+                prev_seed_block1=block1,  # Block2 volume_ratio 체크용
+                prev_seed_block2=block2   # Block3 조건용
             ):
                 continue
 
@@ -304,6 +312,7 @@ class PatternSeedDetector:
                     prev_block_peak_price=block2.peak_price,
                     peak_price=stock.high,
                     peak_date=stock.date,
+                    peak_volume=stock.volume,  # 진입일 거래량으로 초기화
                     condition_name="seed"
                 )
 
@@ -313,6 +322,8 @@ class PatternSeedDetector:
 
     def find_first_block4_after_block3(
         self,
+        block1: Block1Detection,
+        block2: Block2Detection,
         block3: Block3Detection,
         stocks: List[Stock],
         condition: SeedCondition
@@ -321,6 +332,8 @@ class PatternSeedDetector:
         Block3 이후 첫 번째 Block4 Seed 찾기
 
         Args:
+            block1: Block1 Seed (Block2 volume_ratio 체크용)
+            block2: Block2 Seed (Block3 volume_ratio 체크용)
             block3: Block3 Seed
             stocks: 주식 데이터 리스트
             condition: Seed 조건
@@ -363,9 +376,9 @@ class PatternSeedDetector:
                 condition=block4_condition,
                 stock=stock,
                 all_stocks=stocks,
-                prev_block1=None,  # Block4Checker가 필요로 하지 않음
-                prev_block2=None,  # Block4Checker가 필요로 하지 않음
-                prev_block3=block3
+                prev_seed_block1=block1,  # Block2 volume_ratio 체크용
+                prev_seed_block2=block2,  # Block3 volume_ratio 체크용
+                prev_seed_block3=block3   # Block4 조건용
             ):
                 continue
 
@@ -401,6 +414,7 @@ class PatternSeedDetector:
                     prev_block_peak_price=block3.peak_price,
                     peak_price=stock.high,
                     peak_date=stock.date,
+                    peak_volume=stock.volume,  # 진입일 거래량으로 초기화
                     condition_name="seed"
                 )
 
