@@ -128,6 +128,7 @@ def print_conditions_table(
     )
 
     # 거래량 비율
+    volume_ratio_desc = " 시드 블록 최고 거래량 대비" if condition_type == "redetection" else " 이전 블록 최고 거래량 대비"
     print(
         "│"
         + " 거래량 비율".center(14)
@@ -140,11 +141,12 @@ def print_conditions_table(
         + "│"
         + f"{block4['volume_ratio']:>6.1f}%".center(12)
         + "│"
-        + " 이전 블록 최고 거래량 대비".ljust(32)
+        + volume_ratio_desc.ljust(32)
         + "│"
     )
 
     # 저가 마진
+    low_price_desc = " 시드 블록 최고가 대비 마진" if condition_type == "redetection" else " 이전 블록 최고가 대비 마진"
     print(
         "│"
         + " 저가 마진".center(14)
@@ -157,7 +159,7 @@ def print_conditions_table(
         + "│"
         + f"{block4['low_price_margin']:>6.1f}%".center(12)
         + "│"
-        + " 이전 블록 최고가 대비 마진".ljust(32)
+        + low_price_desc.ljust(32)
         + "│"
     )
 
