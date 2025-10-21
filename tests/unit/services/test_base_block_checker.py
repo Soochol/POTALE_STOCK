@@ -13,17 +13,17 @@ from src.domain.entities import Stock
 class ConcreteBlockChecker(BaseBlockChecker):
     """Concrete implementation of BaseBlockChecker for testing"""
 
-    def check_entry_conditions(self, stock, base_condition, all_stocks):
+    def check_entry(self, condition, stock, all_stocks):
         """Implement abstract method"""
-        return self.check_common_entry_conditions(stock, base_condition, all_stocks)
+        return self.check_common_entry_conditions(stock, condition, all_stocks)
 
 
 @pytest.fixture
 def sample_stock_with_indicators():
     """Create a sample stock with indicators"""
     stock = Stock(
-            name="삼성전자",
         ticker="005930",
+        name="삼성전자",
         date=date(2024, 1, 1),
         open=75000.0,
         high=76000.0,
@@ -33,13 +33,15 @@ def sample_stock_with_indicators():
         trading_value=755.0
     )
 
-    # Add indicators
-    stock.indicators = Mock()
-    stock.indicators.surge_rate = 6.0  # 등락률
-    stock.indicators.ma_high = 1.3  # 이평선 대비 고가
-    stock.indicators.deviation = 8.0  # 이격도
-    stock.indicators.volume_high = 1.8  # 거래량 고점
-    stock.indicators.volume_spike = 2.5  # 거래량 급등
+    # Add indicators as Dict (matches actual implementation)
+    stock.indicators = {
+        'rate': 6.0,  # 등락률
+        'MA_20': 70000.0,  # 20일 이동평균
+        'deviation': 107.0,  # 이격도
+        'trading_value_100m': 150.0,  # 거래대금 (억)
+        'is_volume_high': True,  # 신고거래량
+        'is_new_high': True,  # 신고가
+    }
 
     return stock
 
@@ -49,30 +51,31 @@ def base_condition():
     """Create a sample base condition"""
     condition = Mock()
     condition.block1_entry_surge_rate = 5.0
-    condition.block1_entry_ma_high = 1.2
-    condition.block1_entry_deviation = 5.0
-    condition.block1_entry_trading_value = 100.0
-    condition.block1_entry_volume_high = 1.5
-    condition.block1_entry_volume_spike = 2.0
-    condition.block1_entry_price_high = 1.3
+    condition.block1_entry_ma_period = 20
+    condition.block1_entry_high_above_ma = True
+    condition.block1_entry_max_deviation_ratio = 115.0
+    condition.block1_entry_min_trading_value = 100.0
+    condition.block1_entry_volume_high_months = 3
+    condition.block1_entry_volume_spike_ratio = 150.0
+    condition.block1_entry_price_high_months = 3
     return condition
 
 
 @pytest.fixture
 def all_stocks():
-    """Create a list of sample stocks"""
+    """Create a list of sample stocks for historical comparison"""
     stocks = []
     for i in range(10):
         stock = Stock(
-            name="삼성전자",
             ticker="005930",
+            name="삼성전자",
             date=date(2024, 1, i + 1),
             open=75000.0,
             high=76000.0,
             low=74500.0,
             close=75500.0,
-            volume=10000000,
-            trading_value=755.0
+            volume=8000000 + i * 100000,
+            trading_value=600.0 + i * 10
         )
         stocks.append(stock)
     return stocks
@@ -124,37 +127,40 @@ class TestBaseBlockCheckerSurgeRate:
 class TestBaseBlockCheckerMAHigh:
     """Test MA high condition checking"""
 
-    def test_ma_high_pass(self, sample_stock_with_indicators, base_condition, all_stocks):
-        """Test MA high check passes when above threshold"""
+    def test_ma_high_pass(self, sample_stock_with_indicators, base_condition):
+        """Test MA high check passes when high >= MA"""
         checker = ConcreteBlockChecker()
         stock = sample_stock_with_indicators
 
-        # stock.indicators.ma_high = 1.3
-        # base_condition.block1_entry_ma_high = 1.2
+        # stock.high = 76000.0, stock.indicators['MA_20'] = 70000.0
         result = checker._check_ma_high(
-            stock, stock.indicators, base_condition.block1_entry_ma_high
+            stock, stock.indicators,
+            base_condition.block1_entry_ma_period,
+            base_condition.block1_entry_high_above_ma
         )
 
         assert result is True
 
-    def test_ma_high_fail(self, sample_stock_with_indicators, base_condition, all_stocks):
-        """Test MA high check fails when below threshold"""
+    def test_ma_high_fail(self, sample_stock_with_indicators, base_condition):
+        """Test MA high check fails when high < MA"""
         checker = ConcreteBlockChecker()
         stock = sample_stock_with_indicators
-        stock.indicators.ma_high = 1.0  # Below threshold
+        stock.high = 68000.0  # Below MA_20 (70000.0)
 
         result = checker._check_ma_high(
-            stock, stock.indicators, base_condition.block1_entry_ma_high
+            stock, stock.indicators,
+            base_condition.block1_entry_ma_period,
+            base_condition.block1_entry_high_above_ma
         )
 
         assert result is False
 
     def test_ma_high_skip_when_none(self, sample_stock_with_indicators):
-        """Test MA high check is skipped when condition is None"""
+        """Test MA high check is skipped when period is None"""
         checker = ConcreteBlockChecker()
         stock = sample_stock_with_indicators
 
-        result = checker._check_ma_high(stock, stock.indicators, None)
+        result = checker._check_ma_high(stock, stock.indicators, None, False)
 
         assert result is True
 
@@ -165,26 +171,26 @@ class TestBaseBlockCheckerDeviation:
     """Test deviation condition checking"""
 
     def test_deviation_pass(self, sample_stock_with_indicators, base_condition):
-        """Test deviation check passes when above threshold"""
+        """Test deviation check passes when <= max_deviation"""
         checker = ConcreteBlockChecker()
         stock = sample_stock_with_indicators
 
-        # stock.indicators.deviation = 8.0
-        # base_condition.block1_entry_deviation = 5.0
+        # stock.indicators['deviation'] = 107.0
+        # base_condition.block1_entry_max_deviation_ratio = 115.0
         result = checker._check_deviation(
-            stock, stock.indicators, base_condition.block1_entry_deviation
+            stock, stock.indicators, base_condition.block1_entry_max_deviation_ratio
         )
 
         assert result is True
 
     def test_deviation_fail(self, sample_stock_with_indicators, base_condition):
-        """Test deviation check fails when below threshold"""
+        """Test deviation check fails when > max_deviation"""
         checker = ConcreteBlockChecker()
         stock = sample_stock_with_indicators
-        stock.indicators.deviation = 3.0  # Below threshold
+        stock.indicators['deviation'] = 120.0  # Above threshold (115.0)
 
         result = checker._check_deviation(
-            stock, stock.indicators, base_condition.block1_entry_deviation
+            stock, stock.indicators, base_condition.block1_entry_max_deviation_ratio
         )
 
         assert result is False
@@ -195,26 +201,27 @@ class TestBaseBlockCheckerDeviation:
 class TestBaseBlockCheckerTradingValue:
     """Test trading value condition checking"""
 
-    def test_trading_value_pass(self, sample_stock_with_indicators, base_condition, all_stocks):
-        """Test trading value check passes when above threshold"""
+    def test_trading_value_pass(self, sample_stock_with_indicators, base_condition):
+        """Test trading value check passes when >= min_trading_value"""
         checker = ConcreteBlockChecker()
         stock = sample_stock_with_indicators
-        stock.trading_value = 150.0  # Above threshold
 
+        # stock.indicators['trading_value_100m'] = 150.0
+        # base_condition.block1_entry_min_trading_value = 100.0
         result = checker._check_trading_value(
-            stock, stock.indicators, base_condition.block1_entry_trading_value, all_stocks
+            stock, stock.indicators, base_condition.block1_entry_min_trading_value
         )
 
         assert result is True
 
-    def test_trading_value_fail(self, sample_stock_with_indicators, base_condition, all_stocks):
-        """Test trading value check fails when below threshold"""
+    def test_trading_value_fail(self, sample_stock_with_indicators, base_condition):
+        """Test trading value check fails when < min_trading_value"""
         checker = ConcreteBlockChecker()
         stock = sample_stock_with_indicators
-        stock.trading_value = 50.0  # Below threshold
+        stock.indicators['trading_value_100m'] = 50.0  # Below threshold (100.0)
 
         result = checker._check_trading_value(
-            stock, stock.indicators, base_condition.block1_entry_trading_value, all_stocks
+            stock, stock.indicators, base_condition.block1_entry_min_trading_value
         )
 
         assert result is False
@@ -230,23 +237,29 @@ class TestBaseBlockCheckerVolumeConditions:
         checker = ConcreteBlockChecker()
         stock = sample_stock_with_indicators
 
-        # stock.indicators.volume_high = 1.8
-        # base_condition.block1_entry_volume_high = 1.5
+        # stock.indicators['is_volume_high'] = True
+        # base_condition.block1_entry_volume_high_months = 3
         result = checker._check_volume_high(
-            stock, stock.indicators, base_condition.block1_entry_volume_high
+            stock, stock.indicators, base_condition.block1_entry_volume_high_months
         )
 
         assert result is True
 
-    def test_volume_spike_pass(self, sample_stock_with_indicators, base_condition):
+    def test_volume_spike_pass(self, sample_stock_with_indicators, base_condition, all_stocks):
         """Test volume spike check passes"""
         checker = ConcreteBlockChecker()
         stock = sample_stock_with_indicators
 
-        # stock.indicators.volume_spike = 2.5
-        # base_condition.block1_entry_volume_spike = 2.0
+        # base_condition.block1_entry_volume_spike_ratio = 150.0
+        # stock.volume = 10000000, prev.volume = 9000000
+        # Required: 9000000 * 1.5 = 13500000, actual = 10000000 (may fail)
+        # Let's adjust to make it pass
+        stock.volume = 15000000
+
         result = checker._check_volume_spike(
-            stock, stock.indicators, base_condition.block1_entry_volume_spike
+            stock, stock.indicators,
+            base_condition.block1_entry_volume_spike_ratio,
+            all_stocks
         )
 
         assert result is True
@@ -257,24 +270,18 @@ class TestBaseBlockCheckerVolumeConditions:
 class TestBaseBlockCheckerPriceHigh:
     """Test price high condition checking"""
 
-    def test_price_high_pass(self, sample_stock_with_indicators, base_condition, all_stocks):
+    def test_price_high_pass(self, sample_stock_with_indicators, base_condition):
         """Test price high check passes"""
         checker = ConcreteBlockChecker()
         stock = sample_stock_with_indicators
 
-        # Need to set up price comparison data in all_stocks
-        for s in all_stocks:
-            s.high = 70000.0  # Lower than current stock
-
-        stock.high = 76000.0
-
+        # stock.indicators['is_new_high'] = True
+        # base_condition.block1_entry_price_high_months = 3
         result = checker._check_price_high(
-            stock, stock.indicators, base_condition.block1_entry_price_high, all_stocks
+            stock, stock.indicators, base_condition.block1_entry_price_high_months
         )
 
-        # This test may need adjustment based on actual implementation
-        # For now, just verify it returns boolean
-        assert isinstance(result, bool)
+        assert result is True
 
 
 @pytest.mark.unit
@@ -324,12 +331,13 @@ class TestBaseBlockCheckerIntegration:
         # Create condition with all None values
         condition = Mock()
         condition.block1_entry_surge_rate = None
-        condition.block1_entry_ma_high = None
-        condition.block1_entry_deviation = None
-        condition.block1_entry_trading_value = None
-        condition.block1_entry_volume_high = None
-        condition.block1_entry_volume_spike = None
-        condition.block1_entry_price_high = None
+        condition.block1_entry_ma_period = None
+        condition.block1_entry_high_above_ma = False
+        condition.block1_entry_max_deviation_ratio = None
+        condition.block1_entry_min_trading_value = None
+        condition.block1_entry_volume_high_months = None
+        condition.block1_entry_volume_spike_ratio = None
+        condition.block1_entry_price_high_months = None
 
         result = checker.check_common_entry_conditions(stock, condition, all_stocks)
 
