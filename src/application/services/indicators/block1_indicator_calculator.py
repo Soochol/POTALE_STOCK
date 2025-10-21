@@ -177,10 +177,11 @@ class Block1IndicatorCalculator:
         # 대략적인 거래일 수 (1개월 = 20거래일)
         window = months * 20
 
-        # 최근 N개월 최고거래량 계산
-        df['volume_max'] = df['volume'].rolling(window=window, min_periods=1).max()
+        # 과거 N개월 최고거래량 계산 (현재 행 제외)
+        # shift(1)로 자기 자신을 제외한 과거 데이터만 사용
+        df['volume_max'] = df['volume'].shift(1).rolling(window=window, min_periods=1).max()
 
-        # 현재 거래량이 최고거래량과 같으면 True
+        # 현재 거래량이 과거 최고거래량과 같거나 크면 True
         df['is_volume_high'] = (df['volume'] >= df['volume_max'])
 
         return df
