@@ -77,7 +77,7 @@ def print_conditions_table(
     )
     print(
         "│"
-        + " 항목".center(14)
+        + " 변수명".center(14)
         + "│"
         + " Block1".center(12)
         + "│"
@@ -288,7 +288,7 @@ def print_conditions_table(
     )
     print(
         "│"
-        + " 항목".center(14)
+        + " 변수명".center(14)
         + "│"
         + " Block1".center(12)
         + "│"
@@ -462,7 +462,7 @@ def print_conditions_table(
     )
     print(
         "│"
-        + " 항목".center(14)
+        + " 변수명".center(14)
         + "│"
         + " Block1".center(12)
         + "│"
@@ -593,7 +593,7 @@ def print_conditions_table(
         )
         print(
             "│"
-            + " 항목".center(14)
+            + " 변수명".center(14)
             + "│"
             + " Block1".center(12)
             + "│"
