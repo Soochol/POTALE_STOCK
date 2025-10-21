@@ -42,6 +42,7 @@ class Block1Detection(Base):
     # 블록1 기간 중 최고가 추적
     peak_price = Column(Float, comment='블록1 기간 중 최고가')
     peak_date = Column(Date, comment='최고가 달성일')
+    peak_volume = Column(BigInteger, comment='블록1 기간 중 최고 거래량')
 
     # 종료 정보
     exit_reason = Column(String(50), comment='종료 사유 (ma_break, three_line_reversal, body_middle)')

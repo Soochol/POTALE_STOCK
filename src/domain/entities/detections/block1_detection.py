@@ -2,7 +2,7 @@
 Block1 Detection Entity - 블록1 탐지 결과 엔티티
 """
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 import uuid
 
@@ -23,10 +23,10 @@ class Block1Detection:
     entry_low: float  # 시작일 저가
     entry_close: float  # 시작일 종가
     entry_volume: int  # 시작일 거래량
-    entry_trading_value: float  # 시작일 거래대금 (억)
     condition_name: str  # 사용된 조건 이름
 
     # 기본값 있는 필드
+    entry_trading_value: Optional[float] = None  # 시작일 거래대금 (억)
     block1_id: str = ""  # 고유 ID (UUID, __post_init__에서 생성)
     status: str = "active"  # "active" (진행중) or "completed" (종료)
     ended_at: Optional[date] = None  # 블록1 종료일 (진행중이면 None)
@@ -46,7 +46,7 @@ class Block1Detection:
     exit_price: Optional[float] = None  # 종료일 종가
 
     # 메타데이터
-    created_at: Optional[date] = None  # 레코드 생성일
+    created_at: Optional[datetime] = None  # 레코드 생성일시
 
     # 패턴 재탐지 시스템 필드
     pattern_id: Optional[int] = None  # 패턴 ID (재탐지 시스템)

@@ -4,7 +4,7 @@ Base Detection Entity - 블록 탐지 결과 기본 클래스
 Block2/3/4의 공통 로직을 추출한 베이스 클래스
 """
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 import uuid
 
@@ -49,6 +49,7 @@ class BaseBlockDetection:
 
     # 메타데이터
     id: Optional[int] = None  # DB ID
+    created_at: Optional[datetime] = None  # 레코드 생성일시
 
     # 패턴 재탐지 시스템
     pattern_id: Optional[int] = None  # 패턴 ID (재탐지 시스템)

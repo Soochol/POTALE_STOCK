@@ -43,6 +43,7 @@ class Block1Repository(BaseDetectionRepository[Block1DetectionEntity, Block1Dete
             entry_deviation=entity.entry_deviation,
             peak_price=entity.peak_price,
             peak_date=entity.peak_date,
+            peak_volume=entity.peak_volume,
             exit_reason=entity.exit_reason,
             exit_price=entity.exit_price,
             condition_name=entity.condition_name,
@@ -63,18 +64,19 @@ class Block1Repository(BaseDetectionRepository[Block1DetectionEntity, Block1Dete
             entry_low=model.entry_low,
             entry_close=model.entry_close,
             entry_volume=model.entry_volume,
-            entry_trading_value=model.entry_trading_value or 0.0,
+            entry_trading_value=model.entry_trading_value,
             entry_ma_value=model.entry_ma_value,
             entry_rate=model.entry_rate,
             entry_deviation=model.entry_deviation,
             peak_price=model.peak_price,
             peak_date=model.peak_date,
+            peak_volume=model.peak_volume,
             exit_reason=model.exit_reason,
             exit_price=model.exit_price,
             condition_name=model.condition_name,
             pattern_id=model.pattern_id,
             detection_type=model.detection_type,
-            created_at=model.created_at.date() if model.created_at else None
+            created_at=model.created_at
         )
 
     def find_by_pattern_and_condition(

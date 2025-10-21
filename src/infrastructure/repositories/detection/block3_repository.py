@@ -124,6 +124,7 @@ class Block3Repository(
             exit_reason=model.exit_reason,
             pattern_id=model.pattern_id,
             detection_type=model.detection_type,
+            created_at=model.created_at,
             id=model.id
         )
         # block3_id 추가

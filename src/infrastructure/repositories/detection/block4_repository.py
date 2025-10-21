@@ -147,6 +147,9 @@ class Block4Repository(
             peak_volume=model.peak_volume,
             duration_days=model.duration_days,
             exit_reason=model.exit_reason,
+            pattern_id=model.pattern_id,
+            detection_type=model.detection_type,
+            created_at=model.created_at,
             id=model.id
         )
         # block4_id 추가
