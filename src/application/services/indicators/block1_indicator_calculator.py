@@ -2,7 +2,7 @@
 Block1 Indicator Calculator - 블록1 전용 지표 계산 서비스
 """
 from src.domain.entities import Stock
-from typing import List, Dict
+from typing import List, Dict, Optional, Union
 from datetime import date, timedelta
 import pandas as pd
 from src.application.services.three_line_break import ThreeLineBreakCalculator
@@ -26,9 +26,9 @@ class Block1IndicatorCalculator:
         self,
         stocks: List[Stock],
         ma_period: int = 20,
-        exit_ma_period: int = None,
-        volume_months: int = 6,
-        new_high_months: int = 2
+        exit_ma_period: Optional[int] = None,
+        volume_months: Optional[Union[int, List[int]]] = 6,
+        new_high_months: Optional[Union[int, List[int]]] = 2
     ) -> List[Stock]:
         """
         주식 데이터에 블록1 지표 추가
@@ -37,8 +37,8 @@ class Block1IndicatorCalculator:
             stocks: 주식 데이터 리스트 (동일 종목, 날짜순 정렬)
             ma_period: 진입용 이동평균선 기간
             exit_ma_period: 종료용 이동평균선 기간 (None이면 ma_period 사용)
-            volume_months: 신고거래량 기간 (개월)
-            new_high_months: 신고가 기간 (개월)
+            volume_months: 신고거래량 기간 (개월 or 개월 리스트)
+            new_high_months: 신고가 기간 (개월 or 개월 리스트)
 
         Returns:
             지표가 추가된 주식 데이터 리스트
@@ -60,13 +60,17 @@ class Block1IndicatorCalculator:
         df = self._calculate_deviation(df, ma_period)
         df = self._calculate_trading_value(df)
 
-        # volume_months가 None이 아닐 때만 계산
+        # volume_months 처리 (int → [int] 변환)
         if volume_months is not None:
-            df = self._calculate_volume_high(df, months=volume_months)
+            volume_months_list = [volume_months] if isinstance(volume_months, int) else volume_months
+            for months in volume_months_list:
+                df = self._calculate_volume_high(df, months=months)
 
-        # new_high_months가 None이 아닐 때만 계산
+        # new_high_months 처리 (int → [int] 변환)
         if new_high_months is not None:
-            df = self._calculate_new_high(df, months=new_high_months)
+            new_high_months_list = [new_high_months] if isinstance(new_high_months, int) else new_high_months
+            for months in new_high_months_list:
+                df = self._calculate_new_high(df, months=months)
 
         # 삼선전환도 계산
         tlb_bars = self.tlb_calculator.calculate(
@@ -172,17 +176,21 @@ class Block1IndicatorCalculator:
             months: 개월 수
 
         Returns:
-            'is_volume_high' 컬럼이 추가된 DataFrame
+            'is_volume_high_{months}m' 컬럼이 추가된 DataFrame
         """
         # 대략적인 거래일 수 (1개월 = 20거래일)
         window = months * 20
 
+        # 필드 이름: is_volume_high_6m, is_volume_high_12m 등
+        field_name = f'is_volume_high_{months}m'
+        volume_max_field = f'volume_max_{months}m'
+
         # 과거 N개월 최고거래량 계산 (현재 행 제외)
         # shift(1)로 자기 자신을 제외한 과거 데이터만 사용
-        df['volume_max'] = df['volume'].shift(1).rolling(window=window, min_periods=1).max()
+        df[volume_max_field] = df['volume'].shift(1).rolling(window=window, min_periods=1).max()
 
         # 현재 거래량이 과거 최고거래량과 같거나 크면 True
-        df['is_volume_high'] = (df['volume'] >= df['volume_max'])
+        df[field_name] = (df['volume'] >= df[volume_max_field])
 
         return df
 
@@ -195,9 +203,11 @@ class Block1IndicatorCalculator:
             months: 개월 수
 
         Returns:
-            'is_new_high' 컬럼이 추가된 DataFrame
+            'is_new_high_{months}m' 컬럼이 추가된 DataFrame
         """
-        df['is_new_high'] = False
+        # 필드 이름: is_new_high_12m, is_new_high_24m 등
+        field_name = f'is_new_high_{months}m'
+        df[field_name] = False
 
         for i in range(len(df)):
             current_date = df.loc[i, 'date']
@@ -212,11 +222,11 @@ class Block1IndicatorCalculator:
 
             if past_data.empty:
                 # 과거 데이터가 없으면 신고가로 간주
-                df.loc[i, 'is_new_high'] = True
+                df.loc[i, field_name] = True
             else:
                 # 당일 고가 >= 과거 N개월 최고가
                 past_max_high = past_data['high'].max()
-                df.loc[i, 'is_new_high'] = (current_high >= past_max_high)
+                df.loc[i, field_name] = (current_high >= past_max_high)
 
         return df
 

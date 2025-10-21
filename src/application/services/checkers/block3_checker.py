@@ -1,25 +1,27 @@
 """
 Block3 Checker Service - 블록3 진입/종료 조건 검사 서비스
 """
-from typing import Optional, List
 from datetime import date
+from typing import List, Optional
 
 from src.domain.entities import (
-    Stock,
     Block1Condition,
     Block1Detection,
     Block2Detection,
     Block3Condition,
     Block3Detection,
+    Stock,
 )
-from .block2_checker import Block2Checker
-from .block1_checker import Block1Checker
+
 from ..common.utils import get_previous_trading_day_stock
+from .block1_checker import Block1Checker
+from .block2_checker import Block2Checker
 
 class Block3Checker:
     """블록3 진입 및 종료 조건 검사 서비스"""
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Block3Checker 초기화"""
         self.block2_checker = Block2Checker()
         self.block1_checker = Block1Checker()
 
@@ -28,8 +30,8 @@ class Block3Checker:
         condition: Block3Condition,
         stock: Stock,
         all_stocks: List[Stock],
-        prev_block1: Optional[Block1Detection] = None,
-        prev_block2: Optional[Block2Detection] = None
+        prev_seed_block1: Optional[Block1Detection] = None,
+        prev_seed_block2: Optional[Block2Detection] = None,
     ) -> bool:
         """
         블록3 진입 조건 검사
@@ -38,9 +40,9 @@ class Block3Checker:
         Args:
             condition: 블록3 조건
             stock: 주식 데이터 (지표 포함)
-            prev_stock: 전일 주식 데이터 (전날 거래량 조건용, 선택적)
-            prev_block1: 직전 블록1 탐지 결과 (블록2 조건용, 선택적)
-            prev_block2: 직전 블록2 탐지 결과 (추가 조건용, 선택적)
+            all_stocks: 전체 주식 데이터 리스트
+            prev_seed_block1: Block1 Seed (Block2 조건의 volume_ratio, low_price_margin 비교 기준)
+            prev_seed_block2: Block2 Seed (Block3 조건의 volume_ratio, low_price_margin 비교 기준)
 
         Returns:
             모든 조건 만족 여부
@@ -58,7 +60,10 @@ class Block3Checker:
                 return False
 
         # Block1 조건 2: 고가 >= 이동평균선 N
-        if condition.base.block1_entry_ma_period and condition.base.block1_entry_high_above_ma:
+        if (
+            condition.base.block1_entry_ma_period
+            and condition.base.block1_entry_high_above_ma
+        ):
             ma_key = f'MA_{condition.base.block1_entry_ma_period}'
             ma_value = indicators.get(ma_key)
             if ma_value is None or stock.high < ma_value:
@@ -78,7 +83,9 @@ class Block3Checker:
 
         # Block1 조건 5: N개월 신고거래량
         if condition.base.block1_entry_volume_high_months is not None:
-            is_volume_high = indicators.get('is_volume_high', False)
+            # 동적 필드 이름: is_volume_high_6m, is_volume_high_12m 등
+            field_name = f'is_volume_high_{condition.base.block1_entry_volume_high_months}m'
+            is_volume_high = indicators.get(field_name, False)
             if not is_volume_high:
                 return False
 
@@ -95,53 +102,67 @@ class Block3Checker:
 
         # Block1 조건 7: N개월 신고가
         if condition.base.block1_entry_price_high_months is not None:
-            is_new_high = indicators.get('is_new_high', False)
+            # 동적 필드 이름: is_new_high_12m, is_new_high_24m 등
+            field_name = f'is_new_high_{condition.base.block1_entry_price_high_months}m'
+            is_new_high = indicators.get(field_name, False)
             if not is_new_high:
                 return False
 
         # Block2 추가 조건 검사
-        # None 처리: condition 값 또는 prev_block1 데이터가 None이면 스킵
+        # None 처리: condition 값 또는 prev_seed_block1 데이터가 None이면 스킵
         if condition.block2_volume_ratio is not None:
-            if prev_block1 is not None and prev_block1.peak_volume is not None:
+            if (
+                prev_seed_block1 is not None
+                and prev_seed_block1.peak_volume is not None
+            ):
                 ratio = condition.block2_volume_ratio / 100.0
-                required_volume = prev_block1.peak_volume * ratio
+                required_volume = prev_seed_block1.peak_volume * ratio
                 if stock.volume < required_volume:
                     return False
 
         if condition.block2_low_price_margin is not None:
-            if prev_block1 is not None and prev_block1.peak_price is not None:
+            if (
+                prev_seed_block1 is not None
+                and prev_seed_block1.peak_price is not None
+            ):
                 margin = condition.block2_low_price_margin / 100.0
                 threshold_price = stock.low * (1 + margin)
-                if threshold_price <= prev_block1.peak_price:
+                if threshold_price <= prev_seed_block1.peak_price:
                     return False
 
         # 2. 블록3 추가 조건 검사
         # None의 의미: 조건값이 None이면 해당 조건 스킵 (pass)
-        # prev_block2가 None이어도 검사 진행 (단, 값이 없으면 해당 조건 스킵)
+        # prev_seed_block2가 None이어도 검사 진행 (단, 값이 없으면 해당 조건 스킵)
 
         # 추가 조건 1: 블록 거래량 조건 (선택적)
-        # 당일_거래량 >= 블록2_최고_거래량 × (block_volume_ratio/100)
-        # block_volume_ratio는 % 단위 (예: 15 = 15%)
-        # None 처리: condition 값 또는 prev_block2 데이터가 None이면 스킵
+        # 당일_거래량 >= Seed Block2_최고_거래량 × (block3_volume_ratio/100)
+        # block3_volume_ratio는 % 단위 (예: 15 = 15%)
+        # None 처리: condition 값 또는 prev_seed_block2 데이터가 None이면 스킵
         if condition.block3_volume_ratio is not None:
-            if prev_block2 is not None and prev_block2.peak_volume is not None:
+            if (
+                prev_seed_block2 is not None
+                and prev_seed_block2.peak_volume is not None
+            ):
                 ratio = condition.block3_volume_ratio / 100.0
-                required_volume = prev_block2.peak_volume * ratio
+                required_volume = prev_seed_block2.peak_volume * ratio
                 if stock.volume < required_volume:
                     return False
-            # prev_block2가 None이거나 peak_volume이 None이면 이 조건 스킵 (pass)
+            # prev_seed_block2가 None이거나 peak_volume이 None이면 이 조건 스킵 (pass)
 
         # 추가 조건 2: 저가 마진 조건 (선택적)
-        # 당일_저가 × (1 + low_price_margin/100) > 블록2_peak_price
+        # 당일_저가 × (1 + low_price_margin/100) > Seed Block2_peak_price
         # low_price_margin은 % 단위 (예: 10 = 10%)
-        # None 처리: condition 값 또는 prev_block2 데이터가 None이면 스킵
+        # None 처리: condition 값 또는 prev_seed_block2 데이터가 None이면 스킵
         if condition.block3_low_price_margin is not None:
-            if prev_block2 is not None and prev_block2.peak_price is not None:
+            if (
+                prev_seed_block2 is not None
+                and prev_seed_block2.peak_price is not None
+            ):
                 margin = condition.block3_low_price_margin / 100.0
                 threshold_price = stock.low * (1 + margin)
-                if threshold_price <= prev_block2.peak_price:
+                if threshold_price <= prev_seed_block2.peak_price:
                     return False
-            # prev_block2가 None이거나 peak_price가 None이면 이 조건 스킵 (pass)
+            # prev_seed_block2가 None이거나 peak_price가 None이면 이 조건 스킵 (pass)
 
         # 모든 조건 만족
         return True
@@ -275,10 +296,7 @@ class Block3Checker:
         return candles_count <= max_candles
 
     def _count_candles_between(
-        self,
-        start_date: date,
-        end_date: date,
-        all_stocks: List[Stock]
+        self, start_date: date, end_date: date, all_stocks: List[Stock]
     ) -> int:
         """
         두 날짜 사이의 캔들 수 계산 (start_date와 end_date 포함)
@@ -297,10 +315,19 @@ class Block3Checker:
                 count += 1
         return count
 
-    def _convert_to_block1_detection(self, block3: Block3Detection) -> Block1Detection:
+    def _convert_to_block1_detection(
+        self, block3: Block3Detection
+    ) -> Block1Detection:
         """
         Block3Detection을 Block1Detection 형식으로 변환
-        (종료 조건 검사를 위해 Block1Checker 재사용)
+
+        종료 조건 검사를 위해 Block1Checker 재사용
+
+        Args:
+            block3: Block3Detection 객체
+
+        Returns:
+            Block1Detection 객체
         """
         return Block1Detection(
             ticker=block3.ticker,
@@ -308,12 +335,13 @@ class Block3Checker:
             status=block3.status,
             started_at=block3.started_at,
             ended_at=block3.ended_at,
-            entry_open=block3.entry_close,  # Block3는 open 정보가 없으므로 close 사용
+            # Block3는 open 정보가 없으므로 close 사용
+            entry_open=block3.entry_close,
             entry_high=block3.entry_close,
             entry_low=block3.entry_close,
             entry_close=block3.entry_close,
             entry_volume=0,  # Block3에 없음
             entry_trading_value=0.0,
             condition_name=block3.condition_name,
-            created_at=date.today()
+            created_at=date.today(),
         )

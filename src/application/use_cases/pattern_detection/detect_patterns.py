@@ -67,15 +67,44 @@ class DetectPatternsUseCase:
         # Step 0: Indicator 계산
         # ========================================
         print("\n[Step 0] Indicator 계산 중...")
+
+        # Block1/2/3/4의 모든 entry_volume_high_months 수집 (중복 제거)
+        volume_months_set = set()
+        for attr in ['block1_entry_volume_high_months', 'block2_entry_volume_high_months',
+                     'block3_entry_volume_high_months', 'block4_entry_volume_high_months']:
+            if attr == 'block1_entry_volume_high_months':
+                months = seed_condition.base.block1_entry_volume_high_months
+            else:
+                months = getattr(seed_condition, attr, None)
+            if months is not None:
+                volume_months_set.add(months)
+        volume_months_list = sorted(list(volume_months_set)) if volume_months_set else None
+
+        # Block1/2/3/4의 모든 entry_price_high_months 수집 (중복 제거)
+        new_high_months_set = set()
+        for attr in ['block1_entry_price_high_months', 'block2_entry_price_high_months',
+                     'block3_entry_price_high_months', 'block4_entry_price_high_months']:
+            if attr == 'block1_entry_price_high_months':
+                months = seed_condition.base.block1_entry_price_high_months
+            else:
+                months = getattr(seed_condition, attr, None)
+            if months is not None:
+                new_high_months_set.add(months)
+        new_high_months_list = sorted(list(new_high_months_set)) if new_high_months_set else None
+
         calculator = Block1IndicatorCalculator()
         stocks_with_indicators = calculator.calculate(
             stocks=stocks,
             ma_period=seed_condition.base.block1_entry_ma_period,
             exit_ma_period=seed_condition.base.block1_exit_ma_period,
-            volume_months=seed_condition.base.block1_entry_volume_high_months,
-            new_high_months=seed_condition.base.block1_entry_price_high_months
+            volume_months=volume_months_list,
+            new_high_months=new_high_months_list
         )
         print(f"  {len(stocks_with_indicators)}건의 데이터에 indicator 추가 완료")
+        if volume_months_list:
+            print(f"  volume_high 계산: {volume_months_list}개월")
+        if new_high_months_list:
+            print(f"  new_high 계산: {new_high_months_list}개월")
 
         # ========================================
         # Step 1: 모든 Block1 Seed 찾기
@@ -129,6 +158,7 @@ class DetectPatternsUseCase:
             # ========================================
             print(f"  [2-2] Block3 Seed 탐지 중...")
             seed_block3 = self.seed_detector.find_first_block3_after_block2(
+                block1=seed_block1,  # Block2 volume_ratio 체크용
                 block2=seed_block2,
                 stocks=stocks_with_indicators,
                 condition=seed_condition
@@ -145,6 +175,8 @@ class DetectPatternsUseCase:
             # ========================================
             print(f"  [2-2.5] Block4 Seed 탐지 중...")
             seed_block4 = self.seed_detector.find_first_block4_after_block3(
+                block1=seed_block1,  # Block2 volume_ratio 체크용
+                block2=seed_block2,  # Block3 volume_ratio 체크용
                 block3=seed_block3,
                 stocks=stocks_with_indicators,
                 condition=seed_condition
@@ -271,6 +303,7 @@ class DetectPatternsUseCase:
             print(f"    Block3 재탐지 중...")
             block3_redetections = self.redetector.redetect_block3(
                 stocks=stocks_with_indicators,
+                seed_block1=seed_block1,  # Block2 volume_ratio 체크용
                 seed_block2=seed_block2,
                 seed_block3=seed_block3,
                 condition=redetection_condition,
@@ -290,6 +323,8 @@ class DetectPatternsUseCase:
                 print(f"    Block4 재탐지 중...")
                 block4_redetections = self.redetector.redetect_block4(
                     stocks=stocks_with_indicators,
+                    seed_block1=seed_block1,  # Block2 volume_ratio 체크용
+                    seed_block2=seed_block2,  # Block3 volume_ratio 체크용
                     seed_block3=seed_block3,
                     seed_block4=seed_block4,
                     condition=redetection_condition,

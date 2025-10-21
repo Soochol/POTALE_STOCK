@@ -1,22 +1,23 @@
 """
 Block1 Checker Service - 블록1 진입/종료 조건 검사 서비스
 """
-from typing import List, Optional, Dict
 from datetime import date, timedelta
+from typing import List, Optional
 
-from src.domain.entities import (
-    Stock,
-    Block1Condition,
-    Block1ExitConditionType,
-    Block1Detection,
-)
-from src.application.services.three_line_break import ThreeLineBreakCalculator
 from src.application.services.common.utils import get_previous_trading_day_stock
+from src.application.services.three_line_break import ThreeLineBreakCalculator
+from src.domain.entities import (
+    Block1Condition,
+    Block1Detection,
+    Block1ExitConditionType,
+    Stock,
+)
 
 class Block1Checker:
     """블록1 진입 및 종료 조건 검사 서비스"""
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Block1Checker 초기화"""
         self.tlb_calculator = ThreeLineBreakCalculator(line_count=3)
 
     def check_entry(
@@ -52,7 +53,10 @@ class Block1Checker:
                 return False
 
         # 조건 2: 고가 >= 이동평균선 N
-        if condition.base.block1_entry_ma_period and condition.base.block1_entry_high_above_ma:
+        if (
+            condition.base.block1_entry_ma_period
+            and condition.base.block1_entry_high_above_ma
+        ):
             ma_key = f'MA_{condition.base.block1_entry_ma_period}'
             ma_value = indicators.get(ma_key)
             if ma_value is None or stock.high < ma_value:
@@ -73,7 +77,9 @@ class Block1Checker:
 
         # 조건 5: N개월 신고거래량
         if condition.base.block1_entry_volume_high_months is not None:
-            is_volume_high = indicators.get('is_volume_high', False)
+            # 동적 필드 이름: is_volume_high_6m, is_volume_high_12m 등
+            field_name = f'is_volume_high_{condition.base.block1_entry_volume_high_months}m'
+            is_volume_high = indicators.get(field_name, False)
             if not is_volume_high:
                 return False
 
@@ -101,7 +107,9 @@ class Block1Checker:
         # 조건 7: N개월 신고가 (선택적)
         if condition.base.block1_entry_price_high_months is not None:
             indicators = stock.indicators if hasattr(stock, 'indicators') else {}
-            is_new_high = indicators.get('is_new_high', False)
+            # 동적 필드 이름: is_new_high_12m, is_new_high_24m 등
+            field_name = f'is_new_high_{condition.base.block1_entry_price_high_months}m'
+            is_new_high = indicators.get(field_name, False)
             if not is_new_high:
                 return False
 
@@ -148,8 +156,13 @@ class Block1Checker:
 
     def _check_ma_break(self, condition: Block1Condition, stock: Stock) -> bool:
         """이동평균선 이탈 확인 (종가 < MA)"""
-        # 종료용 MA 기간 결정 (exit_ma_period가 있으면 사용, 없으면 entry_ma_period 사용)
-        exit_ma = condition.base.block1_exit_ma_period if condition.base.block1_exit_ma_period else condition.base.block1_entry_ma_period
+        # 종료용 MA 기간 결정 (exit_ma_period가 있으면 사용,
+        # 없으면 entry_ma_period 사용)
+        exit_ma = (
+            condition.base.block1_exit_ma_period
+            if condition.base.block1_exit_ma_period
+            else condition.base.block1_entry_ma_period
+        )
 
         if not exit_ma:
             return False
@@ -235,16 +248,16 @@ class Block1Checker:
 
             # 종료된 블록1이지만 cooldown 기간 내면 불가
             if detection.ended_at:
-                cooldown_end = detection.started_at + timedelta(days=cooldown_days)
+                cooldown_end = detection.started_at + timedelta(
+                    days=cooldown_days
+                )
                 if detection.started_at <= current_date < cooldown_end:
                     return False
 
         return True
 
     def create_detection(
-        self,
-        condition_name: str,
-        stock: Stock
+        self, condition_name: str, stock: Stock
     ) -> Block1Detection:
         """
         블록1 탐지 결과 생성
@@ -256,7 +269,9 @@ class Block1Checker:
         Returns:
             Block1Detection 객체
         """
-        indicators = stock.indicators if hasattr(stock, 'indicators') else {}
+        indicators = (
+            stock.indicators if hasattr(stock, 'indicators') else {}
+        )
 
         # 거래대금을 억 단위로 변환
         trading_value_100m = (stock.close * stock.volume) / 100_000_000
