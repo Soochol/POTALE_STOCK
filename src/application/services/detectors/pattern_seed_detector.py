@@ -64,12 +64,11 @@ class PatternSeedDetector:
         return BaseEntryCondition(
             block1_entry_surge_rate=getattr(condition, f"{prefix}entry_surge_rate"),
             block1_entry_ma_period=getattr(condition, f"{prefix}entry_ma_period"),
-            block1_entry_high_above_ma=getattr(condition, f"{prefix}entry_high_above_ma"),
             block1_entry_max_deviation_ratio=getattr(condition, f"{prefix}entry_max_deviation_ratio"),
             block1_entry_min_trading_value=getattr(condition, f"{prefix}entry_min_trading_value"),
-            block1_entry_volume_high_months=getattr(condition, f"{prefix}entry_volume_high_months"),
+            block1_entry_volume_high_days=getattr(condition, f"{prefix}entry_volume_high_days"),
             block1_entry_volume_spike_ratio=getattr(condition, f"{prefix}entry_volume_spike_ratio"),
-            block1_entry_price_high_months=getattr(condition, f"{prefix}entry_price_high_months"),
+            block1_entry_price_high_days=getattr(condition, f"{prefix}entry_price_high_days"),
             block1_exit_condition_type=getattr(condition, f"{prefix}exit_condition_type"),
             block1_exit_ma_period=getattr(condition, f"{prefix}exit_ma_period"),
             block1_cooldown_days=getattr(condition, f"{prefix}cooldown_days")

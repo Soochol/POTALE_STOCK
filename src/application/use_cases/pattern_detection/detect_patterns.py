@@ -82,44 +82,44 @@ class DetectPatternsUseCase:
                 ma_periods_set.add(period)
         ma_periods_list = sorted(list(ma_periods_set)) if ma_periods_set else None
 
-        # Block1/2/3/4의 모든 entry_volume_high_months 수집 (중복 제거)
-        volume_months_set = set()
-        for attr in ['block1_entry_volume_high_months', 'block2_entry_volume_high_months',
-                     'block3_entry_volume_high_months', 'block4_entry_volume_high_months']:
-            if attr == 'block1_entry_volume_high_months':
-                months = seed_condition.base.block1_entry_volume_high_months
+        # Block1/2/3/4의 모든 entry_volume_high_days 수집 (중복 제거)
+        volume_days_set = set()
+        for attr in ['block1_entry_volume_high_days', 'block2_entry_volume_high_days',
+                     'block3_entry_volume_high_days', 'block4_entry_volume_high_days']:
+            if attr == 'block1_entry_volume_high_days':
+                days = seed_condition.base.block1_entry_volume_high_days
             else:
-                months = getattr(seed_condition, attr, None)
-            if months is not None:
-                volume_months_set.add(months)
-        volume_months_list = sorted(list(volume_months_set)) if volume_months_set else None
+                days = getattr(seed_condition, attr, None)
+            if days is not None:
+                volume_days_set.add(days)
+        volume_days_list = sorted(list(volume_days_set)) if volume_days_set else None
 
-        # Block1/2/3/4의 모든 entry_price_high_months 수집 (중복 제거)
-        new_high_months_set = set()
-        for attr in ['block1_entry_price_high_months', 'block2_entry_price_high_months',
-                     'block3_entry_price_high_months', 'block4_entry_price_high_months']:
-            if attr == 'block1_entry_price_high_months':
-                months = seed_condition.base.block1_entry_price_high_months
+        # Block1/2/3/4의 모든 entry_price_high_days 수집 (중복 제거)
+        new_high_days_set = set()
+        for attr in ['block1_entry_price_high_days', 'block2_entry_price_high_days',
+                     'block3_entry_price_high_days', 'block4_entry_price_high_days']:
+            if attr == 'block1_entry_price_high_days':
+                days = seed_condition.base.block1_entry_price_high_days
             else:
-                months = getattr(seed_condition, attr, None)
-            if months is not None:
-                new_high_months_set.add(months)
-        new_high_months_list = sorted(list(new_high_months_set)) if new_high_months_set else None
+                days = getattr(seed_condition, attr, None)
+            if days is not None:
+                new_high_days_set.add(days)
+        new_high_days_list = sorted(list(new_high_days_set)) if new_high_days_set else None
 
         calculator = Block1IndicatorCalculator()
         stocks_with_indicators = calculator.calculate(
             stocks=stocks,
             ma_periods=ma_periods_list,
-            volume_months=volume_months_list,
-            new_high_months=new_high_months_list
+            volume_days=volume_days_list,
+            new_high_days=new_high_days_list
         )
         print(f"  {len(stocks_with_indicators)}건의 데이터에 indicator 추가 완료")
         if ma_periods_list:
             print(f"  MA 계산: {ma_periods_list}일")
-        if volume_months_list:
-            print(f"  volume_high 계산: {volume_months_list}개월")
-        if new_high_months_list:
-            print(f"  new_high 계산: {new_high_months_list}개월")
+        if volume_days_list:
+            print(f"  volume_high 계산: {volume_days_list}일 (달력 기준)")
+        if new_high_days_list:
+            print(f"  new_high 계산: {new_high_days_list}일 (달력 기준)")
 
         # ========================================
         # Step 1: 모든 Block1 Seed 찾기
@@ -244,7 +244,9 @@ class DetectPatternsUseCase:
             # ========================================
             print(f"  [2-4] Pattern 생성 중...")
 
-            # 재탐지 기간 계산 (각 Block Seed 발생일 기준)
+            # 재탐지 기간 계산 (각 Block Seed 발생일 기준, 달력상 일수 - 주말/공휴일 포함)
+            # NOTE: timedelta(days=N)는 거래일이 아닌 달력상 날짜 차이로 계산됨
+
             # Block1 재탐지 기간
             block1_redetection_start = seed_block1.started_at + timedelta(
                 days=redetection_condition.block1_redetection_min_days_after_seed

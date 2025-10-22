@@ -94,15 +94,15 @@ class DetectBlock1UseCase:
         # 지표 계산
         ma_period = condition.entry_ma_period or 20
         exit_ma_period = condition.exit_ma_period
-        volume_months = condition.volume_high_months or 6
-        new_high_months = condition.price_high_months or 2  # 기본값 2개월
+        volume_days = condition.volume_high_days  # None이면 조건 비활성화
+        new_high_days = condition.price_high_days  # None이면 조건 비활성화
 
         stocks_with_indicators = self.indicator_calculator.calculate(
             stocks,
             ma_period=ma_period,
             exit_ma_period=exit_ma_period,
-            volume_months=volume_months,
-            new_high_months=new_high_months
+            volume_days=volume_days,
+            new_high_days=new_high_days
         )
 
         # 기존 블록1 조회

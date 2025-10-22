@@ -26,8 +26,12 @@ sys.path.insert(0, str(project_root))
 
 # Windows 콘솔 UTF-8 인코딩 설정
 if sys.platform == "win32":
+    # 콘솔 코드페이지를 UTF-8로 설정
     os.system("chcp 65001 > nul")
-    sys.stdout.reconfigure(encoding="utf-8")
+    # 표준 출력/에러를 UTF-8로 재설정
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 # Loguru 설정
 logger.remove()  # 기본 핸들러 제거
@@ -202,16 +206,6 @@ def print_conditions_table(
         "진입 조건 이동평균선 기간"
     )
 
-    # 고가 > MA
-    table1.add_row(
-        "high_above_ma",
-        "예" if block1.get('entry_high_above_ma', True) else "아니오",
-        "예" if block2.get('entry_high_above_ma', True) else "아니오",
-        "예" if block3.get('entry_high_above_ma', True) else "아니오",
-        "예" if block4.get('entry_high_above_ma', True) else "아니오",
-        "고가가 MA 상회 필수"
-    )
-
     # 최소/최대 캔들 (Seed 전용)
     if condition_type == "seed":
         table1.add_row(
@@ -278,21 +272,21 @@ def print_conditions_table(
     )
 
     # 신고 거래량
-    def format_months(val):
-        """개월 수 포맷팅"""
+    def format_days(val):
+        """일수 포맷팅"""
         return (
-            f"[yellow]{val}개월[/yellow]"
+            f"[yellow]{val}일[/yellow]"
             if val is not None
             else "[dim]비활성화[/dim]"
         )
 
     table2.add_row(
         "volume_high",
-        format_months(block1.get('entry_volume_high_months')),
-        format_months(block2.get('entry_volume_high_months')),
-        format_months(block3.get('entry_volume_high_months')),
-        format_months(block4.get('entry_volume_high_months')),
-        "N개월 신고 거래량"
+        format_days(block1.get('entry_volume_high_days')),
+        format_days(block2.get('entry_volume_high_days')),
+        format_days(block3.get('entry_volume_high_days')),
+        format_days(block4.get('entry_volume_high_days')),
+        "N일 신고 거래량 (달력 기준)"
     )
 
     # 거래량 급증
@@ -309,11 +303,11 @@ def print_conditions_table(
     # 신고가
     table2.add_row(
         "price_high",
-        format_months(block1.get('entry_price_high_months')),
-        format_months(block2.get('entry_price_high_months')),
-        format_months(block3.get('entry_price_high_months')),
-        format_months(block4.get('entry_price_high_months')),
-        "N개월 신고가"
+        format_days(block1.get('entry_price_high_days')),
+        format_days(block2.get('entry_price_high_days')),
+        format_days(block3.get('entry_price_high_days')),
+        format_days(block4.get('entry_price_high_days')),
+        "N일 신고가 (달력 기준)"
     )
 
     console.print(table2)
@@ -468,14 +462,13 @@ def update_seed_conditions(
                 base = BaseEntryCondition(
                     block1_entry_surge_rate=block1["entry_surge_rate"],
                     block1_entry_ma_period=block1["entry_ma_period"],
-                    block1_entry_high_above_ma=block1["entry_high_above_ma"],
                     block1_entry_max_deviation_ratio=block1[
                         "entry_max_deviation_ratio"
                     ],
                     block1_entry_min_trading_value=block1["entry_min_trading_value"],
-                    block1_entry_volume_high_months=block1["entry_volume_high_months"],
+                    block1_entry_volume_high_days=block1["entry_volume_high_days"],
                     block1_entry_volume_spike_ratio=block1["entry_volume_spike_ratio"],
-                    block1_entry_price_high_months=block1["entry_price_high_months"],
+                    block1_entry_price_high_days=block1["entry_price_high_days"],
                     block1_exit_condition_type=Block1ExitConditionType(
                         block1.get("exit_condition_type", "ma_break")
                     ),
@@ -506,21 +499,20 @@ def update_seed_conditions(
                     # Block2 전용 파라미터 (Optional)
                     block2_entry_surge_rate=block2.get("entry_surge_rate"),
                     block2_entry_ma_period=block2.get("entry_ma_period"),
-                    block2_entry_high_above_ma=block2.get("entry_high_above_ma"),
                     block2_entry_max_deviation_ratio=block2.get(
                         "entry_max_deviation_ratio"
                     ),
                     block2_entry_min_trading_value=block2.get(
                         "entry_min_trading_value"
                     ),
-                    block2_entry_volume_high_months=block2.get(
-                        "entry_volume_high_months"
+                    block2_entry_volume_high_days=block2.get(
+                        "entry_volume_high_days"
                     ),
                     block2_entry_volume_spike_ratio=block2.get(
                         "entry_volume_spike_ratio"
                     ),
-                    block2_entry_price_high_months=block2.get(
-                        "entry_price_high_months"
+                    block2_entry_price_high_days=block2.get(
+                        "entry_price_high_days"
                     ),
                     block2_exit_condition_type=(
                         Block1ExitConditionType(block2["exit_condition_type"])
@@ -532,21 +524,20 @@ def update_seed_conditions(
                     # Block3 전용 파라미터 (Optional)
                     block3_entry_surge_rate=block3.get("entry_surge_rate"),
                     block3_entry_ma_period=block3.get("entry_ma_period"),
-                    block3_entry_high_above_ma=block3.get("entry_high_above_ma"),
                     block3_entry_max_deviation_ratio=block3.get(
                         "entry_max_deviation_ratio"
                     ),
                     block3_entry_min_trading_value=block3.get(
                         "entry_min_trading_value"
                     ),
-                    block3_entry_volume_high_months=block3.get(
-                        "entry_volume_high_months"
+                    block3_entry_volume_high_days=block3.get(
+                        "entry_volume_high_days"
                     ),
                     block3_entry_volume_spike_ratio=block3.get(
                         "entry_volume_spike_ratio"
                     ),
-                    block3_entry_price_high_months=block3.get(
-                        "entry_price_high_months"
+                    block3_entry_price_high_days=block3.get(
+                        "entry_price_high_days"
                     ),
                     block3_exit_condition_type=(
                         Block1ExitConditionType(block3["exit_condition_type"])
@@ -558,21 +549,20 @@ def update_seed_conditions(
                     # Block4 전용 파라미터 (Optional)
                     block4_entry_surge_rate=block4.get("entry_surge_rate"),
                     block4_entry_ma_period=block4.get("entry_ma_period"),
-                    block4_entry_high_above_ma=block4.get("entry_high_above_ma"),
                     block4_entry_max_deviation_ratio=block4.get(
                         "entry_max_deviation_ratio"
                     ),
                     block4_entry_min_trading_value=block4.get(
                         "entry_min_trading_value"
                     ),
-                    block4_entry_volume_high_months=block4.get(
-                        "entry_volume_high_months"
+                    block4_entry_volume_high_days=block4.get(
+                        "entry_volume_high_days"
                     ),
                     block4_entry_volume_spike_ratio=block4.get(
                         "entry_volume_spike_ratio"
                     ),
-                    block4_entry_price_high_months=block4.get(
-                        "entry_price_high_months"
+                    block4_entry_price_high_days=block4.get(
+                        "entry_price_high_days"
                     ),
                     block4_exit_condition_type=(
                         Block1ExitConditionType(block4["exit_condition_type"])
@@ -641,14 +631,13 @@ def update_redetection_conditions(
                 base = BaseEntryCondition(
                     block1_entry_surge_rate=block1["entry_surge_rate"],
                     block1_entry_ma_period=block1["entry_ma_period"],
-                    block1_entry_high_above_ma=block1["entry_high_above_ma"],
                     block1_entry_max_deviation_ratio=block1[
                         "entry_max_deviation_ratio"
                     ],
                     block1_entry_min_trading_value=block1["entry_min_trading_value"],
-                    block1_entry_volume_high_months=block1["entry_volume_high_months"],
+                    block1_entry_volume_high_days=block1["entry_volume_high_days"],
                     block1_entry_volume_spike_ratio=block1["entry_volume_spike_ratio"],
-                    block1_entry_price_high_months=block1["entry_price_high_months"],
+                    block1_entry_price_high_days=block1["entry_price_high_days"],
                     block1_exit_condition_type=Block1ExitConditionType(
                         block1.get("exit_condition_type", "ma_break")
                     ),
@@ -680,21 +669,20 @@ def update_redetection_conditions(
                     # Block2 전용 파라미터 (Optional)
                     block2_entry_surge_rate=block2.get("entry_surge_rate"),
                     block2_entry_ma_period=block2.get("entry_ma_period"),
-                    block2_entry_high_above_ma=block2.get("entry_high_above_ma"),
                     block2_entry_max_deviation_ratio=block2.get(
                         "entry_max_deviation_ratio"
                     ),
                     block2_entry_min_trading_value=block2.get(
                         "entry_min_trading_value"
                     ),
-                    block2_entry_volume_high_months=block2.get(
-                        "entry_volume_high_months"
+                    block2_entry_volume_high_days=block2.get(
+                        "entry_volume_high_days"
                     ),
                     block2_entry_volume_spike_ratio=block2.get(
                         "entry_volume_spike_ratio"
                     ),
-                    block2_entry_price_high_months=block2.get(
-                        "entry_price_high_months"
+                    block2_entry_price_high_days=block2.get(
+                        "entry_price_high_days"
                     ),
                     block2_exit_condition_type=(
                         Block1ExitConditionType(block2["exit_condition_type"])
@@ -706,21 +694,20 @@ def update_redetection_conditions(
                     # Block3 전용 파라미터 (Optional)
                     block3_entry_surge_rate=block3.get("entry_surge_rate"),
                     block3_entry_ma_period=block3.get("entry_ma_period"),
-                    block3_entry_high_above_ma=block3.get("entry_high_above_ma"),
                     block3_entry_max_deviation_ratio=block3.get(
                         "entry_max_deviation_ratio"
                     ),
                     block3_entry_min_trading_value=block3.get(
                         "entry_min_trading_value"
                     ),
-                    block3_entry_volume_high_months=block3.get(
-                        "entry_volume_high_months"
+                    block3_entry_volume_high_days=block3.get(
+                        "entry_volume_high_days"
                     ),
                     block3_entry_volume_spike_ratio=block3.get(
                         "entry_volume_spike_ratio"
                     ),
-                    block3_entry_price_high_months=block3.get(
-                        "entry_price_high_months"
+                    block3_entry_price_high_days=block3.get(
+                        "entry_price_high_days"
                     ),
                     block3_exit_condition_type=(
                         Block1ExitConditionType(block3["exit_condition_type"])
@@ -732,21 +719,20 @@ def update_redetection_conditions(
                     # Block4 전용 파라미터 (Optional)
                     block4_entry_surge_rate=block4.get("entry_surge_rate"),
                     block4_entry_ma_period=block4.get("entry_ma_period"),
-                    block4_entry_high_above_ma=block4.get("entry_high_above_ma"),
                     block4_entry_max_deviation_ratio=block4.get(
                         "entry_max_deviation_ratio"
                     ),
                     block4_entry_min_trading_value=block4.get(
                         "entry_min_trading_value"
                     ),
-                    block4_entry_volume_high_months=block4.get(
-                        "entry_volume_high_months"
+                    block4_entry_volume_high_days=block4.get(
+                        "entry_volume_high_days"
                     ),
                     block4_entry_volume_spike_ratio=block4.get(
                         "entry_volume_spike_ratio"
                     ),
-                    block4_entry_price_high_months=block4.get(
-                        "entry_price_high_months"
+                    block4_entry_price_high_days=block4.get(
+                        "entry_price_high_days"
                     ),
                     block4_exit_condition_type=(
                         Block1ExitConditionType(block4["exit_condition_type"])

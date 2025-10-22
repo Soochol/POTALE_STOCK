@@ -38,12 +38,11 @@ class SeedCondition:
     # Block2 전용 파라미터 (Optional, 없으면 Block1 값 사용)
     block2_entry_surge_rate: Optional[float] = None
     block2_entry_ma_period: Optional[int] = None
-    block2_entry_high_above_ma: Optional[bool] = None
     block2_entry_max_deviation_ratio: Optional[float] = None
     block2_entry_min_trading_value: Optional[float] = None
-    block2_entry_volume_high_months: Optional[int] = None
+    block2_entry_volume_high_days: Optional[int] = None  # 달력 기준 일수
     block2_entry_volume_spike_ratio: Optional[float] = None
-    block2_entry_price_high_months: Optional[int] = None
+    block2_entry_price_high_days: Optional[int] = None  # 달력 기준 일수
     block2_exit_condition_type: Optional[Block1ExitConditionType] = None
     block2_exit_ma_period: Optional[int] = None
     block2_cooldown_days: Optional[int] = None
@@ -58,12 +57,11 @@ class SeedCondition:
     # Block3 전용 파라미터 (Optional, 없으면 Block1 값 사용)
     block3_entry_surge_rate: Optional[float] = None
     block3_entry_ma_period: Optional[int] = None
-    block3_entry_high_above_ma: Optional[bool] = None
     block3_entry_max_deviation_ratio: Optional[float] = None
     block3_entry_min_trading_value: Optional[float] = None
-    block3_entry_volume_high_months: Optional[int] = None
+    block3_entry_volume_high_days: Optional[int] = None  # 달력 기준 일수
     block3_entry_volume_spike_ratio: Optional[float] = None
-    block3_entry_price_high_months: Optional[int] = None
+    block3_entry_price_high_days: Optional[int] = None  # 달력 기준 일수
     block3_exit_condition_type: Optional[Block1ExitConditionType] = None
     block3_exit_ma_period: Optional[int] = None
     block3_cooldown_days: Optional[int] = None
@@ -78,12 +76,11 @@ class SeedCondition:
     # Block4 전용 파라미터 (Optional, 없으면 Block1 값 사용)
     block4_entry_surge_rate: Optional[float] = None
     block4_entry_ma_period: Optional[int] = None
-    block4_entry_high_above_ma: Optional[bool] = None
     block4_entry_max_deviation_ratio: Optional[float] = None
     block4_entry_min_trading_value: Optional[float] = None
-    block4_entry_volume_high_months: Optional[int] = None
+    block4_entry_volume_high_days: Optional[int] = None  # 달력 기준 일수
     block4_entry_volume_spike_ratio: Optional[float] = None
-    block4_entry_price_high_months: Optional[int] = None
+    block4_entry_price_high_days: Optional[int] = None  # 달력 기준 일수
     block4_exit_condition_type: Optional[Block1ExitConditionType] = None
     block4_exit_ma_period: Optional[int] = None
     block4_cooldown_days: Optional[int] = None

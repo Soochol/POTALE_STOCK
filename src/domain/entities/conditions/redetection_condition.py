@@ -28,26 +28,25 @@ class RedetectionCondition:
     # ===== Block1 기본 조건 (완화) =====
     base: BaseEntryCondition
     block1_tolerance_pct: float = 10.0  # Block1 재탐지 가격 범위 (±%)
-    block1_redetection_min_days_after_seed: int = 0  # Block1 Seed 발생일 + 최소일수
-    block1_redetection_max_days_after_seed: int = 1825  # Block1 Seed 발생일 + 최대일수 (5년)
+    block1_redetection_min_days_after_seed: int = 0  # Block1 Seed 발생일 + 최소일수 (달력 기준, 주말/공휴일 포함)
+    block1_redetection_max_days_after_seed: int = 1825  # Block1 Seed 발생일 + 최대일수 (달력 기준, 5년=1825일)
 
     # ===== Block2 조건 =====
     # Block2 추가 조건
     block2_volume_ratio: float = 15.0  # Block1 최고 거래량 대비 (%)
     block2_low_price_margin: float = 10.0  # Block1 최고가 저가 마진 (%)
     block2_tolerance_pct: float = 15.0  # Block2 재탐지 가격 범위 (±%)
-    block2_redetection_min_days_after_seed: int = 0  # Block2 Seed 발생일 + 최소일수
-    block2_redetection_max_days_after_seed: int = 1825  # Block2 Seed 발생일 + 최대일수 (5년)
+    block2_redetection_min_days_after_seed: int = 0  # Block2 Seed 발생일 + 최소일수 (달력 기준, 주말/공휴일 포함)
+    block2_redetection_max_days_after_seed: int = 1825  # Block2 Seed 발생일 + 최대일수 (달력 기준, 5년=1825일)
 
     # Block2 전용 파라미터 (Optional, 없으면 Block1 값 사용)
     block2_entry_surge_rate: Optional[float] = None
     block2_entry_ma_period: Optional[int] = None
-    block2_entry_high_above_ma: Optional[bool] = None
     block2_entry_max_deviation_ratio: Optional[float] = None
     block2_entry_min_trading_value: Optional[float] = None
-    block2_entry_volume_high_months: Optional[int] = None
+    block2_entry_volume_high_days: Optional[int] = None  # 달력 기준 일수
     block2_entry_volume_spike_ratio: Optional[float] = None
-    block2_entry_price_high_months: Optional[int] = None
+    block2_entry_price_high_days: Optional[int] = None  # 달력 기준 일수
     block2_exit_condition_type: Optional[Block1ExitConditionType] = None
     block2_exit_ma_period: Optional[int] = None
     block2_cooldown_days: Optional[int] = None
@@ -57,18 +56,17 @@ class RedetectionCondition:
     block3_volume_ratio: float = 15.0  # Block2 최고 거래량 대비 (%)
     block3_low_price_margin: float = 10.0  # Block2 최고가 저가 마진 (%)
     block3_tolerance_pct: float = 20.0  # Block3 재탐지 가격 범위 (±%)
-    block3_redetection_min_days_after_seed: int = 0  # Block3 Seed 발생일 + 최소일수
-    block3_redetection_max_days_after_seed: int = 1825  # Block3 Seed 발생일 + 최대일수 (5년)
+    block3_redetection_min_days_after_seed: int = 0  # Block3 Seed 발생일 + 최소일수 (달력 기준, 주말/공휴일 포함)
+    block3_redetection_max_days_after_seed: int = 1825  # Block3 Seed 발생일 + 최대일수 (달력 기준, 5년=1825일)
 
     # Block3 전용 파라미터 (Optional, 없으면 Block1 값 사용)
     block3_entry_surge_rate: Optional[float] = None
     block3_entry_ma_period: Optional[int] = None
-    block3_entry_high_above_ma: Optional[bool] = None
     block3_entry_max_deviation_ratio: Optional[float] = None
     block3_entry_min_trading_value: Optional[float] = None
-    block3_entry_volume_high_months: Optional[int] = None
+    block3_entry_volume_high_days: Optional[int] = None  # 달력 기준 일수
     block3_entry_volume_spike_ratio: Optional[float] = None
-    block3_entry_price_high_months: Optional[int] = None
+    block3_entry_price_high_days: Optional[int] = None  # 달력 기준 일수
     block3_exit_condition_type: Optional[Block1ExitConditionType] = None
     block3_exit_ma_period: Optional[int] = None
     block3_cooldown_days: Optional[int] = None
@@ -78,18 +76,17 @@ class RedetectionCondition:
     block4_volume_ratio: float = 20.0  # Block3 최고 거래량 대비 (%)
     block4_low_price_margin: float = 10.0  # Block3 최고가 저가 마진 (%)
     block4_tolerance_pct: float = 25.0  # Block4 재탐지 가격 범위 (±%)
-    block4_redetection_min_days_after_seed: int = 0  # Block4 Seed 발생일 + 최소일수
-    block4_redetection_max_days_after_seed: int = 1825  # Block4 Seed 발생일 + 최대일수 (5년)
+    block4_redetection_min_days_after_seed: int = 0  # Block4 Seed 발생일 + 최소일수 (달력 기준, 주말/공휴일 포함)
+    block4_redetection_max_days_after_seed: int = 1825  # Block4 Seed 발생일 + 최대일수 (달력 기준, 5년=1825일)
 
     # Block4 전용 파라미터 (Optional, 없으면 Block1 값 사용)
     block4_entry_surge_rate: Optional[float] = None
     block4_entry_ma_period: Optional[int] = None
-    block4_entry_high_above_ma: Optional[bool] = None
     block4_entry_max_deviation_ratio: Optional[float] = None
     block4_entry_min_trading_value: Optional[float] = None
-    block4_entry_volume_high_months: Optional[int] = None
+    block4_entry_volume_high_days: Optional[int] = None  # 달력 기준 일수
     block4_entry_volume_spike_ratio: Optional[float] = None
-    block4_entry_price_high_months: Optional[int] = None
+    block4_entry_price_high_days: Optional[int] = None  # 달력 기준 일수
     block4_exit_condition_type: Optional[Block1ExitConditionType] = None
     block4_exit_ma_period: Optional[int] = None
     block4_cooldown_days: Optional[int] = None

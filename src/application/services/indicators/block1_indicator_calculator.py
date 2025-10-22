@@ -25,20 +25,22 @@ class Block1IndicatorCalculator:
     def calculate(
         self,
         stocks: List[Stock],
-        ma_period: int = 20,
+        ma_period: Optional[int] = None,
+        ma_periods: Optional[List[int]] = None,
         exit_ma_period: Optional[int] = None,
-        volume_months: Optional[Union[int, List[int]]] = 6,
-        new_high_months: Optional[Union[int, List[int]]] = 2
+        volume_days: Optional[Union[int, List[int]]] = None,
+        new_high_days: Optional[Union[int, List[int]]] = None
     ) -> List[Stock]:
         """
         주식 데이터에 블록1 지표 추가
 
         Args:
             stocks: 주식 데이터 리스트 (동일 종목, 날짜순 정렬)
-            ma_period: 진입용 이동평균선 기간
+            ma_period: 진입용 이동평균선 기간 (단일 값)
+            ma_periods: 이동평균선 기간 리스트 (여러 값, ma_period보다 우선)
             exit_ma_period: 종료용 이동평균선 기간 (None이면 ma_period 사용)
-            volume_months: 신고거래량 기간 (개월 or 개월 리스트)
-            new_high_months: 신고가 기간 (개월 or 개월 리스트)
+            volume_days: 신고거래량 기간 (달력 기준 일수 or 일수 리스트)
+            new_high_days: 신고가 기간 (달력 기준 일수 or 일수 리스트)
 
         Returns:
             지표가 추가된 주식 데이터 리스트
@@ -49,28 +51,40 @@ class Block1IndicatorCalculator:
         # Stock 리스트를 DataFrame으로 변환
         df = self._stocks_to_dataframe(stocks)
 
-        # 지표 계산
-        df = self._calculate_ma(df, ma_period)
+        # MA period 처리 (ma_periods가 우선, 없으면 ma_period 사용)
+        if ma_periods:
+            periods_to_calculate = ma_periods
+        elif ma_period:
+            periods_to_calculate = [ma_period]
+        else:
+            periods_to_calculate = [20]  # 기본값
 
-        # 종료용 MA가 다르면 추가 계산
-        if exit_ma_period and exit_ma_period != ma_period:
+        # 모든 MA period 계산
+        for period in periods_to_calculate:
+            df = self._calculate_ma(df, period)
+
+        # 종료용 MA 추가 계산
+        if exit_ma_period and exit_ma_period not in periods_to_calculate:
             df = self._calculate_ma(df, exit_ma_period)
 
+        # 기본 MA period 설정 (deviation 계산용)
+        primary_ma_period = periods_to_calculate[0] if periods_to_calculate else 20
+
         df = self._calculate_rate(df)
-        df = self._calculate_deviation(df, ma_period)
+        df = self._calculate_deviation(df, primary_ma_period)
         df = self._calculate_trading_value(df)
 
-        # volume_months 처리 (int → [int] 변환)
-        if volume_months is not None:
-            volume_months_list = [volume_months] if isinstance(volume_months, int) else volume_months
-            for months in volume_months_list:
-                df = self._calculate_volume_high(df, months=months)
+        # volume_days 처리 (int → [int] 변환)
+        if volume_days is not None:
+            volume_days_list = [volume_days] if isinstance(volume_days, int) else volume_days
+            for days in volume_days_list:
+                df = self._calculate_volume_high(df, days=days)
 
-        # new_high_months 처리 (int → [int] 변환)
-        if new_high_months is not None:
-            new_high_months_list = [new_high_months] if isinstance(new_high_months, int) else new_high_months
-            for months in new_high_months_list:
-                df = self._calculate_new_high(df, months=months)
+        # new_high_days 처리 (int → [int] 변환)
+        if new_high_days is not None:
+            new_high_days_list = [new_high_days] if isinstance(new_high_days, int) else new_high_days
+            for days in new_high_days_list:
+                df = self._calculate_new_high(df, days=days)
 
         # 삼선전환도 계산
         tlb_bars = self.tlb_calculator.calculate(
@@ -167,64 +181,77 @@ class Block1IndicatorCalculator:
         df['trading_value_100m'] = (df['close'] * df['volume']) / 100_000_000
         return df
 
-    def _calculate_volume_high(self, df: pd.DataFrame, months: int) -> pd.DataFrame:
+    def _calculate_volume_high(self, df: pd.DataFrame, days: int) -> pd.DataFrame:
         """
-        N개월 최고거래량 여부 계산
+        N일 최고거래량 여부 계산 (달력 기준)
 
         Args:
             df: DataFrame
-            months: 개월 수
+            days: 달력 기준 일수 (예: 90일, 180일, 365일)
 
         Returns:
-            'is_volume_high_{months}m' 컬럼이 추가된 DataFrame
+            'is_volume_high_{days}d' 컬럼이 추가된 DataFrame
         """
-        # 대략적인 거래일 수 (1개월 = 20거래일)
-        window = months * 20
+        # 필드 이름: is_volume_high_90d, is_volume_high_180d 등
+        field_name = f'is_volume_high_{days}d'
+        volume_max_field = f'volume_max_{days}d'
 
-        # 필드 이름: is_volume_high_6m, is_volume_high_12m 등
-        field_name = f'is_volume_high_{months}m'
-        volume_max_field = f'volume_max_{months}m'
+        df[field_name] = False
+        df[volume_max_field] = None
 
-        # 과거 N개월 최고거래량 계산 (현재 행 제외)
-        # shift(1)로 자기 자신을 제외한 과거 데이터만 사용
-        df[volume_max_field] = df['volume'].shift(1).rolling(window=window, min_periods=1).max()
+        # 각 행에 대해 과거 N일간 최고거래량 계산 (정확한 달력 기준)
+        for i in range(len(df)):
+            current_date = df.loc[i, 'date']
+            current_volume = df.loc[i, 'volume']
 
-        # 현재 거래량이 과거 최고거래량과 같거나 크면 True
-        df[field_name] = (df['volume'] >= df[volume_max_field])
+            # N일 전 날짜 계산 (정확한 달력 기준)
+            lookback_date = current_date - timedelta(days=days)
+
+            # 과거 N일간 거래량 찾기 (자기 자신 제외)
+            past_data = df[(df['date'] >= lookback_date) & (df['date'] < current_date)]
+
+            if past_data.empty:
+                # 과거 데이터가 없으면 신고거래량으로 간주
+                df.loc[i, field_name] = True
+                df.loc[i, volume_max_field] = current_volume
+            else:
+                # 당일 거래량 >= 과거 N일 최고거래량
+                past_max_volume = past_data['volume'].max()
+                df.loc[i, volume_max_field] = past_max_volume
+                df.loc[i, field_name] = (current_volume >= past_max_volume)
 
         return df
 
-    def _calculate_new_high(self, df: pd.DataFrame, months: int) -> pd.DataFrame:
+    def _calculate_new_high(self, df: pd.DataFrame, days: int) -> pd.DataFrame:
         """
-        N개월 신고가 여부 계산 (정확한 달력 기준)
+        N일 신고가 여부 계산 (정확한 달력 기준)
 
         Args:
             df: DataFrame
-            months: 개월 수
+            days: 달력 기준 일수 (예: 90일, 180일, 365일)
 
         Returns:
-            'is_new_high_{months}m' 컬럼이 추가된 DataFrame
+            'is_new_high_{days}d' 컬럼이 추가된 DataFrame
         """
-        # 필드 이름: is_new_high_12m, is_new_high_24m 등
-        field_name = f'is_new_high_{months}m'
+        # 필드 이름: is_new_high_90d, is_new_high_180d 등
+        field_name = f'is_new_high_{days}d'
         df[field_name] = False
 
         for i in range(len(df)):
             current_date = df.loc[i, 'date']
             current_high = df.loc[i, 'high']
 
-            # N개월 전 날짜 계산 (정확한 달력 기준)
-            # relativedelta를 사용하는 대신 간단히 days로 계산
-            lookback_date = current_date - timedelta(days=months * 30)
+            # N일 전 날짜 계산 (정확한 달력 기준)
+            lookback_date = current_date - timedelta(days=days)
 
-            # 과거 N개월간 최고가 찾기
+            # 과거 N일간 최고가 찾기
             past_data = df[(df['date'] >= lookback_date) & (df['date'] < current_date)]
 
             if past_data.empty:
                 # 과거 데이터가 없으면 신고가로 간주
                 df.loc[i, field_name] = True
             else:
-                # 당일 고가 >= 과거 N개월 최고가
+                # 당일 고가 >= 과거 N일 최고가
                 past_max_high = past_data['high'].max()
                 df.loc[i, field_name] = (current_high >= past_max_high)
 

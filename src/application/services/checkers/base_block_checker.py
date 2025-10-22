@@ -55,11 +55,14 @@ class BaseBlockChecker(ABC):
         self,
         stock: Stock,
         indicators: Dict,
-        ma_period: Optional[int],
-        high_above_ma: Optional[bool]
+        ma_period: Optional[int]
     ) -> bool:
-        """조건 2: 고가 >= 이동평균선 검사"""
-        if not (ma_period and high_above_ma):
+        """조건 2: 고가 >= 이동평균선 검사
+
+        Args:
+            ma_period: MA 기간. None이면 MA 조건 전체 skip, 값이 있으면 고가≥MA 체크
+        """
+        if ma_period is None:
             return True
 
         ma_key = f'MA_{ma_period}'
@@ -99,10 +102,10 @@ class BaseBlockChecker(ABC):
         self,
         stock: Stock,
         indicators: Dict,
-        volume_high_months: Optional[int]
+        volume_high_days: Optional[int]
     ) -> bool:
-        """조건 5: 신고거래량 검사"""
-        if volume_high_months is None:
+        """조건 5: 신고거래량 검사 (달력 기준 일수)"""
+        if volume_high_days is None:
             return True
 
         is_volume_high = indicators.get('is_volume_high', False)
@@ -132,10 +135,10 @@ class BaseBlockChecker(ABC):
         self,
         stock: Stock,
         indicators: Dict,
-        price_high_months: Optional[int]
+        price_high_days: Optional[int]
     ) -> bool:
-        """조건 7: 신고가 검사"""
-        if price_high_months is None:
+        """조건 7: 신고가 검사 (달력 기준 일수)"""
+        if price_high_days is None:
             return True
 
         is_new_high = indicators.get('is_new_high', False)
@@ -170,8 +173,7 @@ class BaseBlockChecker(ABC):
         # 조건 2: 고가 >= 이동평균선
         if not self._check_ma_high(
             stock, indicators,
-            base_condition.block1_entry_ma_period,
-            base_condition.block1_entry_high_above_ma
+            base_condition.block1_entry_ma_period
         ):
             return False
 
@@ -184,7 +186,7 @@ class BaseBlockChecker(ABC):
             return False
 
         # 조건 5: 신고거래량
-        if not self._check_volume_high(stock, indicators, base_condition.block1_entry_volume_high_months):
+        if not self._check_volume_high(stock, indicators, base_condition.block1_entry_volume_high_days):
             return False
 
         # 조건 6: 전날 거래량 비율
@@ -192,7 +194,7 @@ class BaseBlockChecker(ABC):
             return False
 
         # 조건 7: 신고가
-        if not self._check_price_high(stock, indicators, base_condition.block1_entry_price_high_months):
+        if not self._check_price_high(stock, indicators, base_condition.block1_entry_price_high_days):
             return False
 
         return True

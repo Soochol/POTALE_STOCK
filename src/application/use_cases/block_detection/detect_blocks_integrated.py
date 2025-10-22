@@ -126,17 +126,17 @@ class DetectBlocksIntegratedUseCase:
         condition: Block1Condition
     ) -> List[Stock]:
         """주가 데이터에 지표 계산"""
-        ma_period = condition.entry_ma_period or 20
-        exit_ma_period = condition.exit_ma_period
-        volume_months = condition.volume_high_months or 6
-        new_high_months = condition.price_high_months or 2
+        ma_period = condition.base.block1_entry_ma_period or 20
+        exit_ma_period = condition.base.block1_exit_ma_period
+        volume_days = condition.base.block1_entry_volume_high_days  # None이면 조건 비활성화
+        new_high_days = condition.base.block1_entry_price_high_days  # None이면 조건 비활성화
 
         return self.indicator_calculator.calculate(
             stocks,
             ma_period=ma_period,
             exit_ma_period=exit_ma_period,
-            volume_months=volume_months,
-            new_high_months=new_high_months
+            volume_days=volume_days,
+            new_high_days=new_high_days
         )
 
     def _detect_all_blocks(

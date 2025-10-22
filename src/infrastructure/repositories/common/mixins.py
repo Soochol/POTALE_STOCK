@@ -112,12 +112,11 @@ class ConditionPresetMapperMixin:
         return {
             f"{prefix}entry_surge_rate": base_condition.block1_entry_surge_rate,
             f"{prefix}entry_ma_period": base_condition.block1_entry_ma_period,
-            f"{prefix}entry_high_above_ma": 1 if base_condition.block1_entry_high_above_ma else 0,
             f"{prefix}entry_max_deviation_ratio": base_condition.block1_entry_max_deviation_ratio,
             f"{prefix}entry_min_trading_value": base_condition.block1_entry_min_trading_value,
-            f"{prefix}entry_volume_high_months": base_condition.block1_entry_volume_high_months,
+            f"{prefix}entry_volume_high_days": base_condition.block1_entry_volume_high_days,
             f"{prefix}entry_volume_spike_ratio": base_condition.block1_entry_volume_spike_ratio,
-            f"{prefix}entry_price_high_months": base_condition.block1_entry_price_high_months,
+            f"{prefix}entry_price_high_days": base_condition.block1_entry_price_high_days,
             f"{prefix}exit_condition_type": base_condition.block1_exit_condition_type.value,
             f"{prefix}exit_ma_period": base_condition.block1_exit_ma_period,
             f"{prefix}cooldown_days": base_condition.block1_cooldown_days,
@@ -142,19 +141,12 @@ class ConditionPresetMapperMixin:
             f"{prefix}entry_ma_period": getattr(condition, f"{prefix}entry_ma_period", None),
             f"{prefix}entry_max_deviation_ratio": getattr(condition, f"{prefix}entry_max_deviation_ratio", None),
             f"{prefix}entry_min_trading_value": getattr(condition, f"{prefix}entry_min_trading_value", None),
-            f"{prefix}entry_volume_high_months": getattr(condition, f"{prefix}entry_volume_high_months", None),
+            f"{prefix}entry_volume_high_days": getattr(condition, f"{prefix}entry_volume_high_days", None),
             f"{prefix}entry_volume_spike_ratio": getattr(condition, f"{prefix}entry_volume_spike_ratio", None),
-            f"{prefix}entry_price_high_months": getattr(condition, f"{prefix}entry_price_high_months", None),
+            f"{prefix}entry_price_high_days": getattr(condition, f"{prefix}entry_price_high_days", None),
             f"{prefix}exit_ma_period": getattr(condition, f"{prefix}exit_ma_period", None),
             f"{prefix}cooldown_days": getattr(condition, f"{prefix}cooldown_days", None),
         }
-
-        # Boolean 필드 처리
-        high_above_ma = getattr(condition, f"{prefix}entry_high_above_ma", None)
-        if high_above_ma is not None:
-            result[f"{prefix}entry_high_above_ma"] = 1 if high_above_ma else 0
-        else:
-            result[f"{prefix}entry_high_above_ma"] = None
 
         # Enum 필드 처리
         exit_type = getattr(condition, f"{prefix}exit_condition_type", None)

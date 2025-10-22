@@ -16,6 +16,11 @@ Background:
 - Now each Block can have independent min/max periods based on its Seed occurrence date
 - Default values: min=0, max=1825 (5 years) to maintain backward compatibility
 
+IMPORTANT - Calendar Days vs Trading Days:
+- These values represent CALENDAR days (달력 기준 일수), NOT trading days
+- Calculation: Seed.started_at + timedelta(days=N) includes weekends/holidays
+- Example: If Seed is on 2020-01-15 and max=1825, redetection ends on 2025-01-15
+
 Changes:
 - Add 8 INTEGER columns with NOT NULL and default values
 - No data migration needed (default values maintain current behavior)
@@ -130,9 +135,9 @@ def migrate():
         print("\n3. Statistics:")
         count = session.execute(text("SELECT COUNT(*) FROM redetection_condition_preset")).scalar()
         print(f"   - Total redetection presets: {count}")
-        print(f"   - Default values applied:")
+        print(f"   - Default values applied (달력 기준 일수):")
         print(f"     * min_days_after_seed: 0 (재탐지 시작 = Seed 발생일 당일부터)")
-        print(f"     * max_days_after_seed: 1825 (재탐지 종료 = Seed 발생일 + 5년)")
+        print(f"     * max_days_after_seed: 1825 (재탐지 종료 = Seed 발생일 + 5년, 주말/공휴일 포함)")
 
         # Show sample values
         if count > 0:

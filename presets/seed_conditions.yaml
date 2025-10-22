@@ -9,13 +9,12 @@ default_seed:
     # │                          진입 조건 (Entry)                          │
     # └─────────────────────────────────────────────────────────────────────┘
     entry_surge_rate:           14.0      # 등락률: 14%
-    entry_ma_period:            120       # MA기간: 120일
-    entry_high_above_ma:        true      # 고가>MA 필수
+    entry_ma_period:            60       # MA기간: 120일 (null이면 MA 조건 전체 skip, 값이 있으면 고가≥MA 체크)
     entry_max_deviation_ratio:  500.0     # 이격도: 500%
     entry_min_trading_value:    300.0     # 거래대금: 300억
-    entry_volume_high_months:   null        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
+    entry_volume_high_days:   null        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
     entry_volume_spike_ratio:   300.0     # 거래량비: 300% (3배)
-    entry_price_high_months:    null        # 신고가: 비활성화 (null = 조건 완전 스킵)
+    entry_price_high_days:    null        # 신고가: 비활성화 (null = 조건 완전 스킵)
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │                          종료 조건 (Exit)                           │
@@ -37,20 +36,19 @@ default_seed:
     # └─────────────────────────────────────────────────────────────────────┘
     volume_ratio:               100.0      # 거래량비: Block1 최고 대비 100%
     low_price_margin:           5.0      # 저가마진: Block1 최고가 대비 5%
-    min_candles_after_block1:   4         # 최소캔들: Block1 시작 후 4개
+    min_candles_after_block1:   3         # 최소캔들: Block1 시작 후 4개
     max_candles_after_block1:   100       # 최대캔들: Block1 시작 후 250개 (약 1년)
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │                Block2 전용 진입 조건 (없으면 Block1 값 사용)         │
     # └─────────────────────────────────────────────────────────────────────┘
     entry_surge_rate:           14.0      # 등락률: 14%
-    entry_ma_period:            120       # MA기간: 120일
-    entry_high_above_ma:        true      # 고가>MA 필수
+    entry_ma_period:            60       # MA기간: 120일 (null이면 MA 조건 전체 skip)
     entry_max_deviation_ratio:  500.0     # 이격도: 500%
     entry_min_trading_value:    1000.0    # 거래대금: 1000억
-    entry_volume_high_months:   null        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
+    entry_volume_high_days:   null        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
     entry_volume_spike_ratio:   300.0     # 거래량비: 300%
-    entry_price_high_months:    null        # 신고가: 비활성화 (null = 조건 완전 스킵)
+    entry_price_high_days:    null        # 신고가: 비활성화 (null = 조건 완전 스킵)
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │                       Block2 전용 종료 조건                         │
@@ -66,22 +64,21 @@ default_seed:
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │                     Block3 추가 조건 (Block2 기준)                  │
     # └─────────────────────────────────────────────────────────────────────┘
-    volume_ratio:               18.0      # 거래량비: Block2 최고 대비 18%
+    volume_ratio:               10.0      # 거래량비: Block2 최고 대비 18%
     low_price_margin:           5.0      # 저가마진: Block2 최고가 대비 5%
-    min_candles_after_block2:   4         # 최소캔들: Block2 시작 후 4개
+    min_candles_after_block2:   3         # 최소캔들: Block2 시작 후 4개
     max_candles_after_block2:   100       # 최대캔들: Block2 시작 후 120개 (약 6개월)
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │                Block3 전용 진입 조건 (없으면 Block1 값 사용)         │
     # └─────────────────────────────────────────────────────────────────────┘
     entry_surge_rate:           10.0      # 등락률: 10%
-    entry_ma_period:            120       # MA기간: 120일
-    entry_high_above_ma:        true      # 고가>MA 필수
+    entry_ma_period:            60       # MA기간: 120일 (null이면 MA 조건 전체 skip)
     entry_max_deviation_ratio:  500.0     # 이격도: 500%
     entry_min_trading_value:    1000.0    # 거래대금: 1000억
-    entry_volume_high_months:   null        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
+    entry_volume_high_days:   null        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
     entry_volume_spike_ratio:   300.0     # 거래량비: 300%
-    entry_price_high_months:    null        # 신고가: 비활성화 (null = 조건 완전 스킵)
+    entry_price_high_days:    null        # 신고가: 비활성화 (null = 조건 완전 스킵)
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │                       Block3 전용 종료 조건                         │
@@ -99,20 +96,19 @@ default_seed:
     # └─────────────────────────────────────────────────────────────────────┘
     volume_ratio:               10.0      # 거래량비: Block3 최고 대비 10%
     low_price_margin:           5.0      # 저가마진: Block3 최고가 대비 5%
-    min_candles_after_block3:   4         # 최소캔들: Block3 시작 후 4개
+    min_candles_after_block3:   3         # 최소캔들: Block3 시작 후 4개
     max_candles_after_block3:   1000        # 최대캔들: Block3 시작 후 60개 (약 3개월)
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │             Block4 전용 진입 조건 (완화) - Block1 값보다 완화        │
     # └─────────────────────────────────────────────────────────────────────┘
     entry_surge_rate:           10.0       # 등락률: 10% (완화)
-    entry_ma_period:            60        # MA기간: 60일 (짧음)
-    entry_high_above_ma:        true      # 고가>MA 필수
+    entry_ma_period:            60        # MA기간: 60일 (짧음, null이면 MA 조건 전체 skip)
     entry_max_deviation_ratio:  500.0     # 이격도: 500%
-    entry_min_trading_value:    150.0     # 거래대금: 150억 (낮음)
-    entry_volume_high_months:   null        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
+    entry_min_trading_value:    300.0     # 거래대금: 150억 (낮음)
+    entry_volume_high_days:   null        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
     entry_volume_spike_ratio:   300.0     # 거래량비: 300%
-    entry_price_high_months:    null        # 신고가: 비활성화 (null = 조건 완전 스킵)
+    entry_price_high_days:    null        # 신고가: 비활성화 (null = 조건 완전 스킵)
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │                       Block4 전용 종료 조건                         │

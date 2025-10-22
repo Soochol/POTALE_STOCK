@@ -54,11 +54,8 @@ class Block2Checker:
             if rate < condition.base.block1_entry_surge_rate:
                 return False
 
-        # 조건 2: 고가 >= 이동평균선 N
-        if (
-            condition.base.block1_entry_ma_period
-            and condition.base.block1_entry_high_above_ma
-        ):
+        # 조건 2: 고가 >= 이동평균선 N (ma_period가 null이면 skip, 값이 있으면 항상 체크)
+        if condition.base.block1_entry_ma_period:
             ma_key = f'MA_{condition.base.block1_entry_ma_period}'
             ma_value = indicators.get(ma_key)
             if ma_value is None or stock.high < ma_value:
@@ -79,9 +76,9 @@ class Block2Checker:
                 return False
 
         # 조건 5: N개월 신고거래량
-        if condition.base.block1_entry_volume_high_months is not None:
+        if condition.base.block1_entry_volume_high_days is not None:
             # 동적 필드 이름: is_volume_high_6m, is_volume_high_12m 등
-            field_name = f'is_volume_high_{condition.base.block1_entry_volume_high_months}m'
+            field_name = f'is_volume_high_{condition.base.block1_entry_volume_high_days}d'
             is_volume_high = indicators.get(field_name, False)
             if not is_volume_high:
                 return False
@@ -98,9 +95,9 @@ class Block2Checker:
                 return False
 
         # 조건 7: N개월 신고가
-        if condition.base.block1_entry_price_high_months is not None:
+        if condition.base.block1_entry_price_high_days is not None:
             # 동적 필드 이름: is_new_high_12m, is_new_high_24m 등
-            field_name = f'is_new_high_{condition.base.block1_entry_price_high_months}m'
+            field_name = f'is_new_high_{condition.base.block1_entry_price_high_days}d'
             is_new_high = indicators.get(field_name, False)
             if not is_new_high:
                 return False
