@@ -9,7 +9,18 @@ from typing import List, Dict
 from datetime import timedelta
 from src.application.services.detectors.pattern_seed_detector import PatternSeedDetector
 from src.application.services.detectors.pattern_redetector import PatternRedetector
+from src.application.services.detectors.exit_condition_processor import ExitConditionProcessor
 from src.application.services.indicators.block1_indicator_calculator import Block1IndicatorCalculator
+from src.application.services.checkers.block1_checker import Block1Checker
+from src.application.services.checkers.block2_checker import Block2Checker
+from src.application.services.checkers.block3_checker import Block3Checker
+from src.application.services.checkers.block4_checker import Block4Checker
+from src.domain.entities.conditions.block_conditions import (
+    Block1Condition,
+    Block2Condition,
+    Block3Condition,
+    Block4Condition,
+)
 from src.infrastructure.repositories.pattern.block_pattern_repository import BlockPatternRepository
 from src.infrastructure.repositories.detection.block1_repository import Block1Repository
 from src.infrastructure.repositories.detection.block2_repository import Block2Repository
@@ -405,6 +416,10 @@ class DetectPatternsUseCase:
                 "seed_block2": seed_block2,
                 "seed_block3": seed_block3,
                 "seed_block4": seed_block4,  # None일 수도 있음
+                "block1_redetections": block1_redetections,
+                "block2_redetections": block2_redetections,
+                "block3_redetections": block3_redetections,
+                "block4_redetections": block4_redetections,
                 "redetection_stats": {
                     "block1": len(block1_redetections),
                     "block2": len(block2_redetections),
@@ -414,7 +429,117 @@ class DetectPatternsUseCase:
             })
 
         # ========================================
-        # Step 3: 완료
+        # Step 3: 종료 조건 체크 (후처리)
+        # ========================================
+        print(f"\n{'='*70}")
+        print("[Step 3] 종료 조건 체크 중...")
+        print(f"{'='*70}")
+
+        # ExitConditionProcessor 초기화
+        exit_processor = ExitConditionProcessor(
+            block1_checker=Block1Checker(),
+            block2_checker=Block2Checker(),
+            block3_checker=Block3Checker(),
+            block4_checker=Block4Checker(),
+            block1_repo=self.block1_repo,
+            block2_repo=self.block2_repo,
+            block3_repo=self.block3_repo,
+            block4_repo=self.block4_repo
+        )
+
+        # Seed 조건을 Block 조건으로 변환
+        block1_condition = Block1Condition(base=seed_condition.base)
+        block2_condition = Block2Condition(
+            base=seed_condition.base,
+            block2_volume_ratio=seed_condition.block2_volume_ratio,
+            block2_low_price_margin=seed_condition.block2_low_price_margin,
+            block2_min_candles_after_block1=seed_condition.block2_min_candles_after_block1,
+            block2_max_candles_after_block1=seed_condition.block2_max_candles_after_block1
+        )
+        block3_condition = Block3Condition(
+            base=seed_condition.base,
+            block2_volume_ratio=seed_condition.block2_volume_ratio,
+            block2_low_price_margin=seed_condition.block2_low_price_margin,
+            block2_min_candles_after_block1=seed_condition.block2_min_candles_after_block1,
+            block2_max_candles_after_block1=seed_condition.block2_max_candles_after_block1,
+            block3_volume_ratio=seed_condition.block3_volume_ratio,
+            block3_low_price_margin=seed_condition.block3_low_price_margin,
+            block3_min_candles_after_block2=seed_condition.block3_min_candles_after_block2,
+            block3_max_candles_after_block2=seed_condition.block3_max_candles_after_block2
+        )
+        block4_condition = Block4Condition(
+            base=seed_condition.base,
+            block2_volume_ratio=seed_condition.block2_volume_ratio,
+            block2_low_price_margin=seed_condition.block2_low_price_margin,
+            block2_min_candles_after_block1=seed_condition.block2_min_candles_after_block1,
+            block2_max_candles_after_block1=seed_condition.block2_max_candles_after_block1,
+            block3_volume_ratio=seed_condition.block3_volume_ratio,
+            block3_low_price_margin=seed_condition.block3_low_price_margin,
+            block3_min_candles_after_block2=seed_condition.block3_min_candles_after_block2,
+            block3_max_candles_after_block2=seed_condition.block3_max_candles_after_block2,
+            block4_volume_ratio=seed_condition.block4_volume_ratio,
+            block4_low_price_margin=seed_condition.block4_low_price_margin,
+            block4_min_candles_after_block3=seed_condition.block4_min_candles_after_block3,
+            block4_max_candles_after_block3=seed_condition.block4_max_candles_after_block3
+        )
+
+        # 종료 조건 체크 통계
+        exit_stats = {
+            "block1_completed": 0,
+            "block2_completed": 0,
+            "block3_completed": 0,
+            "block4_completed": 0
+        }
+
+        # 각 패턴의 모든 블록(Seed + 재탐지) 종료 조건 체크
+        for idx, pattern in enumerate(patterns, 1):
+            print(f"  Pattern #{idx} 종료 조건 체크 중...")
+
+            # Block1 Seed + 재탐지
+            block1_list = [pattern["seed_block1"]] + pattern["block1_redetections"]
+            count = exit_processor.process_block1_exits(
+                detections=block1_list,
+                condition=block1_condition,
+                all_stocks=stocks_with_indicators
+            )
+            exit_stats["block1_completed"] += count
+
+            # Block2 Seed + 재탐지
+            block2_list = [pattern["seed_block2"]] + pattern["block2_redetections"]
+            count = exit_processor.process_block2_exits(
+                detections=block2_list,
+                condition=block2_condition,
+                all_stocks=stocks_with_indicators
+            )
+            exit_stats["block2_completed"] += count
+
+            # Block3 Seed + 재탐지
+            block3_list = [pattern["seed_block3"]] + pattern["block3_redetections"]
+            count = exit_processor.process_block3_exits(
+                detections=block3_list,
+                condition=block3_condition,
+                all_stocks=stocks_with_indicators
+            )
+            exit_stats["block3_completed"] += count
+
+            # Block4 Seed + 재탐지 (Block4 Seed가 있는 경우에만)
+            if pattern["seed_block4"]:
+                block4_list = [pattern["seed_block4"]] + pattern["block4_redetections"]
+                count = exit_processor.process_block4_exits(
+                    detections=block4_list,
+                    condition=block4_condition,
+                    all_stocks=stocks_with_indicators
+                )
+                exit_stats["block4_completed"] += count
+
+        print(f"\n  종료 처리 완료:")
+        print(f"    Block1 종료: {exit_stats['block1_completed']}개")
+        print(f"    Block2 종료: {exit_stats['block2_completed']}개")
+        print(f"    Block3 종료: {exit_stats['block3_completed']}개")
+        print(f"    Block4 종료: {exit_stats['block4_completed']}개")
+
+        # ========================================
+        # Step 4: 완료
         # ========================================
         print(f"\n{'='*70}")
         print(f"전체 탐지 완료!")
@@ -429,5 +554,6 @@ class DetectPatternsUseCase:
         return {
             "patterns": patterns,
             "total_patterns": len(patterns),
-            "total_stats": total_stats
+            "total_stats": total_stats,
+            "exit_stats": exit_stats
         }

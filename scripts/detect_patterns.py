@@ -88,7 +88,12 @@ def create_pattern_tree(pattern: Dict, pattern_num: int, block1_repo, block2_rep
     # Block1 Seed
     block1_seed = pattern.get('seed_block1')
     if block1_seed:
-        b1_info = f"[yellow]Block1 Seed[/yellow]: {block1_seed.started_at} ~ {block1_seed.ended_at or '진행중'}"
+        # 종료 정보 생성 (ended_at + exit_reason)
+        end_info = block1_seed.ended_at or '진행중'
+        if block1_seed.ended_at and hasattr(block1_seed, 'exit_reason') and block1_seed.exit_reason:
+            end_info = f"{block1_seed.ended_at} (종료: {block1_seed.exit_reason})"
+
+        b1_info = f"[yellow]Block1 Seed[/yellow]: {block1_seed.started_at} ~ {end_info}"
         b1_branch = tree.add(b1_info)
         b1_branch.add(f"진입가: {block1_seed.entry_close:,.0f}원")
 
@@ -108,9 +113,14 @@ def create_pattern_tree(pattern: Dict, pattern_num: int, block1_repo, block2_rep
                         gain = (redetection.peak_price - redetection.entry_close) / redetection.entry_close * 100
                         gain_str = f" ([green]+{gain:.1f}%[/green])"
 
+                    # 종료 정보 생성
+                    end_info = redetection.ended_at or '진행중'
+                    if redetection.ended_at and hasattr(redetection, 'exit_reason') and redetection.exit_reason:
+                        end_info = f"{redetection.ended_at} (종료: {redetection.exit_reason})"
+
                     # 상세 정보
                     detail = (
-                        f"[{idx}] {redetection.started_at} ~ {redetection.ended_at or '진행중'} | "
+                        f"[{idx}] {redetection.started_at} ~ {end_info} | "
                         f"{redetection.entry_close:,.0f}원"
                     )
                     if hasattr(redetection, 'peak_price') and redetection.peak_price:
@@ -123,7 +133,12 @@ def create_pattern_tree(pattern: Dict, pattern_num: int, block1_repo, block2_rep
     # Block2 Seed
     block2_seed = pattern.get('seed_block2')
     if block2_seed:
-        b2_info = f"[yellow]Block2 Seed[/yellow]: {block2_seed.started_at} ~ {block2_seed.ended_at or '진행중'}"
+        # 종료 정보 생성 (ended_at + exit_reason)
+        end_info = block2_seed.ended_at or '진행중'
+        if block2_seed.ended_at and hasattr(block2_seed, 'exit_reason') and block2_seed.exit_reason:
+            end_info = f"{block2_seed.ended_at} (종료: {block2_seed.exit_reason})"
+
+        b2_info = f"[yellow]Block2 Seed[/yellow]: {block2_seed.started_at} ~ {end_info}"
         b2_branch = tree.add(b2_info)
         b2_branch.add(f"진입가: {block2_seed.entry_close:,.0f}원")
 
@@ -143,9 +158,14 @@ def create_pattern_tree(pattern: Dict, pattern_num: int, block1_repo, block2_rep
                         gain = (redetection.peak_price - redetection.entry_close) / redetection.entry_close * 100
                         gain_str = f" ([green]+{gain:.1f}%[/green])"
 
+                    # 종료 정보 생성
+                    end_info = redetection.ended_at or '진행중'
+                    if redetection.ended_at and hasattr(redetection, 'exit_reason') and redetection.exit_reason:
+                        end_info = f"{redetection.ended_at} (종료: {redetection.exit_reason})"
+
                     # 상세 정보
                     detail = (
-                        f"[{idx}] {redetection.started_at} ~ {redetection.ended_at or '진행중'} | "
+                        f"[{idx}] {redetection.started_at} ~ {end_info} | "
                         f"{redetection.entry_close:,.0f}원"
                     )
                     if hasattr(redetection, 'peak_price') and redetection.peak_price:
@@ -158,7 +178,12 @@ def create_pattern_tree(pattern: Dict, pattern_num: int, block1_repo, block2_rep
     # Block3 Seed
     block3_seed = pattern.get('seed_block3')
     if block3_seed:
-        b3_info = f"[yellow]Block3 Seed[/yellow]: {block3_seed.started_at} ~ {block3_seed.ended_at or '진행중'}"
+        # 종료 정보 생성 (ended_at + exit_reason)
+        end_info = block3_seed.ended_at or '진행중'
+        if block3_seed.ended_at and hasattr(block3_seed, 'exit_reason') and block3_seed.exit_reason:
+            end_info = f"{block3_seed.ended_at} (종료: {block3_seed.exit_reason})"
+
+        b3_info = f"[yellow]Block3 Seed[/yellow]: {block3_seed.started_at} ~ {end_info}"
         b3_branch = tree.add(b3_info)
         b3_branch.add(f"진입가: {block3_seed.entry_close:,.0f}원")
 
@@ -178,9 +203,14 @@ def create_pattern_tree(pattern: Dict, pattern_num: int, block1_repo, block2_rep
                         gain = (redetection.peak_price - redetection.entry_close) / redetection.entry_close * 100
                         gain_str = f" ([green]+{gain:.1f}%[/green])"
 
+                    # 종료 정보 생성
+                    end_info = redetection.ended_at or '진행중'
+                    if redetection.ended_at and hasattr(redetection, 'exit_reason') and redetection.exit_reason:
+                        end_info = f"{redetection.ended_at} (종료: {redetection.exit_reason})"
+
                     # 상세 정보
                     detail = (
-                        f"[{idx}] {redetection.started_at} ~ {redetection.ended_at or '진행중'} | "
+                        f"[{idx}] {redetection.started_at} ~ {end_info} | "
                         f"{redetection.entry_close:,.0f}원"
                     )
                     if hasattr(redetection, 'peak_price') and redetection.peak_price:
@@ -193,7 +223,12 @@ def create_pattern_tree(pattern: Dict, pattern_num: int, block1_repo, block2_rep
     # Block4 Seed (있으면)
     block4_seed = pattern.get('seed_block4')
     if block4_seed:
-        b4_info = f"[yellow]Block4 Seed[/yellow]: {block4_seed.started_at} ~ {block4_seed.ended_at or '진행중'}"
+        # 종료 정보 생성 (ended_at + exit_reason)
+        end_info = block4_seed.ended_at or '진행중'
+        if block4_seed.ended_at and hasattr(block4_seed, 'exit_reason') and block4_seed.exit_reason:
+            end_info = f"{block4_seed.ended_at} (종료: {block4_seed.exit_reason})"
+
+        b4_info = f"[yellow]Block4 Seed[/yellow]: {block4_seed.started_at} ~ {end_info}"
         b4_branch = tree.add(b4_info)
         b4_branch.add(f"진입가: {block4_seed.entry_close:,.0f}원")
 
@@ -213,9 +248,14 @@ def create_pattern_tree(pattern: Dict, pattern_num: int, block1_repo, block2_rep
                         gain = (redetection.peak_price - redetection.entry_close) / redetection.entry_close * 100
                         gain_str = f" ([green]+{gain:.1f}%[/green])"
 
+                    # 종료 정보 생성
+                    end_info = redetection.ended_at or '진행중'
+                    if redetection.ended_at and hasattr(redetection, 'exit_reason') and redetection.exit_reason:
+                        end_info = f"{redetection.ended_at} (종료: {redetection.exit_reason})"
+
                     # 상세 정보
                     detail = (
-                        f"[{idx}] {redetection.started_at} ~ {redetection.ended_at or '진행중'} | "
+                        f"[{idx}] {redetection.started_at} ~ {end_info} | "
                         f"{redetection.entry_close:,.0f}원"
                     )
                     if hasattr(redetection, 'peak_price') and redetection.peak_price:

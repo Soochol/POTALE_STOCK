@@ -195,7 +195,11 @@ class Block4Checker:
             ticker=detection.ticker,
             condition_name=detection.condition_name,
             started_at=detection.started_at,
+            entry_open=detection.entry_close,  # Block4는 entry_open 정보가 없으므로 entry_close로 대체
+            entry_high=detection.entry_close,  # Block4는 entry_high 정보가 없으므로 entry_close로 대체
+            entry_low=detection.entry_close,   # Block4는 entry_low 정보가 없으므로 entry_close로 대체
             entry_close=detection.entry_close,
+            entry_volume=0,  # Block4는 volume 정보가 없으므로 0으로 설정
             peak_price=detection.peak_price
         )
 
