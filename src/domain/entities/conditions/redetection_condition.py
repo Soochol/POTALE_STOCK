@@ -49,7 +49,7 @@ class RedetectionCondition:
     block2_entry_price_high_days: Optional[int] = None  # 달력 기준 일수
     block2_exit_condition_type: Optional[Block1ExitConditionType] = None
     block2_exit_ma_period: Optional[int] = None
-    block2_cooldown_days: Optional[int] = None
+    block2_min_start_interval_days: Optional[int] = None
 
     # ===== Block3 조건 =====
     # Block3 추가 조건
@@ -69,7 +69,7 @@ class RedetectionCondition:
     block3_entry_price_high_days: Optional[int] = None  # 달력 기준 일수
     block3_exit_condition_type: Optional[Block1ExitConditionType] = None
     block3_exit_ma_period: Optional[int] = None
-    block3_cooldown_days: Optional[int] = None
+    block3_min_start_interval_days: Optional[int] = None
 
     # ===== Block4 조건 =====
     # Block4 추가 조건
@@ -89,4 +89,4 @@ class RedetectionCondition:
     block4_entry_price_high_days: Optional[int] = None  # 달력 기준 일수
     block4_exit_condition_type: Optional[Block1ExitConditionType] = None
     block4_exit_ma_period: Optional[int] = None
-    block4_cooldown_days: Optional[int] = None
+    block4_min_start_interval_days: Optional[int] = None

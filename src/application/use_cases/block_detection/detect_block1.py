@@ -17,7 +17,7 @@ class DetectBlock1UseCase:
     주요 기능:
     1. 블록1 진입 조건 검사
     2. 블록1 종료 조건 검사 (기존 활성 블록1)
-    3. 중복 방지 (cooldown 기간 체크)
+    3. 중복 방지 (min_start_interval 기간 체크)
     4. 블록1 탐지 결과 저장
     """
 
@@ -167,7 +167,7 @@ class DetectBlock1UseCase:
             stock.ticker,
             stock.date,
             existing_detections,
-            condition.cooldown_days
+            condition.base.block1_min_start_interval_days
         ):
             return False
 

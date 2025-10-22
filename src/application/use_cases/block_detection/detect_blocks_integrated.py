@@ -370,7 +370,7 @@ class DetectBlocksIntegratedUseCase:
             stock.ticker,
             stock.date,
             existing_detections,
-            condition.cooldown_days
+            condition.base.block1_min_start_interval_days
         ):
             return False
 

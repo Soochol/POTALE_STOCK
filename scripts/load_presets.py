@@ -55,7 +55,7 @@ def create_base_entry_condition(block_data: dict) -> BaseEntryCondition:
         block1_entry_price_high_months=block_data.get('entry_price_high_months'),
         block1_exit_condition_type=exit_type if exit_type else Block1ExitConditionType.MA_BREAK,
         block1_exit_ma_period=block_data.get('exit_ma_period'),
-        block1_cooldown_days=block_data.get('cooldown_days', 120)
+        block1_min_start_interval_days=block_data.get('min_start_interval_days', 120)
     )
 
 
@@ -83,7 +83,7 @@ def create_seed_condition(preset_name: str, preset_data: dict) -> SeedCondition:
         block2_entry_price_high_months=block2_data.get('entry_price_high_months'),
         block2_exit_condition_type=convert_exit_type(block2_data.get('exit_condition_type')),
         block2_exit_ma_period=block2_data.get('exit_ma_period'),
-        block2_cooldown_days=block2_data.get('cooldown_days'),
+        block2_min_start_interval_days=block2_data.get('min_start_interval_days'),
         # Block3 조건
         block3_volume_ratio=block3_data.get('volume_ratio', 15.0),
         block3_low_price_margin=block3_data.get('low_price_margin', 10.0),
@@ -99,7 +99,7 @@ def create_seed_condition(preset_name: str, preset_data: dict) -> SeedCondition:
         block3_entry_price_high_months=block3_data.get('entry_price_high_months'),
         block3_exit_condition_type=convert_exit_type(block3_data.get('exit_condition_type')),
         block3_exit_ma_period=block3_data.get('exit_ma_period'),
-        block3_cooldown_days=block3_data.get('cooldown_days'),
+        block3_min_start_interval_days=block3_data.get('min_start_interval_days'),
         # Block4 조건
         block4_volume_ratio=block4_data.get('volume_ratio', 20.0),
         block4_low_price_margin=block4_data.get('low_price_margin', 10.0),
@@ -115,7 +115,7 @@ def create_seed_condition(preset_name: str, preset_data: dict) -> SeedCondition:
         block4_entry_price_high_months=block4_data.get('entry_price_high_months'),
         block4_exit_condition_type=convert_exit_type(block4_data.get('exit_condition_type')),
         block4_exit_ma_period=block4_data.get('exit_ma_period'),
-        block4_cooldown_days=block4_data.get('cooldown_days')
+        block4_min_start_interval_days=block4_data.get('min_start_interval_days')
     )
 
 
@@ -145,7 +145,7 @@ def create_redetection_condition(preset_name: str, preset_data: dict) -> Redetec
         block2_entry_price_high_months=block2_data.get('entry_price_high_months'),
         block2_exit_condition_type=convert_exit_type(block2_data.get('exit_condition_type')),
         block2_exit_ma_period=block2_data.get('exit_ma_period'),
-        block2_cooldown_days=block2_data.get('cooldown_days'),
+        block2_min_start_interval_days=block2_data.get('min_start_interval_days'),
         # Block3 조건
         block3_volume_ratio=block3_data.get('volume_ratio', 15.0),
         block3_low_price_margin=block3_data.get('low_price_margin', 10.0),
@@ -162,7 +162,7 @@ def create_redetection_condition(preset_name: str, preset_data: dict) -> Redetec
         block3_entry_price_high_months=block3_data.get('entry_price_high_months'),
         block3_exit_condition_type=convert_exit_type(block3_data.get('exit_condition_type')),
         block3_exit_ma_period=block3_data.get('exit_ma_period'),
-        block3_cooldown_days=block3_data.get('cooldown_days'),
+        block3_min_start_interval_days=block3_data.get('min_start_interval_days'),
         # Block4 조건
         block4_volume_ratio=block4_data.get('volume_ratio', 20.0),
         block4_low_price_margin=block4_data.get('low_price_margin', 10.0),
@@ -179,7 +179,7 @@ def create_redetection_condition(preset_name: str, preset_data: dict) -> Redetec
         block4_entry_price_high_months=block4_data.get('entry_price_high_months'),
         block4_exit_condition_type=convert_exit_type(block4_data.get('exit_condition_type')),
         block4_exit_ma_period=block4_data.get('exit_ma_period'),
-        block4_cooldown_days=block4_data.get('cooldown_days')
+        block4_min_start_interval_days=block4_data.get('min_start_interval_days')
     )
 
 

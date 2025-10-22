@@ -71,7 +71,7 @@ class PatternSeedDetector:
             block1_entry_price_high_days=getattr(condition, f"{prefix}entry_price_high_days"),
             block1_exit_condition_type=getattr(condition, f"{prefix}exit_condition_type"),
             block1_exit_ma_period=getattr(condition, f"{prefix}exit_ma_period"),
-            block1_cooldown_days=getattr(condition, f"{prefix}cooldown_days")
+            block1_min_start_interval_days=getattr(condition, f"{prefix}min_start_interval_days")
         )
 
     def find_all_block1_seeds(
@@ -101,10 +101,10 @@ class PatternSeedDetector:
         last_seed_date = None
 
         for i, stock in enumerate(stocks):
-            # Cooldown 체크
+            # Min start interval 체크
             if last_seed_date:
                 days_diff = (stock.date - last_seed_date).days
-                if days_diff < condition.base.block1_cooldown_days:
+                if days_diff < condition.base.block1_min_start_interval_days:
                     continue
 
             # Block1 조건 체크

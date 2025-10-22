@@ -30,7 +30,7 @@ class SeedConditionPreset(Base):
     block1_exit_ma_period = Column(Integer, comment='종료용 이동평균선 기간')
 
     # 시스템
-    block1_cooldown_days = Column(Integer, default=20, nullable=False, comment='Seed 간 최소 간격 (일)')
+    block1_min_start_interval_days = Column(Integer, default=20, nullable=False, comment='같은 레벨 블록 중복 방지: 시작 후 N일간 새 블록 탐지 금지')
 
     # Block2 추가 조건
     block2_volume_ratio = Column(Float, comment='Block1 최고 거래량 대비 비율 (%)')
@@ -60,7 +60,7 @@ class SeedConditionPreset(Base):
     block2_entry_price_high_days = Column(Integer, comment='Block2 전용 N일 신고가 (달력 기준)')
     block2_exit_condition_type = Column(String(50), comment='Block2 전용 종료 조건 타입')
     block2_exit_ma_period = Column(Integer, comment='Block2 전용 종료 이평선 기간')
-    block2_cooldown_days = Column(Integer, comment='Block2 전용 Cooldown (일)')
+    block2_min_start_interval_days = Column(Integer, comment='Block2 전용: 같은 레벨 블록 중복 방지 (시작 후 N일간)')
 
     # Block3 전용 파라미터 (Optional)
     block3_entry_surge_rate = Column(Float, comment='Block3 전용 진입 급등률 (%)')
@@ -72,7 +72,7 @@ class SeedConditionPreset(Base):
     block3_entry_price_high_days = Column(Integer, comment='Block3 전용 N일 신고가 (달력 기준)')
     block3_exit_condition_type = Column(String(50), comment='Block3 전용 종료 조건 타입')
     block3_exit_ma_period = Column(Integer, comment='Block3 전용 종료 이평선 기간')
-    block3_cooldown_days = Column(Integer, comment='Block3 전용 Cooldown (일)')
+    block3_min_start_interval_days = Column(Integer, comment='Block3 전용: 같은 레벨 블록 중복 방지 (시작 후 N일간)')
 
     # Block4 전용 파라미터 (Optional)
     block4_entry_surge_rate = Column(Float, comment='Block4 전용 진입 급등률 (%)')
@@ -84,7 +84,7 @@ class SeedConditionPreset(Base):
     block4_entry_price_high_days = Column(Integer, comment='Block4 전용 N일 신고가 (달력 기준)')
     block4_exit_condition_type = Column(String(50), comment='Block4 전용 종료 조건 타입')
     block4_exit_ma_period = Column(Integer, comment='Block4 전용 종료 이평선 기간')
-    block4_cooldown_days = Column(Integer, comment='Block4 전용 Cooldown (일)')
+    block4_min_start_interval_days = Column(Integer, comment='Block4 전용: 같은 레벨 블록 중복 방지 (시작 후 N일간)')
 
     # 메타데이터
     is_active = Column(Integer, default=1, comment='활성 여부')
@@ -139,7 +139,7 @@ class RedetectionConditionPreset(Base):
     block1_exit_ma_period = Column(Integer, comment='종료용 이동평균선 기간')
 
     # 시스템
-    block1_cooldown_days = Column(Integer, default=20, nullable=False, comment='재탐지 간 최소 간격 (일)')
+    block1_min_start_interval_days = Column(Integer, default=20, nullable=False, comment='같은 레벨 블록 중복 방지: 시작 후 N일간 새 블록 탐지 금지')
 
     # Block2 추가 조건
     block2_volume_ratio = Column(Float, comment='Block1 최고 거래량 대비 비율 (%)')
@@ -163,7 +163,7 @@ class RedetectionConditionPreset(Base):
     block2_entry_price_high_days = Column(Integer, comment='Block2 전용 N일 신고가 (달력 기준)')
     block2_exit_condition_type = Column(String(50), comment='Block2 전용 종료 조건 타입')
     block2_exit_ma_period = Column(Integer, comment='Block2 전용 종료용 이동평균선 기간')
-    block2_cooldown_days = Column(Integer, comment='Block2 전용 재탐지 간 최소 간격 (일)')
+    block2_min_start_interval_days = Column(Integer, comment='Block2 전용: 같은 레벨 블록 중복 방지 (시작 후 N일간)')
 
     # Block3 전용 파라미터 (Optional)
     block3_entry_surge_rate = Column(Float, comment='Block3 전용 진입 급등률 (%)')
@@ -175,7 +175,7 @@ class RedetectionConditionPreset(Base):
     block3_entry_price_high_days = Column(Integer, comment='Block3 전용 N일 신고가 (달력 기준)')
     block3_exit_condition_type = Column(String(50), comment='Block3 전용 종료 조건 타입')
     block3_exit_ma_period = Column(Integer, comment='Block3 전용 종료용 이동평균선 기간')
-    block3_cooldown_days = Column(Integer, comment='Block3 전용 재탐지 간 최소 간격 (일)')
+    block3_min_start_interval_days = Column(Integer, comment='Block3 전용: 같은 레벨 블록 중복 방지 (시작 후 N일간)')
 
     # Block4 전용 파라미터 (Optional)
     block4_entry_surge_rate = Column(Float, comment='Block4 전용 진입 급등률 (%)')
@@ -187,7 +187,7 @@ class RedetectionConditionPreset(Base):
     block4_entry_price_high_days = Column(Integer, comment='Block4 전용 N일 신고가 (달력 기준)')
     block4_exit_condition_type = Column(String(50), comment='Block4 전용 종료 조건 타입')
     block4_exit_ma_period = Column(Integer, comment='Block4 전용 종료용 이동평균선 기간')
-    block4_cooldown_days = Column(Integer, comment='Block4 전용 재탐지 간 최소 간격 (일)')
+    block4_min_start_interval_days = Column(Integer, comment='Block4 전용: 같은 레벨 블록 중복 방지 (시작 후 N일간)')
 
     # 메타데이터
     is_active = Column(Integer, default=1, comment='활성 여부')

@@ -223,7 +223,7 @@ class Block1Checker:
         ticker: str,
         current_date: date,
         existing_detections: List[Block1Detection],
-        cooldown_days: int
+        min_start_interval_days: int
     ) -> bool:
         """
         중복 방지 기간 확인
@@ -232,7 +232,7 @@ class Block1Checker:
             ticker: 종목코드
             current_date: 현재 날짜
             existing_detections: 기존 블록1 탐지 결과 리스트
-            cooldown_days: 재탐지 제외 기간 (일)
+            min_start_interval_days: 같은 레벨 블록 중복 방지: 시작 후 N일간 새 블록 탐지 금지
 
         Returns:
             탐지 가능 여부 (True: 가능, False: 중복 방지 기간 내)
@@ -245,12 +245,12 @@ class Block1Checker:
             if detection.status == "active":
                 return False
 
-            # 종료된 블록1이지만 cooldown 기간 내면 불가
+            # 종료된 블록1이지만 min_start_interval 기간 내면 불가
             if detection.ended_at:
-                cooldown_end = detection.started_at + timedelta(
-                    days=cooldown_days
+                interval_end = detection.started_at + timedelta(
+                    days=min_start_interval_days
                 )
-                if detection.started_at <= current_date < cooldown_end:
+                if detection.started_at <= current_date < interval_end:
                     return False
 
         return True

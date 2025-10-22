@@ -119,7 +119,7 @@ class ConditionPresetMapperMixin:
             f"{prefix}entry_price_high_days": base_condition.block1_entry_price_high_days,
             f"{prefix}exit_condition_type": base_condition.block1_exit_condition_type.value,
             f"{prefix}exit_ma_period": base_condition.block1_exit_ma_period,
-            f"{prefix}cooldown_days": base_condition.block1_cooldown_days,
+            f"{prefix}min_start_interval_days": base_condition.block1_min_start_interval_days,
         }
 
     def map_optional_block_params(self, condition, block_num: int) -> dict:
@@ -145,7 +145,7 @@ class ConditionPresetMapperMixin:
             f"{prefix}entry_volume_spike_ratio": getattr(condition, f"{prefix}entry_volume_spike_ratio", None),
             f"{prefix}entry_price_high_days": getattr(condition, f"{prefix}entry_price_high_days", None),
             f"{prefix}exit_ma_period": getattr(condition, f"{prefix}exit_ma_period", None),
-            f"{prefix}cooldown_days": getattr(condition, f"{prefix}cooldown_days", None),
+            f"{prefix}min_start_interval_days": getattr(condition, f"{prefix}min_start_interval_days", None),
         }
 
         # Enum 필드 처리

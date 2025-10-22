@@ -79,7 +79,7 @@ class SeedConditionPresetRepository(BaseConditionPresetRepository, ConditionPres
             block1_entry_price_high_days=preset.block1_entry_price_high_days,
             block1_exit_condition_type=Block1ExitConditionType(preset.block1_exit_condition_type),
             block1_exit_ma_period=preset.block1_exit_ma_period,
-            block1_cooldown_days=preset.block1_cooldown_days
+            block1_min_start_interval_days=preset.block1_min_start_interval_days
         )
 
         # SeedCondition 생성
@@ -107,7 +107,7 @@ class SeedConditionPresetRepository(BaseConditionPresetRepository, ConditionPres
             block2_entry_price_high_days=preset.block2_entry_price_high_days,
             block2_exit_condition_type=Block1ExitConditionType(preset.block2_exit_condition_type) if preset.block2_exit_condition_type else None,
             block2_exit_ma_period=preset.block2_exit_ma_period,
-            block2_cooldown_days=preset.block2_cooldown_days,
+            block2_min_start_interval_days=preset.block2_min_start_interval_days,
             # Block3 전용 파라미터
             block3_entry_surge_rate=preset.block3_entry_surge_rate,
             block3_entry_ma_period=preset.block3_entry_ma_period,
@@ -118,7 +118,7 @@ class SeedConditionPresetRepository(BaseConditionPresetRepository, ConditionPres
             block3_entry_price_high_days=preset.block3_entry_price_high_days,
             block3_exit_condition_type=Block1ExitConditionType(preset.block3_exit_condition_type) if preset.block3_exit_condition_type else None,
             block3_exit_ma_period=preset.block3_exit_ma_period,
-            block3_cooldown_days=preset.block3_cooldown_days,
+            block3_min_start_interval_days=preset.block3_min_start_interval_days,
             # Block4 전용 파라미터
             block4_entry_surge_rate=preset.block4_entry_surge_rate,
             block4_entry_ma_period=preset.block4_entry_ma_period,
@@ -129,5 +129,5 @@ class SeedConditionPresetRepository(BaseConditionPresetRepository, ConditionPres
             block4_entry_price_high_days=preset.block4_entry_price_high_days,
             block4_exit_condition_type=Block1ExitConditionType(preset.block4_exit_condition_type) if preset.block4_exit_condition_type else None,
             block4_exit_ma_period=preset.block4_exit_ma_period,
-            block4_cooldown_days=preset.block4_cooldown_days
+            block4_min_start_interval_days=preset.block4_min_start_interval_days
         )

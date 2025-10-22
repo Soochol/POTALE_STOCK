@@ -248,16 +248,34 @@ class Block3Checker:
         all_stocks: List[Stock]
     ) -> bool:
         """
-        블록2 시작 후 최소 캔들 수 확인
+        이전 Seed Block 시작 후 최소 캔들 수 확인
+
+        중요 - 캔들 카운팅 로직:
+        - 이전 Seed Block 시작일을 1번째 캔들로 간주 (포함)
+        - min_candles는 "N개 캔들 이후"를 의미 (N+1번째부터 탐지 가능)
+        - 따라서 조건: candles_count > min_candles (등호 없음!)
+
+        예시:
+        - Block2 시작일: 2024-01-08 (1번째 캔들)
+        - min_candles=4 설정 시
+        - 2024-01-09 (2번째) → count=2, 2 > 4? False (불가)
+        - 2024-01-10 (3번째) → count=3, 3 > 4? False (불가)
+        - 2024-01-11 (4번째) → count=4, 4 > 4? False (불가)
+        - 2024-01-12 (5번째) → count=5, 5 > 4? True (가능!) ← 여기부터 탐지
 
         Args:
             current_date: 현재 날짜
-            prev_block2: 직전 블록2
-            min_candles: 최소 캔들 수
+            prev_block2: 직전 블록2 (None이면 조건 무시)
+            min_candles: 최소 캔들 수 (N개 캔들 이후부터 탐지)
             all_stocks: 전체 주식 데이터 (캔들 수 계산용, 날짜순 정렬)
 
         Returns:
-            조건 만족 여부 (True: 가능, False: 최소 캔들 수 미만)
+            bool: 조건 만족 여부 (True: 탐지 가능, False: 최소 캔들 수 미만)
+
+        Note:
+            - 거래일 기준 카운팅 (_count_candles_between 사용)
+            - 공휴일/거래정지일은 자동 제외됨
+            - YAML 설정 예: min_candles_after_block2: 4
         """
         if prev_block2 is None:
             # 직전 블록2가 없으면 조건 무시
@@ -298,15 +316,34 @@ class Block3Checker:
         self, start_date: date, end_date: date, all_stocks: List[Stock]
     ) -> int:
         """
-        두 날짜 사이의 캔들 수 계산 (start_date와 end_date 포함)
+        두 날짜 사이의 실제 거래일 캔들 수 계산
+
+        중요 - 거래일 기준 vs 달력 기준:
+        - 이 함수는 "거래일" 기준으로 캔들 수를 셈 (공휴일/거래정지일 제외)
+        - DB에는 거래일만 저장되므로 자동으로 비거래일 필터링됨
+        - 달력 기준 계산(timedelta)과는 다름 (재탐지 기간은 달력 기준 사용)
+
+        포함 범위:
+        - start_date와 end_date 모두 포함 (inclusive, closed interval)
+        - 예: start=1/8, end=1/11 → 1/8, 1/9, 1/10, 1/11 모두 카운트
 
         Args:
-            start_date: 시작 날짜
-            end_date: 종료 날짜
-            all_stocks: 전체 주식 데이터 리스트
+            start_date: 시작 날짜 (포함)
+            end_date: 종료 날짜 (포함)
+            all_stocks: 전체 주식 데이터 리스트 (날짜순 정렬 필요)
 
         Returns:
-            캔들 수
+            int: 거래일 캔들 수
+
+        Example:
+            >>> # 2024-01-08(월), 01-09(화), 01-10(공휴일), 01-11(목)
+            >>> # all_stocks = [Stock(2024-01-08), Stock(2024-01-09), Stock(2024-01-11)]
+            >>> count = _count_candles_between(date(2024,1,8), date(2024,1,11), all_stocks)
+            >>> # 결과: 3 (실제 거래일만 카운트, 공휴일 제외)
+
+        Note:
+            - 시간 복잡도: O(n) - 전체 리스트 순회
+            - min_candles/max_candles 체크에 사용됨
         """
         count = 0
         for stock in all_stocks:

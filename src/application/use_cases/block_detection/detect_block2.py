@@ -177,12 +177,12 @@ class DetectBlock2UseCase:
             return False
 
         # 2. 중복 방지 기간 검사 (선택적)
-        if condition.cooldown_days is not None:
+        if condition.base.block1_min_start_interval_days is not None:
             if not self.checker.check_cooldown(
                 stock.ticker,
                 stock.date,
                 existing_block2s,
-                condition.cooldown_days
+                condition.base.block1_min_start_interval_days
             ):
                 return False
 

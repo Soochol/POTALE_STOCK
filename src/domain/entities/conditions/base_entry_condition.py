@@ -71,7 +71,7 @@ class BaseEntryCondition:
     block1_exit_ma_period: Optional[int] = None  # 종료용 이동평균선 기간 (None이면 entry_ma_period 사용)
 
     # ===== 시스템 (1개) =====
-    block1_cooldown_days: int = 120  # 재탐지 제외 기간 (기본 120일)
+    block1_min_start_interval_days: int = 120  # 같은 레벨 블록 중복 방지: 시작 후 N일간 새 블록 탐지 금지
 
     def validate(self) -> bool:
         """
@@ -113,7 +113,7 @@ class BaseEntryCondition:
         if self.block1_entry_price_high_days is not None and self.block1_entry_price_high_days <= 0:
             return False
 
-        if self.block1_cooldown_days <= 0:
+        if self.block1_min_start_interval_days <= 0:
             return False
 
         return True

@@ -161,7 +161,7 @@ class TestBaseEntryConditionDefaults:
         # Exit conditions have defaults
         assert condition.block1_exit_ma_period is None  # None is default
         assert condition.block1_exit_condition_type == Block1ExitConditionType.MA_BREAK  # MA_BREAK is default
-        assert condition.block1_cooldown_days == 120  # 120 days is default
+        assert condition.block1_min_start_interval_days == 120  # 120 days is default
 
     def test_partial_initialization(self):
         """Test that unspecified fields remain None"""
@@ -341,20 +341,20 @@ class TestBaseEntryConditionValidation:
 
         assert condition.validate() is False
 
-    def test_validate_fails_with_negative_cooldown_days(self):
-        """Test validation fails with negative cooldown days"""
+    def test_validate_fails_with_negative_min_start_interval_days(self):
+        """Test validation fails with negative min_start_interval_days"""
         condition = BaseEntryCondition(
             block1_entry_ma_period=20,
-            block1_cooldown_days=-120
+            block1_min_start_interval_days=-120
         )
 
         assert condition.validate() is False
 
-    def test_validate_fails_with_zero_cooldown_days(self):
-        """Test validation fails with zero cooldown days"""
+    def test_validate_fails_with_zero_min_start_interval_days(self):
+        """Test validation fails with zero min_start_interval_days"""
         condition = BaseEntryCondition(
             block1_entry_ma_period=20,
-            block1_cooldown_days=0
+            block1_min_start_interval_days=0
         )
 
         assert condition.validate() is False

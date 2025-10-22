@@ -358,10 +358,10 @@ def print_conditions_table(
     # 쿨다운
     table3.add_row(
         "cooldown",
-        f"{block1.get('cooldown_days', 20)}일",
-        f"{block2.get('cooldown_days', block1.get('cooldown_days', 20))}일",
-        f"{block3.get('cooldown_days', block1.get('cooldown_days', 20))}일",
-        f"{block4.get('cooldown_days', 20)}일",
+        f"{block1.get('min_start_interval_days', 20)}일",
+        f"{block2.get('min_start_interval_days', block1.get('min_start_interval_days', 20))}일",
+        f"{block3.get('min_start_interval_days', block1.get('min_start_interval_days', 20))}일",
+        f"{block4.get('min_start_interval_days', 20)}일",
         "재진입 대기 기간"
     )
 
@@ -473,7 +473,7 @@ def update_seed_conditions(
                         block1.get("exit_condition_type", "ma_break")
                     ),
                     block1_exit_ma_period=block1["exit_ma_period"],
-                    block1_cooldown_days=block1["cooldown_days"],
+                    block1_min_start_interval_days=block1["min_start_interval_days"],
                 )
 
                 condition = SeedCondition(
@@ -520,7 +520,7 @@ def update_seed_conditions(
                         else None
                     ),
                     block2_exit_ma_period=block2.get("exit_ma_period"),
-                    block2_cooldown_days=block2.get("cooldown_days"),
+                    block2_min_start_interval_days=block2.get("min_start_interval_days"),
                     # Block3 전용 파라미터 (Optional)
                     block3_entry_surge_rate=block3.get("entry_surge_rate"),
                     block3_entry_ma_period=block3.get("entry_ma_period"),
@@ -545,7 +545,7 @@ def update_seed_conditions(
                         else None
                     ),
                     block3_exit_ma_period=block3.get("exit_ma_period"),
-                    block3_cooldown_days=block3.get("cooldown_days"),
+                    block3_min_start_interval_days=block3.get("min_start_interval_days"),
                     # Block4 전용 파라미터 (Optional)
                     block4_entry_surge_rate=block4.get("entry_surge_rate"),
                     block4_entry_ma_period=block4.get("entry_ma_period"),
@@ -570,7 +570,7 @@ def update_seed_conditions(
                         else None
                     ),
                     block4_exit_ma_period=block4.get("exit_ma_period"),
-                    block4_cooldown_days=block4.get("cooldown_days"),
+                    block4_min_start_interval_days=block4.get("min_start_interval_days"),
                 )
 
                 repo.save(name, condition, preset_data.get("description", ""))
@@ -642,7 +642,7 @@ def update_redetection_conditions(
                         block1.get("exit_condition_type", "ma_break")
                     ),
                     block1_exit_ma_period=block1["exit_ma_period"],
-                    block1_cooldown_days=block1["cooldown_days"],
+                    block1_min_start_interval_days=block1["min_start_interval_days"],
                 )
 
                 condition = RedetectionCondition(
@@ -690,7 +690,7 @@ def update_redetection_conditions(
                         else None
                     ),
                     block2_exit_ma_period=block2.get("exit_ma_period"),
-                    block2_cooldown_days=block2.get("cooldown_days"),
+                    block2_min_start_interval_days=block2.get("min_start_interval_days"),
                     # Block3 전용 파라미터 (Optional)
                     block3_entry_surge_rate=block3.get("entry_surge_rate"),
                     block3_entry_ma_period=block3.get("entry_ma_period"),
@@ -715,7 +715,7 @@ def update_redetection_conditions(
                         else None
                     ),
                     block3_exit_ma_period=block3.get("exit_ma_period"),
-                    block3_cooldown_days=block3.get("cooldown_days"),
+                    block3_min_start_interval_days=block3.get("min_start_interval_days"),
                     # Block4 전용 파라미터 (Optional)
                     block4_entry_surge_rate=block4.get("entry_surge_rate"),
                     block4_entry_ma_period=block4.get("entry_ma_period"),
@@ -740,7 +740,7 @@ def update_redetection_conditions(
                         else None
                     ),
                     block4_exit_ma_period=block4.get("exit_ma_period"),
-                    block4_cooldown_days=block4.get("cooldown_days"),
+                    block4_min_start_interval_days=block4.get("min_start_interval_days"),
                 )
 
                 repo.save(name, condition, preset_data.get("description", ""))
