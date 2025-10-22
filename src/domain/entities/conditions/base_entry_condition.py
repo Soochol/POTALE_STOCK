@@ -66,12 +66,27 @@ class BaseEntryCondition:
     # 조건 7: 신고가 조건
     block1_entry_price_high_days: Optional[int] = None  # N일 신고가 (달력 기준 일수, 예: 90일, 180일, 365일)
 
-    # ===== 종료 조건 (2개) =====
+    # ===== 종료 조건 (3개) =====
     block1_exit_condition_type: Block1ExitConditionType = Block1ExitConditionType.MA_BREAK
     block1_exit_ma_period: Optional[int] = None  # 종료용 이동평균선 기간 (None이면 entry_ma_period 사용)
+    block1_auto_exit_on_next_block: bool = False  # 다음 블록(Block2) 시작 시 자동 종료 (true=활성화, false=비활성화)
+                                                   # OR 조건: 기존 종료 조건 OR 다음 블록 시작 (둘 중 먼저 충족되면 종료)
 
     # ===== 시스템 (1개) =====
     block1_min_start_interval_days: int = 120  # 같은 레벨 블록 중복 방지: 시작 후 N일간 새 블록 탐지 금지
+
+    # ===== Block2/3/4 종료 조건 및 시스템 (추가) =====
+    # Block2
+    block2_auto_exit_on_next_block: bool = False  # 다음 블록(Block3) 시작 시 자동 종료
+                                                   # OR 조건: 기존 종료 조건 OR 다음 블록 시작 (둘 중 먼저 충족되면 종료)
+
+    # Block3
+    block3_auto_exit_on_next_block: bool = False  # 다음 블록(Block4) 시작 시 자동 종료
+                                                   # OR 조건: 기존 종료 조건 OR 다음 블록 시작 (둘 중 먼저 충족되면 종료)
+
+    # Block4
+    block4_auto_exit_on_next_block: bool = False  # Block4도 일관성을 위해 포함 (실제로는 Block5가 없으므로 작동 안 함)
+                                                   # OR 조건: 기존 종료 조건 OR 다음 블록 시작 (둘 중 먼저 충족되면 종료)
 
     def validate(self) -> bool:
         """

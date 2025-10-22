@@ -28,6 +28,7 @@ class SeedConditionPreset(Base):
     # 종료 조건
     block1_exit_condition_type = Column(String(50), nullable=False, comment='종료 조건 타입')
     block1_exit_ma_period = Column(Integer, comment='종료용 이동평균선 기간')
+    block1_auto_exit_on_next_block = Column(Integer, default=0, nullable=False, comment='Block2 시작 시 Block1 자동 종료 (0=false, 1=true)')
 
     # 시스템
     block1_min_start_interval_days = Column(Integer, default=20, nullable=False, comment='같은 레벨 블록 중복 방지: 시작 후 N일간 새 블록 탐지 금지')
@@ -60,6 +61,7 @@ class SeedConditionPreset(Base):
     block2_entry_price_high_days = Column(Integer, comment='Block2 전용 N일 신고가 (달력 기준)')
     block2_exit_condition_type = Column(String(50), comment='Block2 전용 종료 조건 타입')
     block2_exit_ma_period = Column(Integer, comment='Block2 전용 종료 이평선 기간')
+    block2_auto_exit_on_next_block = Column(Integer, default=0, nullable=False, comment='Block3 시작 시 Block2 자동 종료 (0=false, 1=true)')
     block2_min_start_interval_days = Column(Integer, comment='Block2 전용: 같은 레벨 블록 중복 방지 (시작 후 N일간)')
 
     # Block3 전용 파라미터 (Optional)
@@ -72,6 +74,7 @@ class SeedConditionPreset(Base):
     block3_entry_price_high_days = Column(Integer, comment='Block3 전용 N일 신고가 (달력 기준)')
     block3_exit_condition_type = Column(String(50), comment='Block3 전용 종료 조건 타입')
     block3_exit_ma_period = Column(Integer, comment='Block3 전용 종료 이평선 기간')
+    block3_auto_exit_on_next_block = Column(Integer, default=0, nullable=False, comment='Block4 시작 시 Block3 자동 종료 (0=false, 1=true)')
     block3_min_start_interval_days = Column(Integer, comment='Block3 전용: 같은 레벨 블록 중복 방지 (시작 후 N일간)')
 
     # Block4 전용 파라미터 (Optional)
@@ -84,6 +87,7 @@ class SeedConditionPreset(Base):
     block4_entry_price_high_days = Column(Integer, comment='Block4 전용 N일 신고가 (달력 기준)')
     block4_exit_condition_type = Column(String(50), comment='Block4 전용 종료 조건 타입')
     block4_exit_ma_period = Column(Integer, comment='Block4 전용 종료 이평선 기간')
+    block4_auto_exit_on_next_block = Column(Integer, default=0, nullable=False, comment='일관성을 위해 포함 (Block5 없음, 실제 작동 안 함)')
     block4_min_start_interval_days = Column(Integer, comment='Block4 전용: 같은 레벨 블록 중복 방지 (시작 후 N일간)')
 
     # 메타데이터
@@ -137,21 +141,28 @@ class RedetectionConditionPreset(Base):
     # 종료 조건
     block1_exit_condition_type = Column(String(50), nullable=False, comment='종료 조건 타입')
     block1_exit_ma_period = Column(Integer, comment='종료용 이동평균선 기간')
+    block1_auto_exit_on_next_block = Column(Integer, default=0, nullable=False, comment='Block2 시작 시 Block1 자동 종료 (0=false, 1=true)')
 
     # 시스템
     block1_min_start_interval_days = Column(Integer, default=20, nullable=False, comment='같은 레벨 블록 중복 방지: 시작 후 N일간 새 블록 탐지 금지')
 
     # Block2 추가 조건
-    block2_volume_ratio = Column(Float, comment='Block1 최고 거래량 대비 비율 (%)')
-    block2_low_price_margin = Column(Float, comment='Block1 최고가 저가 마진 (%)')
+    block2_volume_ratio = Column(Float, comment='Seed Block1 최고 거래량 대비 비율 (%)')
+    block2_low_price_margin = Column(Float, comment='Seed Block1 최고가 저가 마진 (%)')
+    block2_min_candles_after_block1 = Column(Integer, comment='Seed Block1 시작 후 최소 캔들 수')
+    block2_max_candles_after_block1 = Column(Integer, nullable=True, comment='Seed Block1 시작 후 최대 캔들 수')
 
     # Block3 추가 조건
-    block3_volume_ratio = Column(Float, comment='Block2 최고 거래량 대비 비율 (%)')
-    block3_low_price_margin = Column(Float, comment='Block2 최고가 저가 마진 (%)')
+    block3_volume_ratio = Column(Float, comment='Seed Block2 최고 거래량 대비 비율 (%)')
+    block3_low_price_margin = Column(Float, comment='Seed Block2 최고가 저가 마진 (%)')
+    block3_min_candles_after_block2 = Column(Integer, comment='Seed Block2 시작 후 최소 캔들 수')
+    block3_max_candles_after_block2 = Column(Integer, nullable=True, comment='Seed Block2 시작 후 최대 캔들 수')
 
     # Block4 추가 조건
-    block4_volume_ratio = Column(Float, comment='Block3 최고 거래량 대비 비율 (%)')
-    block4_low_price_margin = Column(Float, comment='Block3 최고가 저가 마진 (%)')
+    block4_volume_ratio = Column(Float, comment='Seed Block3 최고 거래량 대비 비율 (%)')
+    block4_low_price_margin = Column(Float, comment='Seed Block3 최고가 저가 마진 (%)')
+    block4_min_candles_after_block3 = Column(Integer, comment='Seed Block3 시작 후 최소 캔들 수')
+    block4_max_candles_after_block3 = Column(Integer, nullable=True, comment='Seed Block3 시작 후 최대 캔들 수')
 
     # Block2 전용 파라미터 (Optional)
     block2_entry_surge_rate = Column(Float, comment='Block2 전용 진입 급등률 (%)')
@@ -163,6 +174,7 @@ class RedetectionConditionPreset(Base):
     block2_entry_price_high_days = Column(Integer, comment='Block2 전용 N일 신고가 (달력 기준)')
     block2_exit_condition_type = Column(String(50), comment='Block2 전용 종료 조건 타입')
     block2_exit_ma_period = Column(Integer, comment='Block2 전용 종료용 이동평균선 기간')
+    block2_auto_exit_on_next_block = Column(Integer, default=0, nullable=False, comment='Block3 시작 시 Block2 자동 종료 (0=false, 1=true)')
     block2_min_start_interval_days = Column(Integer, comment='Block2 전용: 같은 레벨 블록 중복 방지 (시작 후 N일간)')
 
     # Block3 전용 파라미터 (Optional)
@@ -175,6 +187,7 @@ class RedetectionConditionPreset(Base):
     block3_entry_price_high_days = Column(Integer, comment='Block3 전용 N일 신고가 (달력 기준)')
     block3_exit_condition_type = Column(String(50), comment='Block3 전용 종료 조건 타입')
     block3_exit_ma_period = Column(Integer, comment='Block3 전용 종료용 이동평균선 기간')
+    block3_auto_exit_on_next_block = Column(Integer, default=0, nullable=False, comment='Block4 시작 시 Block3 자동 종료 (0=false, 1=true)')
     block3_min_start_interval_days = Column(Integer, comment='Block3 전용: 같은 레벨 블록 중복 방지 (시작 후 N일간)')
 
     # Block4 전용 파라미터 (Optional)
@@ -187,6 +200,7 @@ class RedetectionConditionPreset(Base):
     block4_entry_price_high_days = Column(Integer, comment='Block4 전용 N일 신고가 (달력 기준)')
     block4_exit_condition_type = Column(String(50), comment='Block4 전용 종료 조건 타입')
     block4_exit_ma_period = Column(Integer, comment='Block4 전용 종료용 이동평균선 기간')
+    block4_auto_exit_on_next_block = Column(Integer, default=0, nullable=False, comment='일관성을 위해 포함 (Block5 없음, 실제 작동 안 함)')
     block4_min_start_interval_days = Column(Integer, comment='Block4 전용: 같은 레벨 블록 중복 방지 (시작 후 N일간)')
 
     # 메타데이터

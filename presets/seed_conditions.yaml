@@ -12,15 +12,17 @@ default_seed:
     entry_ma_period:            60       # MA기간: 120일 (null이면 MA 조건 전체 skip, 값이 있으면 고가≥MA 체크)
     entry_max_deviation_ratio:  500.0     # 이격도: 500%
     entry_min_trading_value:    300.0     # 거래대금: 300억
-    entry_volume_high_days:   null        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
-    entry_volume_spike_ratio:   120.0     # 거래량비: 300% (3배)
-    entry_price_high_days:    null        # 신고가: 비활성화 (null = 조건 완전 스킵)
+    entry_volume_high_days:     120        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
+    entry_volume_spike_ratio:   300.0     # 거래량비: 300% (3배)
+    entry_price_high_days:      null        # 신고가: 비활성화 (null = 조건 완전 스킵)
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │                          종료 조건 (Exit)                           │
     # └─────────────────────────────────────────────────────────────────────┘
     exit_condition_type:        ma_break  # 종료방식: ma_break | three_line_reversal | body_middle
     exit_ma_period:             60       # 종료MA: 120일
+    auto_exit_on_next_block:    true      # Block2 시작 시 Block1 자동 종료 (true/false)
+                                          # OR 조건: 기존 종료 조건 OR 다음 블록 시작 (먼저 충족되면 종료)
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │                         시스템 설정 (System)                        │
@@ -34,47 +36,40 @@ default_seed:
   # ╚═══════════════════════════════════════════════════════════════════════╝
   block2:
     # ┌─────────────────────────────────────────────────────────────────────┐
-    # │                     Block2 추가 조건 (Block1 기준)                  │
-    # └─────────────────────────────────────────────────────────────────────┘
-    volume_ratio:               100.0      # 거래량비: Block1 최고 대비 100%
-    low_price_margin:           5.0      # 저가마진: Block1 최고가 대비 5%
-    min_candles_after_block1:   2         # 최소 캔들 간격 (Block1 포함 카운팅)
-                                           # 예: 2개 = Block1 시작일 포함 3번째 캔들부터 Block2 탐지 가능
-    max_candles_after_block1:   150       # 최대 캔들 간격 (Block1 포함, null=무제한)
-
-    # ┌─────────────────────────────────────────────────────────────────────┐
     # │                Block2 전용 진입 조건 (없으면 Block1 값 사용)         │
     # └─────────────────────────────────────────────────────────────────────┘
     entry_surge_rate:           10.0      # 등락률: 14%
     entry_ma_period:            60       # MA기간: 120일 (null이면 MA 조건 전체 skip)
     entry_max_deviation_ratio:  500.0     # 이격도: 500%
     entry_min_trading_value:    1000.0    # 거래대금: 1000억
-    entry_volume_high_days:   null        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
+    entry_volume_high_days:     null        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
     entry_volume_spike_ratio:   120.0     # 거래량비: 300%
-    entry_price_high_days:    null        # 신고가: 비활성화 (null = 조건 완전 스킵)
+    entry_price_high_days:      null        # 신고가: 비활성화 (null = 조건 완전 스킵)
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │                       Block2 전용 종료 조건                         │
     # └─────────────────────────────────────────────────────────────────────┘
     exit_condition_type:        ma_break  # 종료방식
     exit_ma_period:             60        # 종료MA: 60일
+    auto_exit_on_next_block:    true      # Block3 시작 시 Block2 자동 종료 (true/false)
+                                          # OR 조건: 기존 종료 조건 OR 다음 블록 시작 (먼저 충족되면 종료)
     min_start_interval_days:    20        # 같은 레벨 블록 중복 방지 (시작일 기준)
                                           # - 이전 블록 시작일로부터 N일간 동일 레벨 블록 탐지 금지
                                           # - 예: N=3이면 1일 시작 → 4일째부터 새 블록 탐지 가능
+    # ┌─────────────────────────────────────────────────────────────────────┐
+    # │                     Block2 추가 조건 (Block1 기준)                  │
+    # └─────────────────────────────────────────────────────────────────────┘
+    volume_ratio:               80.0      # 거래량비: Block1 최고 대비 100%
+    low_price_margin:           5.0      # 저가마진: Block1 최고가 대비 5%
+    min_candles_after_block1:   2         # 최소 캔들 간격 (Block1 포함 카운팅)
+                                           # 예: 2개 = Block1 시작일 포함 3번째 캔들부터 Block2 탐지 가능
+    max_candles_after_block1:   150       # 최대 캔들 간격 (Block1 포함, null=무제한)
+
 
   # ╔═══════════════════════════════════════════════════════════════════════╗
   # ║                            Block3 조건                                ║
   # ╚═══════════════════════════════════════════════════════════════════════╝
   block3:
-    # ┌─────────────────────────────────────────────────────────────────────┐
-    # │                     Block3 추가 조건 (Block2 기준)                  │
-    # └─────────────────────────────────────────────────────────────────────┘
-    volume_ratio:               10.0      # 거래량비: Block2 최고 대비 18%
-    low_price_margin:           5.0      # 저가마진: Block2 최고가 대비 5%
-    min_candles_after_block2:   10         # 최소 캔들 간격 (Block2 포함 카운팅)
-                                           # 예: 10개 = Block2 시작일 포함 11번째 캔들부터 Block3 탐지 가능
-    max_candles_after_block2:   150       # 최대 캔들 간격 (Block2 포함, null=무제한)
-
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │                Block3 전용 진입 조건 (없으면 Block1 값 사용)         │
     # └─────────────────────────────────────────────────────────────────────┘
@@ -82,31 +77,35 @@ default_seed:
     entry_ma_period:            60       # MA기간: 120일 (null이면 MA 조건 전체 skip)
     entry_max_deviation_ratio:  500.0     # 이격도: 500%
     entry_min_trading_value:    1000.0    # 거래대금: 1000억
-    entry_volume_high_days:   null        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
+    entry_volume_high_days:     null        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
     entry_volume_spike_ratio:   120.0     # 거래량비: 300%
-    entry_price_high_days:    null        # 신고가: 비활성화 (null = 조건 완전 스킵)
+    entry_price_high_days:      null        # 신고가: 비활성화 (null = 조건 완전 스킵)
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │                       Block3 전용 종료 조건                         │
     # └─────────────────────────────────────────────────────────────────────┘
     exit_condition_type:        ma_break  # 종료방식
     exit_ma_period:             60        # 종료MA: 60일
+    auto_exit_on_next_block:    true      # Block4 시작 시 Block3 자동 종료 (true/false)
+                                          # OR 조건: 기존 종료 조건 OR 다음 블록 시작 (먼저 충족되면 종료)
     min_start_interval_days:    20        # 같은 레벨 블록 중복 방지 (시작일 기준)
                                           # - 이전 블록 시작일로부터 N일간 동일 레벨 블록 탐지 금지
                                           # - 예: N=3이면 1일 시작 → 4일째부터 새 블록 탐지 가능
+
+    # ┌─────────────────────────────────────────────────────────────────────┐
+    # │                     Block3 추가 조건 (Block2 기준)                  │
+    # └─────────────────────────────────────────────────────────────────────┘
+    volume_ratio:               10.0      # 거래량비: Block2 최고 대비 18%
+    low_price_margin:           5.0      # 저가마진: Block2 최고가 대비 5%
+    min_candles_after_block2:   2         # 최소 캔들 간격 (Block2 포함 카운팅)
+                                           # 예: 10개 = Block2 시작일 포함 11번째 캔들부터 Block3 탐지 가능
+    max_candles_after_block2:   150       # 최대 캔들 간격 (Block2 포함, null=무제한)
+
 
   # ╔═══════════════════════════════════════════════════════════════════════╗
   # ║                     Block4 조건 (완화된 조건)                         ║
   # ╚═══════════════════════════════════════════════════════════════════════╝
   block4:
-    # ┌─────────────────────────────────────────────────────────────────────┐
-    # │                     Block4 추가 조건 (Block3 기준)                  │
-    # └─────────────────────────────────────────────────────────────────────┘
-    volume_ratio:               10.0      # 거래량비: Block3 최고 대비 10%
-    low_price_margin:           5.0      # 저가마진: Block3 최고가 대비 5%
-    min_candles_after_block3:   2         # 최소 캔들 간격 (Block3 포함 카운팅)
-                                           # 예: 2개 = Block3 시작일 포함 3번째 캔들부터 Block4 탐지 가능
-    max_candles_after_block3:   1000        # 최대 캔들 간격 (Block3 포함, null=무제한)
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │             Block4 전용 진입 조건 (완화) - Block1 값보다 완화        │
@@ -115,15 +114,26 @@ default_seed:
     entry_ma_period:            60        # MA기간: 60일 (짧음, null이면 MA 조건 전체 skip)
     entry_max_deviation_ratio:  500.0     # 이격도: 500%
     entry_min_trading_value:    300.0     # 거래대금: 150억 (낮음)
-    entry_volume_high_days:   null        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
+    entry_volume_high_days:     null        # 신고거래량: 비활성화 (null = 조건 완전 스킵)
     entry_volume_spike_ratio:   120.0     # 거래량비: 300%
-    entry_price_high_days:    null        # 신고가: 비활성화 (null = 조건 완전 스킵)
+    entry_price_high_days:      null        # 신고가: 비활성화 (null = 조건 완전 스킵)
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │                       Block4 전용 종료 조건                         │
     # └─────────────────────────────────────────────────────────────────────┘
     exit_condition_type:        ma_break  # 종료방식
     exit_ma_period:             60        # 종료MA: 60일
+    auto_exit_on_next_block:    true      # 일관성을 위해 포함 (Block5 없으므로 실제 작동 안 함)
+                                          # OR 조건: 기존 종료 조건 OR 다음 블록 시작 (먼저 충족되면 종료)
     min_start_interval_days:    20        # 같은 레벨 블록 중복 방지 (시작일 기준)
                                           # - 이전 블록 시작일로부터 N일간 동일 레벨 블록 탐지 금지
                                           # - 예: N=3이면 1일 시작 → 4일째부터 새 블록 탐지 가능
+                                          
+    # ┌─────────────────────────────────────────────────────────────────────┐
+    # │                     Block4 추가 조건 (Block3 기준)                  │
+    # └─────────────────────────────────────────────────────────────────────┘
+    volume_ratio:               10.0      # 거래량비: Block3 최고 대비 10%
+    low_price_margin:           5.0      # 저가마진: Block3 최고가 대비 5%
+    min_candles_after_block3:   2         # 최소 캔들 간격 (Block3 포함 카운팅)
+                                           # 예: 2개 = Block3 시작일 포함 3번째 캔들부터 Block4 탐지 가능
+    max_candles_after_block3:   1000        # 최대 캔들 간격 (Block3 포함, null=무제한)

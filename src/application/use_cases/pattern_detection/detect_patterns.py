@@ -495,37 +495,47 @@ class DetectPatternsUseCase:
         for idx, pattern in enumerate(patterns, 1):
             print(f"  Pattern #{idx} 종료 조건 체크 중...")
 
-            # Block1 Seed + 재탐지
+            # Block1 Seed + 재탐지 (통합 종료 처리: 전통적 종료 OR 다음 블록 시작)
             block1_list = [pattern["seed_block1"]] + pattern["block1_redetections"]
-            count = exit_processor.process_block1_exits(
+            block2_list = [pattern["seed_block2"]] + pattern["block2_redetections"]
+            count = exit_processor.process_block1_exits_with_auto_exit(
                 detections=block1_list,
                 condition=block1_condition,
+                next_block_detections=block2_list,
+                auto_exit_enabled=seed_condition.base.block1_auto_exit_on_next_block,
                 all_stocks=stocks_with_indicators
             )
             exit_stats["block1_completed"] += count
 
-            # Block2 Seed + 재탐지
-            block2_list = [pattern["seed_block2"]] + pattern["block2_redetections"]
-            count = exit_processor.process_block2_exits(
+            # Block2 Seed + 재탐지 (통합 종료 처리)
+            block3_list = [pattern["seed_block3"]] + pattern["block3_redetections"]
+            count = exit_processor.process_block2_exits_with_auto_exit(
                 detections=block2_list,
                 condition=block2_condition,
+                next_block_detections=block3_list,
+                auto_exit_enabled=seed_condition.base.block2_auto_exit_on_next_block,
                 all_stocks=stocks_with_indicators
             )
             exit_stats["block2_completed"] += count
 
-            # Block3 Seed + 재탐지
-            block3_list = [pattern["seed_block3"]] + pattern["block3_redetections"]
-            count = exit_processor.process_block3_exits(
+            # Block3 Seed + 재탐지 (통합 종료 처리)
+            if pattern["seed_block4"]:
+                block4_list = [pattern["seed_block4"]] + pattern["block4_redetections"]
+            else:
+                block4_list = []
+
+            count = exit_processor.process_block3_exits_with_auto_exit(
                 detections=block3_list,
                 condition=block3_condition,
+                next_block_detections=block4_list,
+                auto_exit_enabled=seed_condition.base.block3_auto_exit_on_next_block,
                 all_stocks=stocks_with_indicators
             )
             exit_stats["block3_completed"] += count
 
-            # Block4 Seed + 재탐지 (Block4 Seed가 있는 경우에만)
+            # Block4 Seed + 재탐지 (Block4가 있는 경우에만)
             if pattern["seed_block4"]:
-                block4_list = [pattern["seed_block4"]] + pattern["block4_redetections"]
-                count = exit_processor.process_block4_exits(
+                count = exit_processor.process_block4_exits_with_auto_exit(
                     detections=block4_list,
                     condition=block4_condition,
                     all_stocks=stocks_with_indicators

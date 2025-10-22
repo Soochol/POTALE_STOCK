@@ -119,7 +119,11 @@ class ConditionPresetMapperMixin:
             f"{prefix}entry_price_high_days": base_condition.block1_entry_price_high_days,
             f"{prefix}exit_condition_type": base_condition.block1_exit_condition_type.value,
             f"{prefix}exit_ma_period": base_condition.block1_exit_ma_period,
+            f"{prefix}auto_exit_on_next_block": int(base_condition.block1_auto_exit_on_next_block),
             f"{prefix}min_start_interval_days": base_condition.block1_min_start_interval_days,
+            "block2_auto_exit_on_next_block": int(base_condition.block2_auto_exit_on_next_block),
+            "block3_auto_exit_on_next_block": int(base_condition.block3_auto_exit_on_next_block),
+            "block4_auto_exit_on_next_block": int(base_condition.block4_auto_exit_on_next_block),
         }
 
     def map_optional_block_params(self, condition, block_num: int) -> dict:

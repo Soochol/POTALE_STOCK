@@ -26,24 +26,60 @@ def get_previous_trading_day_stock(
 
     Example:
         >>> stocks = [
-        ...     Stock(date=date(2024, 1, 8), close=1000),  # 월
-        ...     Stock(date=date(2024, 1, 10), close=1100), # 수 (화 공휴일)
+        ...     Stock(date=date(2024, 1, 8), close=1000, volume=100),  # 월
+        ...     Stock(date=date(2024, 1, 9), close=1000, volume=0),    # 화 (거래정지)
+        ...     Stock(date=date(2024, 1, 10), close=1100, volume=200), # 수
         ... ]
         >>> prev = get_previous_trading_day_stock(date(2024, 1, 10), stocks)
-        >>> print(prev.date)  # 2024-01-08 (공휴일 건너뜀)
+        >>> print(prev.date)  # 2024-01-08 (거래정지일 건너뜀)
 
     Note:
-        - DB에는 실제 거래일만 저장되므로 자동으로 Gap 처리됨
+        - 거래량이 0인 날(거래정지)은 자동으로 건너뜀
         - 시간 복잡도: O(n) - 전체 리스트 순회
     """
-    # 현재 날짜 이전의 모든 Stock 필터링
-    prev_stocks = [s for s in all_stocks if s.date < current_date]
+    # 현재 날짜 이전의 모든 Stock 필터링 (거래량 > 0인 것만)
+    prev_stocks = [s for s in all_stocks if s.date < current_date and s.volume > 0]
 
     if not prev_stocks:
         return None
 
     # 가장 최근 거래일 반환 (날짜 기준 max)
     return max(prev_stocks, key=lambda s: s.date)
+
+
+def get_latest_trading_day_before(
+    target_date: date,
+    all_stocks: List[Stock]
+) -> Optional[date]:
+    """
+    특정 날짜 이전의 가장 최근 거래일 날짜 반환
+
+    Block N+1이 M일에 시작할 때, Block N의 종료일을 M-1일(전 거래일)로 설정하기 위해 사용
+
+    Args:
+        target_date: 기준 날짜 (이 날짜 이전의 거래일 검색)
+        all_stocks: 전체 주식 데이터 리스트
+
+    Returns:
+        Optional[date]: 가장 최근 거래일 날짜 또는 None (이전 거래일이 없는 경우)
+
+    Example:
+        >>> stocks = [
+        ...     Stock(date=date(2024, 1, 8)),   # 월
+        ...     Stock(date=date(2024, 1, 9)),   # 화 (거래정지)
+        ...     Stock(date=date(2024, 1, 10)),  # 수 (Block2 시작일)
+        ... ]
+        >>> # Block2가 1/10에 시작 → Block1은 1/9에 종료되어야 함
+        >>> exit_date = get_latest_trading_day_before(date(2024, 1, 10), stocks)
+        >>> print(exit_date)  # 2024-01-08 (실제 거래일)
+
+    Note:
+        - 거래정지일(거래량 0)은 자동으로 건너뜀
+        - get_previous_trading_day_stock()과 유사하지만 date만 반환
+        - auto_exit_on_next_block 기능에서 사용
+    """
+    prev_stock = get_previous_trading_day_stock(target_date, all_stocks)
+    return prev_stock.date if prev_stock else None
 
 
 def get_trading_day_gap(

@@ -60,10 +60,16 @@ class RedetectionConditionPresetRepository(BaseConditionPresetRepository, Condit
         fields.update({
             'block2_volume_ratio': condition.block2_volume_ratio,
             'block2_low_price_margin': condition.block2_low_price_margin,
+            'block2_min_candles_after_block1': condition.block2_min_candles_after_block1,
+            'block2_max_candles_after_block1': condition.block2_max_candles_after_block1,
             'block3_volume_ratio': condition.block3_volume_ratio,
             'block3_low_price_margin': condition.block3_low_price_margin,
+            'block3_min_candles_after_block2': condition.block3_min_candles_after_block2,
+            'block3_max_candles_after_block2': condition.block3_max_candles_after_block2,
             'block4_volume_ratio': condition.block4_volume_ratio,
             'block4_low_price_margin': condition.block4_low_price_margin,
+            'block4_min_candles_after_block3': condition.block4_min_candles_after_block3,
+            'block4_max_candles_after_block3': condition.block4_max_candles_after_block3,
         })
 
         # Block2/3/4 전용 파라미터 (Optional)
@@ -93,7 +99,11 @@ class RedetectionConditionPresetRepository(BaseConditionPresetRepository, Condit
             block1_entry_price_high_days=preset.block1_entry_price_high_days,
             block1_exit_condition_type=Block1ExitConditionType(preset.block1_exit_condition_type),
             block1_exit_ma_period=preset.block1_exit_ma_period,
-            block1_min_start_interval_days=preset.block1_min_start_interval_days
+            block1_auto_exit_on_next_block=bool(preset.block1_auto_exit_on_next_block),
+            block1_min_start_interval_days=preset.block1_min_start_interval_days,
+            block2_auto_exit_on_next_block=bool(preset.block2_auto_exit_on_next_block),
+            block3_auto_exit_on_next_block=bool(preset.block3_auto_exit_on_next_block),
+            block4_auto_exit_on_next_block=bool(preset.block4_auto_exit_on_next_block)
         )
 
         # RedetectionCondition 생성
@@ -114,10 +124,16 @@ class RedetectionConditionPresetRepository(BaseConditionPresetRepository, Condit
             block4_redetection_max_days_after_seed=preset.block4_redetection_max_days_after_seed,
             block2_volume_ratio=preset.block2_volume_ratio,
             block2_low_price_margin=preset.block2_low_price_margin,
+            block2_min_candles_after_block1=preset.block2_min_candles_after_block1,
+            block2_max_candles_after_block1=preset.block2_max_candles_after_block1,
             block3_volume_ratio=preset.block3_volume_ratio,
             block3_low_price_margin=preset.block3_low_price_margin,
+            block3_min_candles_after_block2=preset.block3_min_candles_after_block2,
+            block3_max_candles_after_block2=preset.block3_max_candles_after_block2,
             block4_volume_ratio=preset.block4_volume_ratio,
             block4_low_price_margin=preset.block4_low_price_margin,
+            block4_min_candles_after_block3=preset.block4_min_candles_after_block3,
+            block4_max_candles_after_block3=preset.block4_max_candles_after_block3,
             # Block2 전용 파라미터
             block2_entry_surge_rate=preset.block2_entry_surge_rate,
             block2_entry_ma_period=preset.block2_entry_ma_period,

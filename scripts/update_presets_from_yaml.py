@@ -9,9 +9,11 @@ Preset 데이터를 YAML 파일에서 읽어서 DB에 업데이트
 """
 
 import argparse
+import io
 import os
 import sys
 from pathlib import Path
+from typing import Dict
 
 import yaml
 from loguru import logger
@@ -19,6 +21,13 @@ from rich import box
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
+# Constants
+DEFAULT_DB_PATH = "data/database/stock_data.db"
+DEFAULT_SEED_FILE = "presets/seed_conditions.yaml"
+DEFAULT_REDETECT_FILE = "presets/redetection_conditions.yaml"
+DEFAULT_CONSOLE_WIDTH = 140
+TABLE_WIDTH = 100
 
 # 프로젝트 루트를 Python 경로에 추가
 project_root = Path(__file__).parent.parent
@@ -29,7 +38,6 @@ if sys.platform == "win32":
     # 콘솔 코드페이지를 UTF-8로 설정
     os.system("chcp 65001 > nul")
     # 표준 출력/에러를 UTF-8로 재설정
-    import io
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
@@ -57,7 +65,7 @@ from src.domain.entities.conditions.base_entry_condition import (
 )
 
 
-def load_yaml_file(file_path: str) -> dict:
+def load_yaml_file(file_path: str) -> Dict:
     """
     YAML 파일 로드
 
@@ -65,19 +73,19 @@ def load_yaml_file(file_path: str) -> dict:
         file_path: YAML 파일 경로
 
     Returns:
-        YAML 파일 내용
+        Dict: YAML 파일 내용
     """
     with open(file_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
-def print_table_header(title: str, width: int = 100) -> None:
+def print_table_header(title: str, width: int = TABLE_WIDTH) -> None:
     """
     테이블 헤더 출력
 
     Args:
         title: 테이블 제목
-        width: 테이블 너비 (기본값: 100)
+        width: 테이블 너비 (기본값: TABLE_WIDTH)
     """
     print()
     print("╔" + "═" * (width - 2) + "╗")
@@ -104,7 +112,7 @@ def print_conditions_table(
         condition_type: 조건 타입 ("seed" 또는 "redetection")
     """
 
-    console = Console()
+    console = Console(width=140)
 
     # 설명 텍스트 (조건 타입에 따라 다름)
     volume_ratio_desc = (
@@ -137,13 +145,13 @@ def print_conditions_table(
         box=box.ROUNDED  # 더 부드러운 박스 스타일
     )
     table1.add_column(
-        "변수명", justify="left", style="bold cyan", no_wrap=True, width=18
+        "변수명", justify="left", style="bold cyan", no_wrap=True, width=20
     )
-    table1.add_column("Block1", justify="center", width=12)
-    table1.add_column("Block2", justify="center", width=12)
-    table1.add_column("Block3", justify="center", width=12)
-    table1.add_column("Block4", justify="center", width=12)
-    table1.add_column("설명", justify="left", width=32)
+    table1.add_column("Block1", justify="center", width=15)
+    table1.add_column("Block2", justify="center", width=15)
+    table1.add_column("Block3", justify="center", width=15)
+    table1.add_column("Block4", justify="center", width=15)
+    table1.add_column("설명", justify="left", no_wrap=False, width=40)
 
     # 등락률 (높을수록 엄격 = 빨강, 낮을수록 완화 = 초록)
     b1_surge = block1['entry_surge_rate']
@@ -241,13 +249,13 @@ def print_conditions_table(
         box=box.ROUNDED
     )
     table2.add_column(
-        "변수명", justify="left", style="bold cyan", no_wrap=True, width=18
+        "변수명", justify="left", style="bold cyan", no_wrap=True, width=20
     )
-    table2.add_column("Block1", justify="center", width=12)
-    table2.add_column("Block2", justify="center", width=12)
-    table2.add_column("Block3", justify="center", width=12)
-    table2.add_column("Block4", justify="center", width=12)
-    table2.add_column("설명", justify="left", width=32)
+    table2.add_column("Block1", justify="center", width=15)
+    table2.add_column("Block2", justify="center", width=15)
+    table2.add_column("Block3", justify="center", width=15)
+    table2.add_column("Block4", justify="center", width=15)
+    table2.add_column("설명", justify="left", no_wrap=False, width=40)
 
     # 이격도
     default_deviation = block1.get('entry_max_deviation_ratio', 500.0)
@@ -322,13 +330,13 @@ def print_conditions_table(
         box=box.ROUNDED
     )
     table3.add_column(
-        "변수명", justify="left", style="bold cyan", no_wrap=True, width=18
+        "변수명", justify="left", style="bold cyan", no_wrap=True, width=20
     )
-    table3.add_column("Block1", justify="center", width=12)
-    table3.add_column("Block2", justify="center", width=12)
-    table3.add_column("Block3", justify="center", width=12)
-    table3.add_column("Block4", justify="center", width=12)
-    table3.add_column("설명", justify="left", width=32)
+    table3.add_column("Block1", justify="center", width=15)
+    table3.add_column("Block2", justify="center", width=15)
+    table3.add_column("Block3", justify="center", width=15)
+    table3.add_column("Block4", justify="center", width=15)
+    table3.add_column("설명", justify="left", no_wrap=False, width=40)
 
     # 종료 타입
     def format_exit_type(block):
@@ -378,13 +386,13 @@ def print_conditions_table(
             box=box.ROUNDED
         )
         table4.add_column(
-            "변수명", justify="left", style="bold cyan", no_wrap=True, width=18
+            "변수명", justify="left", style="bold cyan", no_wrap=True, width=20
         )
-        table4.add_column("Block1", justify="center", width=12)
-        table4.add_column("Block2", justify="center", width=12)
-        table4.add_column("Block3", justify="center", width=12)
-        table4.add_column("Block4", justify="center", width=12)
-        table4.add_column("설명", justify="left", width=32)
+        table4.add_column("Block1", justify="center", width=15)
+        table4.add_column("Block2", justify="center", width=15)
+        table4.add_column("Block3", justify="center", width=15)
+        table4.add_column("Block4", justify="center", width=15)
+        table4.add_column("설명", justify="left", no_wrap=False, width=40)
 
         # Tolerance
         table4.add_row(
@@ -429,7 +437,7 @@ def update_seed_conditions(
         json_data: YAML에서 로드한 조건 데이터
         dry_run: True일 경우 실제 저장하지 않음
     """
-    console = Console()
+    console = Console(width=140)
     console.print(
         Panel(
             "[bold cyan]Seed Condition Presets 업데이트[/bold cyan]",
@@ -473,7 +481,11 @@ def update_seed_conditions(
                         block1.get("exit_condition_type", "ma_break")
                     ),
                     block1_exit_ma_period=block1["exit_ma_period"],
+                    block1_auto_exit_on_next_block=block1.get("auto_exit_on_next_block", False),
                     block1_min_start_interval_days=block1["min_start_interval_days"],
+                    block2_auto_exit_on_next_block=block2.get("auto_exit_on_next_block", False),
+                    block3_auto_exit_on_next_block=block3.get("auto_exit_on_next_block", False),
+                    block4_auto_exit_on_next_block=block4.get("auto_exit_on_next_block", False),
                 )
 
                 condition = SeedCondition(
@@ -598,7 +610,7 @@ def update_redetection_conditions(
         json_data: YAML에서 로드한 조건 데이터
         dry_run: True일 경우 실제 저장하지 않음
     """
-    console = Console()
+    console = Console(width=140)
     console.print(
         Panel(
             "[bold green]Redetection Condition Presets 업데이트[/bold green]",
@@ -642,7 +654,11 @@ def update_redetection_conditions(
                         block1.get("exit_condition_type", "ma_break")
                     ),
                     block1_exit_ma_period=block1["exit_ma_period"],
+                    block1_auto_exit_on_next_block=block1.get("auto_exit_on_next_block", False),
                     block1_min_start_interval_days=block1["min_start_interval_days"],
+                    block2_auto_exit_on_next_block=block2.get("auto_exit_on_next_block", False),
+                    block3_auto_exit_on_next_block=block3.get("auto_exit_on_next_block", False),
+                    block4_auto_exit_on_next_block=block4.get("auto_exit_on_next_block", False),
                 )
 
                 condition = RedetectionCondition(
@@ -771,22 +787,22 @@ def main() -> None:
     )
     parser.add_argument(
         "--seed-file",
-        default="presets/seed_conditions.yaml",
-        help="Seed 조건 YAML 파일 경로",
+        default=DEFAULT_SEED_FILE,
+        help=f"Seed 조건 YAML 파일 경로 (기본값: {DEFAULT_SEED_FILE})",
     )
     parser.add_argument(
         "--redetect-file",
-        default="presets/redetection_conditions.yaml",
-        help="재탐지 조건 YAML 파일 경로",
+        default=DEFAULT_REDETECT_FILE,
+        help=f"재탐지 조건 YAML 파일 경로 (기본값: {DEFAULT_REDETECT_FILE})",
     )
 
     args = parser.parse_args()
 
-    console = Console()
+    console = Console(width=DEFAULT_CONSOLE_WIDTH)
 
     # DB 연결
     logger.info("데이터베이스 연결 중...")
-    db = DatabaseConnection("data/database/stock_data.db")
+    db = DatabaseConnection(DEFAULT_DB_PATH)
     logger.success("데이터베이스 연결 완료")
     print()
 

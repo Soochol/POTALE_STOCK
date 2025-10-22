@@ -79,7 +79,11 @@ class SeedConditionPresetRepository(BaseConditionPresetRepository, ConditionPres
             block1_entry_price_high_days=preset.block1_entry_price_high_days,
             block1_exit_condition_type=Block1ExitConditionType(preset.block1_exit_condition_type),
             block1_exit_ma_period=preset.block1_exit_ma_period,
-            block1_min_start_interval_days=preset.block1_min_start_interval_days
+            block1_auto_exit_on_next_block=bool(preset.block1_auto_exit_on_next_block),
+            block1_min_start_interval_days=preset.block1_min_start_interval_days,
+            block2_auto_exit_on_next_block=bool(preset.block2_auto_exit_on_next_block),
+            block3_auto_exit_on_next_block=bool(preset.block3_auto_exit_on_next_block),
+            block4_auto_exit_on_next_block=bool(preset.block4_auto_exit_on_next_block)
         )
 
         # SeedCondition 생성
