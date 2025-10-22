@@ -4,44 +4,83 @@
 YAML 파일에서 프리셋을 읽어 DB에 저장합니다.
 """
 import sys
-import yaml
 from pathlib import Path
+from typing import Dict, Optional
+
+import yaml
+
+# Constants
+DEFAULT_DB_PATH = 'data/database/stock_data.db'
+SEED_CONDITIONS_FILE = 'presets/seed_conditions.yaml'
+REDETECTION_CONDITIONS_FILE = 'presets/redetection_conditions.yaml'
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.infrastructure.database.connection import get_db_connection
-from src.infrastructure.repositories.preset.seed_condition_preset_repository import SeedConditionPresetRepository
-from src.infrastructure.repositories.preset.redetection_condition_preset_repository import RedetectionConditionPresetRepository
+from src.domain.entities.conditions.base_entry_condition import (
+    BaseEntryCondition,
+    Block1ExitConditionType,
+)
+from src.domain.entities.conditions.redetection_condition import (
+    RedetectionCondition,
+)
 from src.domain.entities.conditions.seed_condition import SeedCondition
-from src.domain.entities.conditions.redetection_condition import RedetectionCondition
-from src.domain.entities.conditions.base_entry_condition import BaseEntryCondition, Block1ExitConditionType
+from src.infrastructure.database.connection import get_db_connection
+from src.infrastructure.repositories.preset.redetection_condition_preset_repository import (
+    RedetectionConditionPresetRepository,
+)
+from src.infrastructure.repositories.preset.seed_condition_preset_repository import (
+    SeedConditionPresetRepository,
+)
 
 
-def load_yaml_file(filepath: str) -> dict:
-    """YAML 파일 로드"""
+def load_yaml_file(filepath: str) -> Dict:
+    """
+    YAML 파일 로드
+
+    Args:
+        filepath: YAML 파일 경로
+
+    Returns:
+        Dict: YAML 파일 내용
+    """
     with open(filepath, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
 
-def convert_exit_type(exit_type_str: str) -> Block1ExitConditionType:
-    """문자열을 Block1ExitConditionType Enum으로 변환"""
+def convert_exit_type(exit_type_str: str) -> Optional[Block1ExitConditionType]:
+    """
+    문자열을 Block1ExitConditionType Enum으로 변환
+
+    Args:
+        exit_type_str: 종료 타입 문자열
+
+    Returns:
+        Optional[Block1ExitConditionType]: 변환된 Enum 값 또는 None
+    """
     if not exit_type_str:
         return None
 
-    if exit_type_str == 'ma_break':
-        return Block1ExitConditionType.MA_BREAK
-    elif exit_type_str == 'three_line_reversal':
-        return Block1ExitConditionType.THREE_LINE_REVERSAL
-    elif exit_type_str == 'body_middle':
-        return Block1ExitConditionType.BODY_MIDDLE
-    else:
-        return None
+    exit_type_map = {
+        'ma_break': Block1ExitConditionType.MA_BREAK,
+        'three_line_reversal': Block1ExitConditionType.THREE_LINE_REVERSAL,
+        'body_middle': Block1ExitConditionType.BODY_MIDDLE,
+    }
+
+    return exit_type_map.get(exit_type_str)
 
 
-def create_base_entry_condition(block_data: dict) -> BaseEntryCondition:
-    """블록 데이터에서 BaseEntryCondition 생성"""
+def create_base_entry_condition(block_data: Dict) -> BaseEntryCondition:
+    """
+    블록 데이터에서 BaseEntryCondition 생성
+
+    Args:
+        block_data: 블록 데이터 딕셔너리
+
+    Returns:
+        BaseEntryCondition: 생성된 기본 진입 조건 객체
+    """
     exit_type = convert_exit_type(block_data.get('exit_condition_type'))
 
     return BaseEntryCondition(
@@ -59,8 +98,17 @@ def create_base_entry_condition(block_data: dict) -> BaseEntryCondition:
     )
 
 
-def create_seed_condition(preset_name: str, preset_data: dict) -> SeedCondition:
-    """Seed 조건 생성"""
+def create_seed_condition(preset_name: str, preset_data: Dict) -> SeedCondition:
+    """
+    Seed 조건 생성
+
+    Args:
+        preset_name: 프리셋 이름
+        preset_data: 프리셋 데이터 딕셔너리
+
+    Returns:
+        SeedCondition: 생성된 Seed 조건 객체
+    """
     block1_data = preset_data['block1']
     block2_data = preset_data['block2']
     block3_data = preset_data['block3']
@@ -119,8 +167,17 @@ def create_seed_condition(preset_name: str, preset_data: dict) -> SeedCondition:
     )
 
 
-def create_redetection_condition(preset_name: str, preset_data: dict) -> RedetectionCondition:
-    """재탐지 조건 생성"""
+def create_redetection_condition(preset_name: str, preset_data: Dict) -> RedetectionCondition:
+    """
+    재탐지 조건 생성
+
+    Args:
+        preset_name: 프리셋 이름
+        preset_data: 프리셋 데이터 딕셔너리
+
+    Returns:
+        RedetectionCondition: 생성된 재탐지 조건 객체
+    """
     block1_data = preset_data['block1']
     block2_data = preset_data['block2']
     block3_data = preset_data['block3']
@@ -183,17 +240,17 @@ def create_redetection_condition(preset_name: str, preset_data: dict) -> Redetec
     )
 
 
-def main():
+def main() -> None:
     """메인 함수"""
-    print("=" * 80)
+    separator = "=" * 80
+    print(separator)
     print("프리셋 로더")
-    print("=" * 80)
+    print(separator)
     print()
 
     # DB 연결
-    db_path = 'data/database/stock_data.db'
-    print(f"DB 연결 중... {db_path}")
-    db = get_db_connection(db_path)
+    print(f"DB 연결 중... {DEFAULT_DB_PATH}")
+    db = get_db_connection(DEFAULT_DB_PATH)
     print("   OK\n")
 
     # Repository 초기화
@@ -202,7 +259,7 @@ def main():
 
     # Seed 조건 로드
     print("Seed 조건 로드 중...")
-    seed_yaml = load_yaml_file('presets/seed_conditions.yaml')
+    seed_yaml = load_yaml_file(SEED_CONDITIONS_FILE)
 
     for preset_name, preset_data in seed_yaml.items():
         try:
@@ -216,7 +273,7 @@ def main():
 
     # 재탐지 조건 로드
     print("재탐지 조건 로드 중...")
-    redetect_yaml = load_yaml_file('presets/redetection_conditions.yaml')
+    redetect_yaml = load_yaml_file(REDETECTION_CONDITIONS_FILE)
 
     for preset_name, preset_data in redetect_yaml.items():
         try:
@@ -227,9 +284,9 @@ def main():
             print(f"   ERROR {preset_name}: {e}")
 
     print()
-    print("=" * 80)
+    print(separator)
     print("완료!")
-    print("=" * 80)
+    print(separator)
 
 
 if __name__ == '__main__':

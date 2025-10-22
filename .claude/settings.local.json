@@ -59,7 +59,19 @@
       "Bash(\".venv/Scripts/python.exe\" scripts/detect_patterns.py --ticker 180640 --from-date 2015-01-01 --verbose)",
       "Bash(copy datadatabasestock_data.db datadatabasestock_data_backup_before_cooldown_rename.db)",
       "Bash(\".venv/Scripts/python.exe\" migrations/migrate_rename_cooldown_to_min_start_interval.py)",
-      "Bash(\".venv/Scripts/python.exe\" -m pytest tests/unit/entities/test_base_entry_condition.py -v)"
+      "Bash(\".venv/Scripts/python.exe\" -m pytest tests/unit/entities/test_base_entry_condition.py -v)",
+      "Bash(copy:*)",
+      "Bash(\".venv/Scripts/python.exe\" migrations/migrate_unified_schema_update.py)",
+      "Bash(python migrations/migrate_unified_schema_update.py:*)",
+      "Bash(python scripts/update_presets_from_yaml.py:*)",
+      "Bash(python:*)",
+      "Bash(\".venv/Scripts/python.exe\" migrations/verify_system_health.py)",
+      "Bash(\".venv/Scripts/python.exe\" migrations/migrate_add_auto_exit_on_next_block.py)",
+      "Bash(.venv/Scripts/python.exe:*)",
+      "Bash(del data/database/stock_data.db)",
+      "Bash(git log:*)",
+      "Bash(\".venv/Scripts/python.exe\" -m pytest tests/unit/infrastructure/test_price_utils.py -v)",
+      "Bash(.venv/Scripts/python.exe -m pytest tests/unit/infrastructure/test_price_utils.py -v)"
     ],
     "deny": [],
     "ask": []

@@ -23,12 +23,31 @@ Usage:
     # 전체 재수집 (증분 무시)
     uv run python scripts/collect_single_ticker.py --ticker 025980 --force-full
 """
-import sys
-import os
-import asyncio
 import argparse
-from pathlib import Path
+import asyncio
+import os
+import sys
 from datetime import date, datetime
+from pathlib import Path
+from typing import Optional
+
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
+from rich.table import Table
+
+# Constants
+DEFAULT_FROM_DATE = "2015-01-01"
+DEFAULT_DB_PATH = "data/database/stock_data.db"
+API_DELAY = 0.1
+MAX_RETRIES = 3
+SEPARATOR_WIDTH = 80
 
 # Windows 콘솔 UTF-8 설정
 if sys.platform == 'win32':
@@ -42,20 +61,29 @@ if sys.platform == 'win32':
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
-from rich.table import Table
-from rich.panel import Panel
-
-from src.infrastructure.collectors.naver.async_unified_collector import AsyncUnifiedCollector
 from src.infrastructure.collectors.incremental_collector import IncrementalCollector
+from src.infrastructure.collectors.naver.async_unified_collector import (
+    AsyncUnifiedCollector,
+)
 from src.infrastructure.database.connection import get_db_connection
 
 console = Console()
 
 
 def create_stats_table(result, ticker: str, fromdate: date, todate: date, elapsed_seconds: float) -> Table:
-    """수집 결과 통계 테이블 생성"""
+    """
+    수집 결과 통계 테이블 생성
+
+    Args:
+        result: 수집 결과 객체
+        ticker: 종목 코드
+        fromdate: 수집 시작일
+        todate: 수집 종료일
+        elapsed_seconds: 소요 시간(초)
+
+    Returns:
+        Table: 수집 통계가 담긴 Rich Table 객체
+    """
     table = Table(title=f"수집 결과 - {ticker}", show_header=True, header_style="bold cyan")
     table.add_column("항목", style="cyan", width=20)
     table.add_column("값", style="green", width=40)
@@ -76,30 +104,55 @@ def create_stats_table(result, ticker: str, fromdate: date, todate: date, elapse
     return table
 
 
+class SingleTickerProgressTracker:
+    """단일 종목 수집 진행 상황 추적용 클래스"""
+
+    def __init__(self, progress_task, progress_manager: Progress):
+        self.collected = False
+        self.result = None
+        self.progress_task = progress_task
+        self.progress_manager = progress_manager
+
+    async def callback(self, ticker: str, result) -> None:
+        """
+        수집 진행 콜백 함수
+
+        Args:
+            ticker: 종목 코드
+            result: 수집 결과 객체
+        """
+        self.progress_manager.update(self.progress_task, completed=50)
+        self.collected = True
+        self.result = result
+
+
 async def collect_single_ticker(
     ticker: str,
     fromdate: date,
     todate: date,
     collect_investor: bool = True,
     force_full: bool = False,
-    db_path: str = "data/database/stock_data.db"
-):
+    db_path: str = DEFAULT_DB_PATH
+) -> Optional[object]:
     """
     단일 종목 데이터 수집
 
     Args:
         ticker: 종목 코드 (예: "005930", "025980")
-        fromdate: 시작일
-        todate: 종료일
+        fromdate: 수집 시작일
+        todate: 수집 종료일
         collect_investor: 투자자 데이터 수집 여부
         force_full: 전체 재수집 강제 (증분 수집 무시)
         db_path: 데이터베이스 파일 경로
+
+    Returns:
+        Optional[object]: 수집 결과 객체, 수집할 데이터가 없으면 None
     """
     start_time = datetime.now()
 
-    console.print("\n" + "=" * 80)
+    console.print("\n" + "=" * SEPARATOR_WIDTH)
     console.print(f"[bold cyan]단일 종목 데이터 수집 시작[/bold cyan]")
-    console.print("=" * 80 + "\n")
+    console.print("=" * SEPARATOR_WIDTH + "\n")
 
     # 1. DB 연결 및 테이블 생성
     console.print("[cyan]1. 데이터베이스 초기화...[/cyan]")
@@ -134,14 +187,10 @@ async def collect_single_ticker(
 
     collector = AsyncUnifiedCollector(
         db_connection=db,
-        delay=0.1,  # API 요청 간 대기 시간
+        delay=API_DELAY,
         concurrency=1,  # 단일 종목이므로 1
-        max_retries=3
+        max_retries=MAX_RETRIES
     )
-
-    # 진행 상황 추적
-    collected = False
-    result = None
 
     with Progress(
         SpinnerColumn(),
@@ -156,11 +205,8 @@ async def collect_single_ticker(
             total=100
         )
 
-        async def progress_callback(t, r):
-            nonlocal collected, result
-            progress.update(task, completed=50)
-            collected = True
-            result = r
+        # ProgressTracker 초기화
+        tracker = SingleTickerProgressTracker(task, progress)
 
         # 비동기 수집 실행
         results = await collector.collect_batch(
@@ -168,7 +214,7 @@ async def collect_single_ticker(
             fromdate=plan.fromdate,
             todate=plan.todate,
             collect_investor=collect_investor,
-            progress_callback=progress_callback
+            progress_callback=tracker.callback
         )
 
         progress.update(task, completed=100)
@@ -180,9 +226,9 @@ async def collect_single_ticker(
     end_time = datetime.now()
     elapsed = (end_time - start_time).total_seconds()
 
-    console.print("=" * 80)
+    console.print("=" * SEPARATOR_WIDTH)
     console.print(f"[bold cyan]수집 완료[/bold cyan]")
-    console.print("=" * 80 + "\n")
+    console.print("=" * SEPARATOR_WIDTH + "\n")
 
     if result:
         stats_table = create_stats_table(result, ticker, plan.fromdate, plan.todate, elapsed)
@@ -210,10 +256,10 @@ async def collect_single_ticker(
     return result
 
 
-def main():
+def main() -> None:
     """CLI 진입점"""
     parser = argparse.ArgumentParser(
-        description="단일 종목 데이터 수집 (2015-01-01 ~ 현재)",
+        description=f"단일 종목 데이터 수집 ({DEFAULT_FROM_DATE} ~ 현재)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 예시:
@@ -238,8 +284,8 @@ def main():
     parser.add_argument(
         "--from-date",
         type=str,
-        default="2015-01-01",
-        help="시작 날짜 (YYYY-MM-DD, 기본값: 2015-01-01)"
+        default=DEFAULT_FROM_DATE,
+        help=f"시작 날짜 (YYYY-MM-DD, 기본값: {DEFAULT_FROM_DATE})"
     )
 
     parser.add_argument(
@@ -264,8 +310,8 @@ def main():
     parser.add_argument(
         "--db",
         type=str,
-        default="data/database/stock_data.db",
-        help="데이터베이스 파일 경로 (기본값: data/database/stock_data.db)"
+        default=DEFAULT_DB_PATH,
+        help=f"데이터베이스 파일 경로 (기본값: {DEFAULT_DB_PATH})"
     )
 
     args = parser.parse_args()

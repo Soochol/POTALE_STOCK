@@ -10,6 +10,7 @@ from typing import List, Dict, Optional
 from io import StringIO
 
 from .base import AsyncCollectorBase
+from src.infrastructure.utils import round_to_tick_size
 
 
 class AsyncPriceCollector(AsyncCollectorBase):
@@ -143,10 +144,10 @@ class AsyncPriceCollector(AsyncCollectorBase):
                 for match in matches:
                     data.append({
                         'date': pd.to_datetime(match[0], format='%Y%m%d').date(),
-                        'adj_open': int(match[1]),
-                        'adj_high': int(match[2]),
-                        'adj_low': int(match[3]),
-                        'adj_close': int(match[4]),
+                        'adj_open': round_to_tick_size(float(match[1])),
+                        'adj_high': round_to_tick_size(float(match[2])),
+                        'adj_low': round_to_tick_size(float(match[3])),
+                        'adj_close': round_to_tick_size(float(match[4])),
                     })
 
                 df = pd.DataFrame(data)

@@ -29,12 +29,29 @@ Usage:
     # 미리보기만 (저장 안 함)
     uv run python scripts/detect_patterns.py --ticker 025980 --dry-run
 """
-import sys
-import os
 import argparse
-from pathlib import Path
+import io
+import os
+import sys
+from contextlib import redirect_stdout
 from datetime import date, datetime
-from typing import List, Dict
+from pathlib import Path
+from typing import Dict, List, Optional
+
+from loguru import logger
+from rich import box
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
+from rich.tree import Tree
+
+# Constants
+DEFAULT_SEED_PRESET = 'default_seed'
+DEFAULT_REDETECT_PRESET = 'default_redetect'
+DEFAULT_DB_PATH = 'data/database/stock_data.db'
+DEFAULT_FROM_DATE = date(2015, 1, 1)
+SEPARATOR_WIDTH = 80
 
 # Windows 콘솔 UTF-8 설정
 if sys.platform == 'win32':
@@ -48,13 +65,34 @@ if sys.platform == 'win32':
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
-from rich.tree import Tree
-from rich import box
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
-from loguru import logger
+from src.application.use_cases.pattern_detection.detect_patterns import (
+    DetectPatternsUseCase,
+)
+from src.infrastructure.database.connection import (
+    DatabaseConnection,
+    get_db_connection,
+)
+from src.infrastructure.repositories.detection.block1_repository import (
+    Block1Repository,
+)
+from src.infrastructure.repositories.detection.block2_repository import (
+    Block2Repository,
+)
+from src.infrastructure.repositories.detection.block3_repository import (
+    Block3Repository,
+)
+from src.infrastructure.repositories.detection.block4_repository import (
+    Block4Repository,
+)
+from src.infrastructure.repositories.preset.redetection_condition_preset_repository import (
+    RedetectionConditionPresetRepository,
+)
+from src.infrastructure.repositories.preset.seed_condition_preset_repository import (
+    SeedConditionPresetRepository,
+)
+from src.infrastructure.repositories.stock.sqlite_stock_repository import (
+    SqliteStockRepository,
+)
 
 # Loguru 설정
 logger.remove()  # 기본 핸들러 제거
@@ -65,21 +103,113 @@ logger.add(
     colorize=True
 )
 
-from src.infrastructure.database.connection import get_db_connection, DatabaseConnection
-from src.infrastructure.repositories.stock.sqlite_stock_repository import SqliteStockRepository
-from src.infrastructure.repositories.preset.seed_condition_preset_repository import SeedConditionPresetRepository
-from src.infrastructure.repositories.preset.redetection_condition_preset_repository import RedetectionConditionPresetRepository
-from src.infrastructure.repositories.detection.block1_repository import Block1Repository
-from src.infrastructure.repositories.detection.block2_repository import Block2Repository
-from src.infrastructure.repositories.detection.block3_repository import Block3Repository
-from src.infrastructure.repositories.detection.block4_repository import Block4Repository
-from src.application.use_cases.pattern_detection.detect_patterns import DetectPatternsUseCase
-
 console = Console()
 
 
-def create_pattern_tree(pattern: Dict, pattern_num: int, block1_repo, block2_repo, block3_repo, block4_repo) -> Tree:
-    """패턴 정보를 트리 형태로 생성"""
+def _format_end_info(block_detection) -> str:
+    """
+    블록 종료 정보 포맷팅
+
+    Args:
+        block_detection: 블록 탐지 객체
+
+    Returns:
+        str: 종료 정보 문자열 (날짜 + 종료 이유 또는 '진행중')
+    """
+    end_info = block_detection.ended_at or '진행중'
+    if block_detection.ended_at and hasattr(block_detection, 'exit_reason') and block_detection.exit_reason:
+        end_info = f"{block_detection.ended_at} (종료: {block_detection.exit_reason})"
+    return end_info
+
+
+def _add_block_seed_to_tree(tree: Tree, block_seed, block_name: str) -> None:
+    """
+    블록 Seed 정보를 트리에 추가
+
+    Args:
+        tree: Rich Tree 객체
+        block_seed: 블록 Seed 객체
+        block_name: 블록 이름 (예: "Block1")
+    """
+    if not block_seed:
+        return
+
+    end_info = _format_end_info(block_seed)
+    block_info = f"[yellow]{block_name} Seed[/yellow]: {block_seed.started_at} ~ {end_info}"
+    block_branch = tree.add(block_info)
+    block_branch.add(f"진입가: {block_seed.entry_close:,.0f}원")
+
+    if hasattr(block_seed, 'peak_price') and block_seed.peak_price:
+        gain = (block_seed.peak_price - block_seed.entry_close) / block_seed.entry_close * 100
+        block_branch.add(f"최고가: {block_seed.peak_price:,.0f}원 ([green]+{gain:.1f}%[/green])")
+
+
+def _add_block_redetections_to_tree(
+    tree_branch,
+    block_repo,
+    pattern_id: int,
+    block_name: str
+) -> None:
+    """
+    블록 재탐지 정보를 트리 브랜치에 추가
+
+    Args:
+        tree_branch: Rich Tree 브랜치 객체
+        block_repo: 블록 Repository
+        pattern_id: 패턴 ID
+        block_name: 블록 이름 (예: "Block1")
+    """
+    if not pattern_id:
+        return
+
+    redetections = block_repo.find_by_pattern_and_condition(pattern_id, 'redetection')
+    if redetections:
+        redetect_branch = tree_branch.add(f"{block_name} 재탐지: [cyan]{len(redetections)}개[/cyan]")
+        for idx, redetection in enumerate(redetections, 1):
+            # 수익률 계산
+            gain_str = ""
+            if hasattr(redetection, 'peak_price') and redetection.peak_price and redetection.entry_close:
+                gain = (redetection.peak_price - redetection.entry_close) / redetection.entry_close * 100
+                gain_str = f" ([green]+{gain:.1f}%[/green])"
+
+            # 종료 정보 생성
+            end_info = _format_end_info(redetection)
+
+            # 상세 정보
+            detail = (
+                f"[{idx}] {redetection.started_at} ~ {end_info} | "
+                f"{redetection.entry_close:,.0f}원"
+            )
+            if hasattr(redetection, 'peak_price') and redetection.peak_price:
+                detail += f" → {redetection.peak_price:,.0f}원{gain_str}"
+
+            redetect_branch.add(detail)
+    else:
+        tree_branch.add(f"{block_name} 재탐지: [cyan]0개[/cyan]")
+
+
+def create_pattern_tree(
+    pattern: Dict,
+    pattern_num: int,
+    block1_repo,
+    block2_repo,
+    block3_repo,
+    block4_repo
+) -> Tree:
+    """
+    패턴 정보를 트리 형태로 생성
+
+    Args:
+        pattern: 패턴 정보 딕셔너리
+        pattern_num: 패턴 번호
+        block1_repo: Block1 Repository
+        block2_repo: Block2 Repository
+        block3_repo: Block3 Repository
+        block4_repo: Block4 Repository
+
+    Returns:
+        Tree: 패턴 정보가 담긴 Rich Tree 객체
+    """
     tree = Tree(f"[bold cyan]Pattern #{pattern_num}[/bold cyan]")
 
     # Pattern ID 추출 (모든 블록에서 사용)
