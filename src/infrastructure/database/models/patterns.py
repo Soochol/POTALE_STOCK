@@ -38,6 +38,8 @@ class BlockPattern(Base):
     block2_detections = relationship("Block2Detection", back_populates="pattern", foreign_keys="Block2Detection.pattern_id")
     block3_detections = relationship("Block3Detection", back_populates="pattern", foreign_keys="Block3Detection.pattern_id")
     block4_detections = relationship("Block4Detection", back_populates="pattern", foreign_keys="Block4Detection.pattern_id")
+    block5_detections = relationship("Block5Detection", back_populates="pattern", foreign_keys="Block5Detection.pattern_id")
+    block6_detections = relationship("Block6Detection", back_populates="pattern", foreign_keys="Block6Detection.pattern_id")
 
     # 인덱스
     __table_args__ = (

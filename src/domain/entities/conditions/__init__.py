@@ -8,6 +8,8 @@ from .block_conditions import (
     Block2Condition,
     Block3Condition,
     Block4Condition,
+    Block5Condition,
+    Block6Condition,
 )
 from .seed_condition import SeedCondition
 from .redetection_condition import RedetectionCondition
@@ -19,6 +21,8 @@ __all__ = [
     'Block2Condition',
     'Block3Condition',
     'Block4Condition',
+    'Block5Condition',
+    'Block6Condition',
     'SeedCondition',
     'RedetectionCondition',
 ]

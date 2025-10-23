@@ -296,3 +296,143 @@ class Block4Detection(Base):
 
     def __repr__(self):
         return f"<Block4Detection(ticker={self.ticker}, started={self.started_at}, status={self.status})>"
+
+
+class Block5Detection(Base):
+    """블록5 탐지 결과 테이블"""
+    __tablename__ = 'block5_detection'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    block5_id = Column(String(50), unique=True, nullable=False, comment='블록5 고유 ID (UUID)')
+    ticker = Column(String(10), ForeignKey('stock_info.ticker'), nullable=False, comment='종목코드')
+
+    # 상태
+    status = Column(String(20), nullable=False, default='active', comment='상태 (active, completed)')
+
+    # 시작/종료 날짜
+    started_at = Column(Date, nullable=False, comment='블록5 시작일')
+    ended_at = Column(Date, comment='블록5 종료일')
+
+    # 진입 정보
+    entry_close = Column(Float, nullable=False, comment='시작일 종가')
+    entry_rate = Column(Float, comment='시작일 등락률 (%)')
+
+    # 직전 블록4 정보
+    prev_block4_id = Column(Integer, ForeignKey('block4_detection.id'), comment='참조한 블록4 ID')
+    prev_block4_peak_price = Column(Float, comment='블록4 최고가')
+    prev_block4_peak_volume = Column(BigInteger, comment='블록4 최고 거래량')
+
+    # 블록5 기간 중 최고가/거래량 추적
+    peak_price = Column(Float, comment='블록5 기간 중 최고가')
+    peak_date = Column(Date, comment='최고가 달성일')
+    peak_gain_ratio = Column(Float, comment='최고가 상승률 (%)')
+    peak_volume = Column(BigInteger, comment='블록5 기간 중 최고 거래량')
+
+    # 종료 정보
+    duration_days = Column(Integer, comment='지속 기간 (일)')
+    exit_reason = Column(String(50), comment='종료 사유 (ma_break, three_line_reversal, body_middle)')
+
+    # 메타데이터
+    condition_name = Column(String(100), comment='사용된 조건 이름')
+    created_at = Column(DateTime, default=datetime.now, comment='레코드 생성일시')
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment='수정일시')
+
+    # 패턴 재탐지 시스템
+    pattern_id = Column(Integer, ForeignKey('block_pattern.pattern_id'), comment='패턴 ID (재탐지 시스템용)')
+    detection_type = Column(String(20), comment='탐지 타입 (seed, redetection)')
+
+    # 관계 설정
+    stock_info = relationship("StockInfo")
+    prev_block4 = relationship("Block4Detection", foreign_keys=[prev_block4_id])
+    pattern = relationship("BlockPattern", back_populates="block5_detections", foreign_keys=[pattern_id])
+
+    # 인덱스 및 제약조건
+    __table_args__ = (
+        # 인덱스
+        Index('ix_block5_ticker_started', 'ticker', 'started_at'),
+        Index('ix_block5_status', 'status'),
+        Index('ix_block5_started', 'started_at'),
+        Index('ix_block5_id', 'block5_id', unique=True),
+        Index('ix_block5_prev_block4', 'prev_block4_id'),
+        Index('ix_block5_pattern', 'pattern_id'),
+        Index('ix_block5_detection_type', 'detection_type'),
+        Index('ix_block5_pattern_condition', 'pattern_id', 'condition_name'),
+        Index('ix_block5_status_started', 'status', 'started_at'),
+        # 제약조건
+        CheckConstraint('entry_close > 0', name='ck_block5_close_positive'),
+        CheckConstraint("ended_at IS NULL OR started_at <= ended_at", name='ck_block5_dates_valid'),
+        CheckConstraint('peak_price IS NULL OR peak_price >= entry_close', name='ck_block5_peak_valid'),
+    )
+
+    def __repr__(self):
+        return f"<Block5Detection(ticker={self.ticker}, started={self.started_at}, status={self.status})>"
+
+
+class Block6Detection(Base):
+    """블록6 탐지 결과 테이블"""
+    __tablename__ = 'block6_detection'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    block6_id = Column(String(50), unique=True, nullable=False, comment='블록6 고유 ID (UUID)')
+    ticker = Column(String(10), ForeignKey('stock_info.ticker'), nullable=False, comment='종목코드')
+
+    # 상태
+    status = Column(String(20), nullable=False, default='active', comment='상태 (active, completed)')
+
+    # 시작/종료 날짜
+    started_at = Column(Date, nullable=False, comment='블록6 시작일')
+    ended_at = Column(Date, comment='블록6 종료일')
+
+    # 진입 정보
+    entry_close = Column(Float, nullable=False, comment='시작일 종가')
+    entry_rate = Column(Float, comment='시작일 등락률 (%)')
+
+    # 직전 블록5 정보
+    prev_block5_id = Column(Integer, ForeignKey('block5_detection.id'), comment='참조한 블록5 ID')
+    prev_block5_peak_price = Column(Float, comment='블록5 최고가')
+    prev_block5_peak_volume = Column(BigInteger, comment='블록5 최고 거래량')
+
+    # 블록6 기간 중 최고가/거래량 추적
+    peak_price = Column(Float, comment='블록6 기간 중 최고가')
+    peak_date = Column(Date, comment='최고가 달성일')
+    peak_gain_ratio = Column(Float, comment='최고가 상승률 (%)')
+    peak_volume = Column(BigInteger, comment='블록6 기간 중 최고 거래량')
+
+    # 종료 정보
+    duration_days = Column(Integer, comment='지속 기간 (일)')
+    exit_reason = Column(String(50), comment='종료 사유 (ma_break, three_line_reversal, body_middle)')
+
+    # 메타데이터
+    condition_name = Column(String(100), comment='사용된 조건 이름')
+    created_at = Column(DateTime, default=datetime.now, comment='레코드 생성일시')
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, comment='수정일시')
+
+    # 패턴 재탐지 시스템
+    pattern_id = Column(Integer, ForeignKey('block_pattern.pattern_id'), comment='패턴 ID (재탐지 시스템용)')
+    detection_type = Column(String(20), comment='탐지 타입 (seed, redetection)')
+
+    # 관계 설정
+    stock_info = relationship("StockInfo")
+    prev_block5 = relationship("Block5Detection", foreign_keys=[prev_block5_id])
+    pattern = relationship("BlockPattern", back_populates="block6_detections", foreign_keys=[pattern_id])
+
+    # 인덱스 및 제약조건
+    __table_args__ = (
+        # 인덱스
+        Index('ix_block6_ticker_started', 'ticker', 'started_at'),
+        Index('ix_block6_status', 'status'),
+        Index('ix_block6_started', 'started_at'),
+        Index('ix_block6_id', 'block6_id', unique=True),
+        Index('ix_block6_prev_block5', 'prev_block5_id'),
+        Index('ix_block6_pattern', 'pattern_id'),
+        Index('ix_block6_detection_type', 'detection_type'),
+        Index('ix_block6_pattern_condition', 'pattern_id', 'condition_name'),
+        Index('ix_block6_status_started', 'status', 'started_at'),
+        # 제약조건
+        CheckConstraint('entry_close > 0', name='ck_block6_close_positive'),
+        CheckConstraint("ended_at IS NULL OR started_at <= ended_at", name='ck_block6_dates_valid'),
+        CheckConstraint('peak_price IS NULL OR peak_price >= entry_close', name='ck_block6_peak_valid'),
+    )
+
+    def __repr__(self):
+        return f"<Block6Detection(ticker={self.ticker}, started={self.started_at}, status={self.status})>"

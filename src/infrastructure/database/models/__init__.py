@@ -20,7 +20,9 @@ from .blocks import (
     Block1Detection,
     Block2Detection,
     Block3Detection,
-    Block4Detection
+    Block4Detection,
+    Block5Detection,
+    Block6Detection
 )
 
 # Pattern models
@@ -54,6 +56,8 @@ __all__ = [
     'Block2Detection',
     'Block3Detection',
     'Block4Detection',
+    'Block5Detection',
+    'Block6Detection',
 
     # Pattern models
     'BlockPattern',

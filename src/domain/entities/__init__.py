@@ -16,6 +16,8 @@ from .detections import (
     Block2Detection,
     Block3Detection,
     Block4Detection,
+    Block5Detection,
+    Block6Detection,
 )
 
 # Condition entities
@@ -26,6 +28,8 @@ from .conditions import (
     Block2Condition,
     Block3Condition,
     Block4Condition,
+    Block5Condition,
+    Block6Condition,
     SeedCondition,
     RedetectionCondition,
 )
@@ -47,6 +51,8 @@ __all__ = [
     'Block2Detection',
     'Block3Detection',
     'Block4Detection',
+    'Block5Detection',
+    'Block6Detection',
 
     # Conditions
     'BaseEntryCondition',
@@ -55,6 +61,8 @@ __all__ = [
     'Block2Condition',
     'Block3Condition',
     'Block4Condition',
+    'Block5Condition',
+    'Block6Condition',
     'SeedCondition',
     'RedetectionCondition',
 

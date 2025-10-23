@@ -78,7 +78,9 @@
       "Bash(del scriptsml_systemgenerate_synthetic_labels.py scriptsml_systemimport_block_labels.py scriptsml_systembuild_block_dataset.py scriptsml_systemtrain_block_classifier.py scriptsml_systemtest_full_pipeline.py)",
       "Bash(del migrationsmigrate_add_block_label_table.py)",
       "Bash(move docsspecificationAI_BLOCK_DETECTION.md docsarchiveAI_BLOCK_DETECTION_V1.md)",
-      "Bash(del presetsfeature_configsblock_classifier_v1.yaml)"
+      "Bash(del presetsfeature_configsblock_classifier_v1.yaml)",
+      "Read(//c/**)",
+      "Bash(cd:*)"
     ],
     "deny": [],
     "ask": []
