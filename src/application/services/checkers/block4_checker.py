@@ -118,7 +118,18 @@ class Block4Checker:
             if condition.block2_low_price_margin is not None and prev_seed_block1.peak_price is not None:
                 margin = condition.block2_low_price_margin / 100.0
                 threshold_price = stock.low * (1 + margin)
-                if threshold_price <= prev_seed_block1.peak_price:
+
+                # OR 조건: DB peak_price OR 실제 range_high
+                meets_db_peak = threshold_price > prev_seed_block1.peak_price
+                range_high = self._get_range_high(
+                    prev_seed_block1.started_at,
+                    stock.date,
+                    stock.ticker,
+                    all_stocks
+                )
+                meets_range_high = range_high is not None and threshold_price > range_high
+
+                if not (meets_db_peak or meets_range_high):
                     return False
 
         # Block3 추가 조건
@@ -132,7 +143,18 @@ class Block4Checker:
             if condition.block3_low_price_margin is not None and prev_seed_block2.peak_price is not None:
                 margin = condition.block3_low_price_margin / 100.0
                 threshold_price = stock.low * (1 + margin)
-                if threshold_price <= prev_seed_block2.peak_price:
+
+                # OR 조건: DB peak_price OR 실제 range_high
+                meets_db_peak = threshold_price > prev_seed_block2.peak_price
+                range_high = self._get_range_high(
+                    prev_seed_block2.started_at,
+                    stock.date,
+                    stock.ticker,
+                    all_stocks
+                )
+                meets_range_high = range_high is not None and threshold_price > range_high
+
+                if not (meets_db_peak or meets_range_high):
                     return False
 
         # 2. 블록4 추가 조건 검사
@@ -151,15 +173,28 @@ class Block4Checker:
                     return False
             # prev_seed_block3가 None이거나 peak_volume이 None이면 이 조건 스킵 (pass)
 
-        # 추가 조건 2: 저가 마진 조건 (선택적)
-        # 당일_저가 × (1 + block4_low_price_margin/100) > Seed Block3_peak_price
+        # 추가 조건 2: 저가 마진 조건 (선택적) - OR 조건
+        # 당일_저가 × (1 + block4_low_price_margin/100) > Seed Block3_peak_price (DB)
+        # OR
+        # 당일_저가 × (1 + block4_low_price_margin/100) > Block3 시작~현재 실제 최고가 (range_high)
         # block4_low_price_margin은 % 단위 (예: 10 = 10%)
         # None 처리: condition 값 또는 prev_seed_block3 데이터가 None이면 스킵
         if condition.block4_low_price_margin is not None:
             if prev_seed_block3 is not None and prev_seed_block3.peak_price is not None:
                 margin = condition.block4_low_price_margin / 100.0
                 threshold_price = stock.low * (1 + margin)
-                if threshold_price <= prev_seed_block3.peak_price:
+
+                # OR 조건: DB peak_price OR 실제 range_high
+                meets_db_peak = threshold_price > prev_seed_block3.peak_price
+                range_high = self._get_range_high(
+                    prev_seed_block3.started_at,
+                    stock.date,
+                    stock.ticker,
+                    all_stocks
+                )
+                meets_range_high = range_high is not None and threshold_price > range_high
+
+                if not (meets_db_peak or meets_range_high):
                     return False
             # prev_seed_block3가 None이거나 peak_price가 None이면 이 조건 스킵 (pass)
 
@@ -408,6 +443,33 @@ class Block4Checker:
             if start_date <= stock.date <= end_date:
                 count += 1
         return count
+
+    def _get_range_high(
+        self,
+        start_date: date,
+        end_date: date,
+        ticker: str,
+        all_stocks: List[Stock]
+    ) -> Optional[float]:
+        """
+        지정된 기간의 실제 최고가(range_high) 계산
+
+        Args:
+            start_date: 시작일 (포함)
+            end_date: 종료일 (포함)
+            ticker: 종목 코드
+            all_stocks: 전체 주식 데이터
+
+        Returns:
+            기간 내 최고가, 데이터가 없으면 None
+        """
+        max_high = None
+        for stock in all_stocks:
+            if (stock.ticker == ticker and
+                start_date <= stock.date <= end_date):
+                if max_high is None or stock.high > max_high:
+                    max_high = stock.high
+        return max_high
 
     def _convert_to_block1_detection(self, block4: Block4Detection) -> Block1Detection:
         """

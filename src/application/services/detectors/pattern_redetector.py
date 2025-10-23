@@ -39,6 +39,33 @@ class PatternRedetector:
         self.block3_checker = Block3Checker()
         self.block4_checker = Block4Checker()
 
+    def _get_range_high(
+        self,
+        start_date: date,
+        end_date: date,
+        ticker: str,
+        stocks: List[Stock]
+    ) -> Optional[float]:
+        """
+        지정된 기간의 실제 최고가(range_high) 계산
+
+        Args:
+            start_date: 시작일 (포함)
+            end_date: 종료일 (포함)
+            ticker: 종목 코드
+            stocks: 전체 주식 데이터
+
+        Returns:
+            기간 내 최고가, 데이터가 없으면 None
+        """
+        max_high = None
+        for stock in stocks:
+            if (stock.ticker == ticker and
+                start_date <= stock.date <= end_date):
+                if max_high is None or stock.high > max_high:
+                    max_high = stock.high
+        return max_high
+
     def _create_base_for_block(
         self,
         condition: RedetectionCondition,
@@ -218,9 +245,21 @@ class PatternRedetector:
             if not (price_min <= stock.high <= price_max):
                 continue
 
-            # 저가 마진 체크 (Block1 Seed 기준)
+            # 저가 마진 체크 (Block1 Seed 기준) - OR 조건
+            # DB peak_price OR 실제 range_high
             low_margin = condition.block2_low_price_margin / 100.0  # 10% -> 0.1
-            if stock.low * (1 + low_margin) <= seed_block1.peak_price:
+            threshold_price = stock.low * (1 + low_margin)
+
+            meets_db_peak = threshold_price > seed_block1.peak_price
+            range_high = self._get_range_high(
+                seed_block1.started_at,
+                stock.date,
+                stock.ticker,
+                stocks
+            )
+            meets_range_high = range_high is not None and threshold_price > range_high
+
+            if not (meets_db_peak or meets_range_high):
                 continue
 
             # Min start interval 체크
@@ -318,9 +357,21 @@ class PatternRedetector:
             if not (price_min <= stock.high <= price_max):
                 continue
 
-            # 저가 마진 체크 (Block2 Seed 기준)
+            # 저가 마진 체크 (Block2 Seed 기준) - OR 조건
+            # DB peak_price OR 실제 range_high
             low_margin = condition.block3_low_price_margin / 100.0  # 10% -> 0.1
-            if stock.low * (1 + low_margin) <= seed_block2.peak_price:
+            threshold_price = stock.low * (1 + low_margin)
+
+            meets_db_peak = threshold_price > seed_block2.peak_price
+            range_high = self._get_range_high(
+                seed_block2.started_at,
+                stock.date,
+                stock.ticker,
+                stocks
+            )
+            meets_range_high = range_high is not None and threshold_price > range_high
+
+            if not (meets_db_peak or meets_range_high):
                 continue
 
             # Min start interval 체크
@@ -425,9 +476,21 @@ class PatternRedetector:
             if not (price_min <= stock.high <= price_max):
                 continue
 
-            # 저가 마진 체크 (Block3 Seed 기준)
+            # 저가 마진 체크 (Block3 Seed 기준) - OR 조건
+            # DB peak_price OR 실제 range_high
             low_margin = condition.block4_low_price_margin / 100.0  # 10% -> 0.1
-            if stock.low * (1 + low_margin) <= seed_block3.peak_price:
+            threshold_price = stock.low * (1 + low_margin)
+
+            meets_db_peak = threshold_price > seed_block3.peak_price
+            range_high = self._get_range_high(
+                seed_block3.started_at,
+                stock.date,
+                stock.ticker,
+                stocks
+            )
+            meets_range_high = range_high is not None and threshold_price > range_high
+
+            if not (meets_db_peak or meets_range_high):
                 continue
 
             # Min start interval 체크

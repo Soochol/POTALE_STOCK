@@ -15,7 +15,7 @@ SEED_CONDITIONS_FILE = 'presets/seed_conditions.yaml'
 REDETECTION_CONDITIONS_FILE = 'presets/redetection_conditions.yaml'
 
 # Add project root to path
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.domain.entities.conditions.base_entry_condition import (

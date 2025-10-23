@@ -71,7 +71,14 @@
       "Bash(del data/database/stock_data.db)",
       "Bash(git log:*)",
       "Bash(\".venv/Scripts/python.exe\" -m pytest tests/unit/infrastructure/test_price_utils.py -v)",
-      "Bash(.venv/Scripts/python.exe -m pytest tests/unit/infrastructure/test_price_utils.py -v)"
+      "Bash(.venv/Scripts/python.exe -m pytest tests/unit/infrastructure/test_price_utils.py -v)",
+      "Bash(if not exist docsarchive mkdir docsarchive)",
+      "Bash(git mv:*)",
+      "Bash(del srclearningfeature_engineeringdataset_builder.py srclearningmodelsblock_classifier.py)",
+      "Bash(del scriptsml_systemgenerate_synthetic_labels.py scriptsml_systemimport_block_labels.py scriptsml_systembuild_block_dataset.py scriptsml_systemtrain_block_classifier.py scriptsml_systemtest_full_pipeline.py)",
+      "Bash(del migrationsmigrate_add_block_label_table.py)",
+      "Bash(move docsspecificationAI_BLOCK_DETECTION.md docsarchiveAI_BLOCK_DETECTION_V1.md)",
+      "Bash(del presetsfeature_configsblock_classifier_v1.yaml)"
     ],
     "deny": [],
     "ask": []

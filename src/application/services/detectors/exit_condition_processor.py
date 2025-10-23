@@ -354,6 +354,23 @@ class ExitConditionProcessor:
             exit_candidates = []
 
             for stock in stocks_after_start:
+                # Peak 업데이트 (종료 조건 체크 전에 먼저 수행)
+                old_peak_price = detection.peak_price
+                old_peak_volume = detection.peak_volume
+
+                detection.update_peak(stock.high, stock.date, stock.volume)
+
+                # Peak가 변경되었으면 DB 업데이트
+                if (detection.peak_price != old_peak_price or
+                    detection.peak_volume != old_peak_volume):
+                    self.block1_repo.update_peak(
+                        detection.block1_id,
+                        peak_price=detection.peak_price,
+                        peak_date=detection.peak_date,
+                        peak_volume=detection.peak_volume
+                    )
+
+                # 종료 조건 체크
                 exit_reason = self.block1_checker.check_exit(
                     condition=condition,
                     detection=detection,
@@ -452,6 +469,23 @@ class ExitConditionProcessor:
             exit_candidates = []
 
             for stock in stocks_after_start:
+                # Peak 업데이트 (종료 조건 체크 전에 먼저 수행)
+                old_peak_price = detection.peak_price
+                old_peak_volume = detection.peak_volume
+
+                detection.update_peak(stock.high, stock.date, stock.volume)
+
+                # Peak가 변경되었으면 DB 업데이트
+                if (detection.peak_price != old_peak_price or
+                    detection.peak_volume != old_peak_volume):
+                    self.block2_repo.update_peak(
+                        detection.block2_id,
+                        peak_price=detection.peak_price,
+                        peak_date=detection.peak_date,
+                        peak_volume=detection.peak_volume
+                    )
+
+                # 종료 조건 체크
                 exit_reason = self.block2_checker.check_exit(
                     condition=condition,
                     detection=detection,
@@ -546,6 +580,23 @@ class ExitConditionProcessor:
             exit_candidates = []
 
             for stock in stocks_after_start:
+                # Peak 업데이트 (종료 조건 체크 전에 먼저 수행)
+                old_peak_price = detection.peak_price
+                old_peak_volume = detection.peak_volume
+
+                detection.update_peak(stock.high, stock.date, stock.volume)
+
+                # Peak가 변경되었으면 DB 업데이트
+                if (detection.peak_price != old_peak_price or
+                    detection.peak_volume != old_peak_volume):
+                    self.block3_repo.update_peak(
+                        detection.block3_id,
+                        peak_price=detection.peak_price,
+                        peak_date=detection.peak_date,
+                        peak_volume=detection.peak_volume
+                    )
+
+                # 종료 조건 체크
                 exit_reason = self.block3_checker.check_exit(
                     condition=condition,
                     detection=detection,
@@ -637,6 +688,23 @@ class ExitConditionProcessor:
 
             # Block4는 전통적 종료 조건만 사용
             for stock in stocks_after_start:
+                # Peak 업데이트 (종료 조건 체크 전에 먼저 수행)
+                old_peak_price = detection.peak_price
+                old_peak_volume = detection.peak_volume
+
+                detection.update_peak(stock.high, stock.date, stock.volume)
+
+                # Peak가 변경되었으면 DB 업데이트
+                if (detection.peak_price != old_peak_price or
+                    detection.peak_volume != old_peak_volume):
+                    self.block4_repo.update_peak(
+                        detection.block4_id,
+                        peak_price=detection.peak_price,
+                        peak_date=detection.peak_date,
+                        peak_volume=detection.peak_volume
+                    )
+
+                # 종료 조건 체크
                 exit_reason = self.block4_checker.check_exit(
                     condition=condition,
                     detection=detection,
@@ -753,8 +821,26 @@ class ExitConditionProcessor:
                 # 시작일 이후 데이터가 없으면 종료 체크 불가
                 continue
 
-            # 시작일 이후 각 시점마다 종료 조건 체크
+            # 시작일 이후 각 시점마다 peak 업데이트 및 종료 조건 체크
             for stock in stocks_after_start:
+                # 1. Peak 업데이트 (종료 조건 체크 전에 먼저 수행)
+                old_peak_price = detection.peak_price
+                old_peak_volume = detection.peak_volume
+
+                detection.update_peak(stock.high, stock.date, stock.volume)
+
+                # Peak가 변경되었으면 DB 업데이트
+                if (detection.peak_price != old_peak_price or
+                    detection.peak_volume != old_peak_volume):
+                    block_id = getattr(detection, block_id_attr)
+                    repo.update_peak(
+                        block_id,
+                        peak_price=detection.peak_price,
+                        peak_date=detection.peak_date,
+                        peak_volume=detection.peak_volume
+                    )
+
+                # 2. 종료 조건 체크
                 exit_reason = checker.check_exit(
                     condition=condition,
                     detection=detection,

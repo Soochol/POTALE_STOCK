@@ -30,7 +30,7 @@ DEFAULT_CONSOLE_WIDTH = 140
 TABLE_WIDTH = 100
 
 # 프로젝트 루트를 Python 경로에 추가
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 # Windows 콘솔 UTF-8 인코딩 설정
