@@ -1,0 +1,27 @@
+version: "1.0"
+
+block_graph:
+  root_node: "block1"
+
+  nodes:
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "Direct Volume Test"
+      description: "직접 거래량 임계값 테스트"
+
+      entry_conditions:
+        - name: "high_volume"
+          expression: "current.volume >= 5000000"
+          description: "거래량 500만주 이상"
+
+      exit_conditions:
+        - name: "low_volume"
+          expression: "current.volume < 1000000"
+          description: "거래량 100만주 미만"
+
+      parameters:
+        min_duration_candles: 1
+        max_duration_candles: 10
+
+  edges: []

@@ -84,7 +84,13 @@
       "Bash(findstr:*)",
       "Bash(git push:*)",
       "Bash(git tag:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(if not exist srclearningevaluation mkdir srclearningevaluation)",
+      "Bash(if not exist testsunitlearning mkdir testsunitlearning)",
+      "Bash(if not exist testsunitlearningevaluation mkdir testsunitlearningevaluation)",
+      "Bash(dir:*)",
+      "Bash(if exist test_indicator_debug.py del test_indicator_debug.py)",
+      "Bash(if exist test_block2_conditions.py del test_block2_conditions.py)"
     ],
     "deny": [],
     "ask": []

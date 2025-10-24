@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-POTALE_STOCK is a Korean stock market analysis and AI learning program that implements a sophisticated block-based pattern detection system. The project follows Clean Architecture principles with strict layer separation.
+POTALE_STOCK is a Korean stock market analysis and AI learning program that implements a sophisticated **YAML-based dynamic block pattern detection system**. The project follows Clean Architecture principles with strict layer separation.
 
-**Core Functionality**: Detects and analyzes stock price patterns using a 4-stage "block" system (Block1→Block2→Block3→Block4), where each block represents a phase in price movement with specific technical conditions.
+**Core Functionality**: Detects and analyzes stock price patterns using a **dynamic block system (Block1 → Block2 → Block3 → ... → BlockN)**, where blocks are defined in YAML configuration files with custom conditions evaluated by an expression engine. Supports unlimited block types without code changes.
 
 ## Essential Commands
 
@@ -21,7 +21,7 @@ POTALE_STOCK is a Korean stock market analysis and AI learning program that impl
 .venv/Scripts/python.exe -m pytest -m checker
 
 # Run single test file
-.venv/Scripts/python.exe -m pytest tests/unit/entities/test_block1_detection.py -v
+.venv/Scripts/python.exe -m pytest tests/unit/entities/test_dynamic_block_detection.py -v
 
 # Run tests without coverage overhead (faster)
 .venv/Scripts/python.exe -m pytest --no-cov
@@ -39,46 +39,53 @@ POTALE_STOCK is a Korean stock market analysis and AI learning program that impl
 .venv/Scripts/python.exe scripts/data_collection/collect_single_ticker.py --ticker 025980 --force-full
 ```
 
-### Pattern Detection
+### Pattern Detection (YAML-based Dynamic System)
 ```bash
-# Detect patterns for a ticker
-.venv/Scripts/python.exe scripts/rule_based_detection/detect_patterns.py --ticker 025980 --from-date 2015-01-01
+# Detect patterns with YAML config (REQUIRED)
+.venv/Scripts/python.exe scripts/rule_based_detection/detect_patterns.py \
+    --ticker 025980 \
+    --config presets/examples/extended_pattern_example.yaml \
+    --from-date 2020-01-01
 
 # Multiple tickers
-.venv/Scripts/python.exe scripts/rule_based_detection/detect_patterns.py --ticker 025980,005930,035720
+.venv/Scripts/python.exe scripts/rule_based_detection/detect_patterns.py \
+    --ticker 025980,005930,035720 \
+    --config presets/examples/simple_pattern_example.yaml
 
 # With verbose output
-.venv/Scripts/python.exe scripts/rule_based_detection/detect_patterns.py --ticker 025980 --verbose
+.venv/Scripts/python.exe scripts/rule_based_detection/detect_patterns.py \
+    --ticker 025980 \
+    --config presets/examples/extended_pattern_example.yaml \
+    --verbose
 
 # Dry-run (don't save to DB)
-.venv/Scripts/python.exe scripts/rule_based_detection/detect_patterns.py --ticker 025980 --dry-run
+.venv/Scripts/python.exe scripts/rule_based_detection/detect_patterns.py \
+    --ticker 025980 \
+    --config presets/examples/simple_pattern_example.yaml \
+    --dry-run
 ```
+
+**Note**: `--config` parameter is **REQUIRED**. The system uses YAML files to define block detection logic.
 
 ### Database Operations
 ```bash
-# Query database directly
-sqlite3 data/database/stock_data.db "SELECT * FROM block1_detection LIMIT 5;"
+# Query dynamic_block_detection table
+sqlite3 data/database/stock_data.db "SELECT * FROM dynamic_block_detection WHERE ticker='025980' LIMIT 5;"
+
+# Count blocks by type
+sqlite3 data/database/stock_data.db "SELECT block_type, COUNT(*) FROM dynamic_block_detection WHERE ticker='025980' GROUP BY block_type;"
 
 # Check table schema
-sqlite3 data/database/stock_data.db "PRAGMA table_info(block1_detection);"
+sqlite3 data/database/stock_data.db "PRAGMA table_info(dynamic_block_detection);"
 
 # List all tables
 sqlite3 data/database/stock_data.db ".tables"
 ```
 
-### Preset Management
-```bash
-# Update presets from YAML files to database
-.venv/Scripts/python.exe scripts/preset_management/update_presets_from_yaml.py
-
-# Dry-run to preview changes
-.venv/Scripts/python.exe scripts/preset_management/update_presets_from_yaml.py --dry-run
-```
-
 ### Database Migrations
 ```bash
 # Run a migration (always create backup first!)
-copy data\database\stock_data.db data\database\stock_data_backup.db
+cp data/database/stock_data.db data/database/stock_data_backup.db
 .venv/Scripts/python.exe migrations/migrate_*.py
 ```
 
@@ -87,34 +94,35 @@ copy data\database\stock_data.db data\database\stock_data_backup.db
 ### Clean Architecture Layers
 
 **Domain Layer** (`src/domain/`)
-- **entities/**: Core business entities (Block1Detection, Block2Detection, Pattern, Conditions, etc.)
-  - `conditions/`: BaseEntryCondition, ExitCondition, SeedCondition, RedetectionCondition
-  - `patterns/`: BlockPattern entity
-  - `detections/`: Block1Detection, Block2Detection, Block3Detection, Block4Detection
+- **entities/**: Core business entities
+  - `conditions/`: ExpressionEngine, FunctionRegistry, builtin_functions
+  - `block_graph/`: BlockGraph, BlockNode, BlockEdge
+  - `detections/`: DynamicBlockDetection, BlockStatus
+  - `patterns/`: SeedPattern, RedetectionConfig
   - `core/`: Stock, Condition, DetectionResult
 - **repositories/**: Repository interfaces (abstract base classes)
+  - `dynamic_block_repository.py`: Interface for dynamic block storage
+  - `seed_pattern_repository.py`: Interface for seed pattern storage
 - Zero external dependencies
 
 **Application Layer** (`src/application/`)
 - **use_cases/**: Business logic orchestration
-  - `block_detection/`: Block1-4 detection use cases
-  - `pattern_detection/`: Pattern lifecycle management
+  - `dynamic_block_detector.py`: Core detection engine (YAML → BlockGraph → Detection)
   - `data_collection/`: Data collection workflows
 - **services/**: Application services
-  - `checkers/`: Block condition checkers
-  - `detectors/`: Block detectors
+  - `block_graph_loader.py`: YAML → BlockGraph converter
   - `indicators/`: Technical indicator calculators
 - Depends only on domain layer
 
 **Infrastructure Layer** (`src/infrastructure/`)
-- **repositories/**: Repository implementations (SQLAlchemy-based)
-  - Pattern: `block_pattern_repository.py`, `detection_repository.py`
-  - Data: `stock_repository.py`, `investor_repository.py`
-  - Config: `seed_condition_preset_repository.py`, `redetection_condition_preset_repository.py`
+- **repositories/**: Repository implementations
+  - `dynamic_block_repository_impl.py`: SQLAlchemy-based dynamic block storage
+  - `seed_pattern_repository_impl.py`: Seed pattern storage
+  - `stock/sqlite_stock_repository.py`: Stock data access
 - **collectors/**: Data collection from Naver Finance
   - `AsyncUnifiedCollector`: High-performance async collector
   - `NaverHybridCollector`: Adjusted price + adjusted volume calculator
-- **database/**: SQLAlchemy models and connection management
+- **database/**: Database models and connection management
 - **utils/**: Price utilities, data validation
 
 **Presentation Layer** (`src/cli/`)
@@ -123,121 +131,210 @@ copy data\database\stock_data.db data\database\stock_data_backup.db
 
 ### Critical Architectural Concepts
 
-#### Block Detection System
-The system detects 4-stage patterns in stock prices:
-- **Block1**: Initial surge detection (entry: surge rate + MA breakout + volume spike)
-- **Block2**: Continuation after Block1 (can start independently)
-- **Block3**: Further continuation after Block2 (can start independently)
-- **Block4**: Final stage after Block3
+#### Dynamic Block Detection System (YAML-based)
+
+The system uses **YAML configuration files** to define block detection logic **without code changes**:
+
+```yaml
+# presets/examples/simple_pattern_example.yaml
+block_graph:
+  root_node: "block1"
+
+  nodes:
+    block1:
+      block_id: "block1"
+      block_type: 1
+      entry_conditions:
+        - expression: "current.close >= 10000"
+        - expression: "current.volume >= 1000000"
+      exit_conditions:
+        - expression: "current.close < 9000"
+
+  edges:
+    - from_block: "block1"
+      to_block: "block2"
+      edge_type: "sequential"
+```
+
+**Key Components**:
+1. **BlockGraph**: Directed graph of blocks (nodes) and transitions (edges)
+2. **ExpressionEngine**: Evaluates conditions like `current.close >= ma(120)`
+3. **FunctionRegistry**: Built-in functions (ma, volume_ma, candles_between, etc.)
+4. **DynamicBlockDetector**: Traverses BlockGraph and detects patterns
+
+**Benefits**:
+- ✅ Unlimited block types (Block1~Block99+) without code changes
+- ✅ Flexible conditions using Python expressions
+- ✅ Easy experimentation (just edit YAML)
+- ✅ Version control for detection strategies
+
+#### Expression System
+
+Conditions are evaluated using Python expressions with custom functions:
+
+**Available Variables**:
+- `current`: Current stock candle (close, high, low, volume, etc.)
+- `prev`: Previous candle
+- `block1`, `block2`, etc.: Active block objects
+- `all_stocks`: Historical price data
+
+**Built-in Functions**:
+- `ma(period)`: Moving average
+- `volume_ma(period)`: Volume moving average
+- `candles_between(date1, date2)`: Count trading days
+- `within_range(value, base, tolerance_pct)`: Price range check
+- `is_new_high(period)`: New high detection
+- `EXISTS('blockN')`: Check if block exists
+
+**Examples**:
+```python
+"current.close >= 10000"
+"current.high >= ma(120)"
+"current.volume >= volume_ma(20) * 3"
+"candles_between(block1.started_at, current.date) >= 2"
+"within_range(current.close, block1.peak_price, 10.0)"
+```
+
+See `presets/schemas/function_library.yaml` and `presets/schemas/data_schema.yaml` for complete reference.
+
+#### Block Independence
 
 **Key Insight**: Each block can be detected independently OR as a sequence. When Block2 starts while Block1 is active, Block1 automatically ends the day before Block2 starts.
 
-#### Seed vs Redetection
-- **Seed Detection**: Initial strict pattern discovery with tight conditions (e.g., entry_surge_rate=8.0%)
-- **Redetection**: Find similar patterns with relaxed conditions (e.g., entry_surge_rate=4.0%, tolerance ranges for price matching)
-
-This 2-phase approach finds high-quality seed patterns, then discovers similar historical occurrences for ML training.
-
-#### Preset System
-Conditions are managed via presets stored in:
-- **YAML source**: `presets/seed_conditions.yaml`, `presets/redetection_conditions.yaml`
-- **Database tables**: `seed_condition_preset`, `redetection_condition_preset`
-
-Workflow: Edit YAML → Run `update_presets_from_yaml.py` → Changes reflected in DB → Detection scripts use DB presets
-
-#### Condition Independence (Post-Refactoring)
-All blocks share the same condition structure (`BaseEntryCondition`), but each block can have different parameter values:
-- Block1: `entry_surge_rate=8.0%`, `entry_ma_period=120`
-- Block2: `entry_surge_rate=5.0%`, `entry_ma_period=60`
-
-This enables per-block optimization while maintaining code reusability.
-
-#### Lookback Validation (New!)
-**Backward-looking** block validation that verifies previous blocks exist within a specified candle range:
-- **Forward checks** (`min/max_candles_from_block`): From previous block start → validate candidate is in range
-- **Backward checks** (`lookback_min/max_candles`): From candidate date → validate previous block exists in range
-
-**Example**:
-```yaml
-block2:
-  min_candles_from_block: 2         # Block2 must be 2+ candles after Block1 starts (forward)
-  max_candles_from_block: 150       # Block2 must be within 150 candles from Block1 (forward)
-  lookback_min_candles: 2           # Block1 must be at least 2 candles before Block2 (backward)
-  lookback_max_candles: 150         # Block1 must be within 150 candles before Block2 (backward)
-```
-
-**Benefits**: Bidirectional validation, optional (null=skip), independent min/max ranges.
-
-**See**: [docs/features/LOOKBACK_VALIDATION.md](docs/features/LOOKBACK_VALIDATION.md) for detailed guide.
+Blocks support:
+- **Sequential transitions**: Block1 → Block2 → Block3
+- **Independent detection**: Block2 can start without Block1
+- **Conditional edges**: Transitions with custom conditions
+- **Parent tracking**: Blocks store references to parent blocks (JSON array)
 
 ### Database Schema
 
 **Key Tables**:
 - `stock_price`: OHLCV data with adjusted prices/volumes from Naver Finance
-- `block1_detection`, `block2_detection`, `block3_detection`, `block4_detection`: Detection records
-- `block_pattern`: Links blocks into complete patterns, tracks pattern lifecycle
-- `seed_condition_preset`, `redetection_condition_preset`: Preset configurations
+- `stock_info`: Stock metadata (ticker, name, market)
+- **`dynamic_block_detection`**: **Main detection table** (replaces block1~6_detection)
+  - Columns: `id`, `block_id`, `block_type`, `ticker`, `started_at`, `ended_at`, `peak_price`, `peak_volume`, `status`, `parent_blocks` (JSON), `custom_metadata` (JSON)
 - `collection_progress`: Tracks incremental collection state
 - `investor_trading`: Investor type trading data
+
+**Deleted Tables** (as of 2025-10-24):
+- ~~`block1_detection`~~, ~~`block2_detection`~~, ~~`block3_detection`~~, ~~`block4_detection`~~ → Replaced by `dynamic_block_detection`
+- ~~`block5_detection`~~, ~~`block6_detection`~~ → Replaced by `dynamic_block_detection`
+- ~~`block_pattern`~~ → Pattern tracking moved to `dynamic_block_detection.pattern_id`
+- ~~`block_label`~~ → ML labels (deleted)
+- ~~`seed_condition_preset`~~, ~~`redetection_condition_preset`~~ → Replaced by YAML files
 
 **Important Indexes**: Heavy indexing on ticker + date combinations for query performance.
 
 ## Development Workflow
+
+### Creating Custom Detection Logic
+
+1. **Copy an example YAML**:
+   ```bash
+   cp presets/examples/simple_pattern_example.yaml presets/my_pattern.yaml
+   ```
+
+2. **Edit block conditions**:
+   ```yaml
+   nodes:
+     block1:
+       entry_conditions:
+         - expression: "current.close >= 15000"  # Custom threshold
+         - expression: "current.volume >= volume_ma(20) * 5"  # Custom volume
+   ```
+
+3. **Run detection**:
+   ```bash
+   .venv/Scripts/python.exe scripts/rule_based_detection/detect_patterns.py \
+       --ticker 025980 \
+       --config presets/my_pattern.yaml
+   ```
+
+4. **Query results**:
+   ```bash
+   sqlite3 data/database/stock_data.db "SELECT * FROM dynamic_block_detection WHERE ticker='025980';"
+   ```
+
+### Adding New Block Types
+
+Just add a new node in YAML - **no code changes required**:
+
+```yaml
+nodes:
+  block7:  # NEW BLOCK!
+    block_id: "block7"
+    block_type: 7
+    entry_conditions:
+      - expression: "current.close >= 20000"
+    exit_conditions:
+      - expression: "current.close < 18000"
+
+edges:
+  - from_block: "block6"
+    to_block: "block7"
+    edge_type: "sequential"
+```
+
+### Adding New Expression Functions
+
+1. **Implement function** in `src/domain/entities/conditions/builtin_functions.py`:
+   ```python
+   @function_registry.register(
+       name='my_function',
+       category='custom',
+       description='My custom function',
+       params_schema={'param1': {'type': 'int'}}
+   )
+   def my_function(param1: int, context: dict) -> float:
+       # Implementation
+       return result
+   ```
+
+2. **Document in** `presets/schemas/function_library.yaml`:
+   ```yaml
+   custom:
+     my_function:
+       description: "My custom function"
+       parameters:
+         - name: param1
+           type: int
+   ```
+
+3. **Use in YAML**:
+   ```yaml
+   entry_conditions:
+     - expression: "my_function(10) >= 100"
+   ```
 
 ### Making Schema Changes
 
 1. **Create a migration script** in `migrations/`:
    - Name format: `migrate_<description>.py`
    - Always create a backup before running
-   - Check for existing similar migrations
 
 2. **Test migration**:
    ```bash
-   copy data\database\stock_data.db data\database\stock_data_backup.db
+   cp data/database/stock_data.db data/database/stock_data_backup.db
    .venv/Scripts/python.exe migrations/migrate_your_change.py
    ```
 
-3. **Update ORM models** in `src/infrastructure/database/models.py`
+3. **Update repository classes** in `src/infrastructure/repositories/`
 
-4. **Update repository classes** in `src/infrastructure/repositories/`
-
-5. **Update entity classes** in `src/domain/entities/`
-
-6. **Update preset YAML if needed** in `presets/`
-
-### Working with Presets
-
-Presets define detection conditions. To modify:
-
-1. Edit YAML files in `presets/seed_conditions.yaml` or `redetection_conditions.yaml`
-2. Run `python scripts/preset_management/update_presets_from_yaml.py --dry-run` to preview
-3. Run `python scripts/preset_management/update_presets_from_yaml.py` to apply
-4. Detection scripts automatically use updated presets from DB
-
-### Adding New Block Conditions
-
-When adding new condition parameters:
-
-1. Update `BaseEntryCondition` in `src/domain/entities/conditions/base_entry_condition.py`
-2. Update YAML preset files with new parameters
-3. Create migration to add columns to `seed_condition_preset` and `redetection_condition_preset` tables
-4. Update preset repositories to handle new fields
-5. Update checker logic in `src/application/services/checkers/`
-6. Add tests for new condition
+4. **Update entity classes** in `src/domain/entities/`
 
 ## Important Conventions
 
 ### Field Naming
-- **Entry conditions**: Prefixed with `entry_` (e.g., `entry_surge_rate`, `entry_ma_period`)
-- **Exit conditions**: Prefixed with `exit_` (e.g., `exit_ma_period`)
-- **Block-specific**: Prefixed with `blockN_` where N is block number (e.g., `block2_volume_ratio`)
-- **Time periods**: Use `_days` or `_months` suffix (e.g., `min_start_interval_days`, `volume_high_months`)
+- **Block fields**: `block_id`, `block_type`, `started_at`, `ended_at`, `peak_price`, `peak_volume`
+- **Status values**: `active`, `completed`, `failed`
+- **JSON fields**: `parent_blocks` (array of parent block IDs), `custom_metadata` (dict)
 
 ### Testing Strategy
-- Use pytest markers: `@pytest.mark.unit`, `@pytest.mark.integration`, `@pytest.mark.checker`
+- Use pytest markers: `@pytest.mark.unit`, `@pytest.mark.integration`
 - Unit tests should not touch the database
 - Integration tests use a test database or transactions that rollback
-- Test files mirror source structure: `tests/unit/entities/test_block1_detection.py` tests `src/domain/entities/detections/block1_detection.py`
+- Test files mirror source structure
 
 ### Repository Pattern
 - All database access goes through repositories
@@ -254,29 +351,44 @@ Data collection is async for performance:
 
 ## Key Files Reference
 
-- `src/domain/entities/conditions/base_entry_condition.py`: Core condition definition shared by all blocks
-- `src/application/services/checkers/block1_checker.py` through `block4_checker.py`: Condition validation logic
-- `src/application/use_cases/pattern_detection/detect_seed_patterns.py`: Seed detection orchestration
-- `src/infrastructure/repositories/detection/block1_repository.py`: Block1 persistence (similar for Block2-4)
-- `docs/specification/BLOCK_DETECTION.md`: Complete block detection system specification
-- `presets/seed_conditions.yaml`: Seed preset source of truth
+**Core Detection System**:
+- `src/application/use_cases/dynamic_block_detector.py`: Main detection engine
+- `src/application/services/block_graph_loader.py`: YAML → BlockGraph converter
+- `src/domain/entities/conditions/expression_engine.py`: Expression evaluator
+- `src/domain/entities/conditions/builtin_functions.py`: Built-in functions
+- `src/domain/entities/block_graph/`: BlockGraph, BlockNode, BlockEdge entities
+- `src/infrastructure/repositories/dynamic_block_repository_impl.py`: Database persistence
+
+**YAML Examples**:
+- `presets/examples/simple_pattern_example.yaml`: Block1~3 example
+- `presets/examples/extended_pattern_example.yaml`: Block1~6 example
+- `presets/schemas/function_library.yaml`: Available functions reference
+- `presets/schemas/data_schema.yaml`: Available data fields reference
+
+**Scripts**:
+- `scripts/rule_based_detection/detect_patterns.py`: Main detection script (YAML-based)
+
+**Legacy Files** (Archived 2025-10-24):
+- `docs/archive/legacy_scripts/`: Old block1~4 detection scripts (no longer work)
+- `docs/archive/legacy_scripts/README.md`: Migration guide from legacy system
 
 ## Documentation
 
 Extensive documentation in `docs/`:
-- **specification/**: Feature specs, especially `BLOCK_DETECTION.md` (complete block system guide)
-- **architecture/**: System structure, database design, project organization
-- **implementation/**: Roadmap, refactoring TODOs, session notes
+- **specification/**: Feature specs
+- **architecture/**: System structure, database design
 - **guides/**: Performance optimization, database maintenance
-- **analysis/**: Code analysis, improvement proposals
+- **archive/**: Legacy scripts and documentation
 
-**Always check** `docs/specification/BLOCK_DETECTION.md` when working with block detection logic.
+**Essential Guides**:
+- `USER_GUIDE.md`: Step-by-step usage guide
+- `docs/archive/legacy_scripts/README.md`: Legacy system migration guide
 
-## AI/ML System (New!)
+## AI/ML System
 
 ### Overview
 
-The project now includes an **AI-based block pattern detection system** alongside the rule-based system. This ML system learns from manually labeled block patterns and can detect Block1/2/3 automatically.
+The project includes an **AI-based block pattern detection system** alongside the rule-based system. This ML system learns from manually labeled block patterns.
 
 ### Essential Commands
 
@@ -299,142 +411,54 @@ The project now includes an **AI-based block pattern detection system** alongsid
     --dataset data/ml/dataset_v1.pkl \
     --output models/block_classifier_v1.h5 \
     --epochs 100
-
-# Test full pipeline
-.venv/Scripts/python.exe scripts/ml_system/test_full_pipeline.py --quick-test
-```
-
-#### Label Management
-```bash
-# Import labels from CSV to database
-.venv/Scripts/python.exe scripts/ml_system/import_block_labels.py \
-    --csv data/labels/block_labels.csv
 ```
 
 ### ML Architecture
 
 **Learning Module** (`src/learning/`):
-- **feature_engineering/**: Feature extraction system
-  - `registry.py`: Feature Registry pattern (50+ features)
-  - `technical_indicators.py`: RSI, MACD, etc.
-  - `block_features.py`: All feature functions
-  - `dataset_builder.py`: Creates training datasets
-- **models/**: ML models
-  - `block_classifier.py`: BlockClassifier (Dense layers)
-- **training/**, **inference/**, **evaluation/**: TODO
+- **feature_engineering/**: Feature extraction (50+ features)
+- **models/**: ML models (Dense, LSTM, CNN)
+- **training/**: Training pipeline
+- **evaluation/**: Metrics, confusion matrix
 
-**Preset Configs** (`presets/`):
-- **feature_configs/**: Feature selection (YAML)
-  - `block_classifier_v1.yaml`: Baseline 50 features
-
-**Scripts** (`scripts/`):
-- `generate_synthetic_labels.py`: Creates fake labels for testing
-- `import_block_labels.py`: CSV → Database
-- `build_block_dataset.py`: Labels + Stock Data → ML Dataset
-- `train_block_classifier.py`: Train classifier model
-- `test_full_pipeline.py`: End-to-end test
-
-### Key Concepts
-
-#### Feature Registry Pattern
-Features are registered using decorators and can be enabled/disabled via YAML config:
-
-```python
-@feature_registry.register('volume_spike_ratio', category='volume')
-def volume_spike_ratio(df: pd.DataFrame) -> pd.Series:
-    ma20 = calculate_moving_average(df['volume'], 20)
-    return (df['volume'] / ma20).fillna(1.0)
-```
-
-Add to config:
-```yaml
-# presets/feature_configs/block_classifier_v2.yaml
-features:
-  - volume_spike_ratio  # Add new feature!
-```
-
-#### Block Labels
-Stored in `block_label` table:
-- `ticker`, `block_type` (1/2/3), `sequence`, `started_at`, `ended_at`
-- `spot_volume_candles` (JSON): Spot volume candle dates
-- `spot_price_center`: Block1 spot candle center price
-- `support_price_type`: 'top'/'middle'/'bottom'
-
-CSV format:
-```csv
-ticker,block_type,sequence,started_at,ended_at,spot_candles,spot_center,support_type,notes
-025980,1,1,2020-01-15,2020-02-10,"2020-01-17,2020-01-18",5500,middle,"Strong surge"
-```
-
-#### Feature Categories (v1)
+### Feature Categories
 - **Price** (10): Normalized close, change rates, new highs
-- **Volume** (12): Normalized, MA ratios, spike detection, new highs
-- **Trading Value** (5): Billion won, MA ratio, threshold flags
-- **Moving Averages** (9): MA5/20/60/120, deviations, alignment
+- **Volume** (12): Normalized, MA ratios, spike detection
+- **Trading Value** (5): Billion won, MA ratio, thresholds
+- **Moving Averages** (9): MA5/20/60/120, deviations
 - **Technical** (5): RSI, MACD, Bollinger bands
-- **Block Relations** (4): Block1 ratios, support distance (Block2/3 only)
+- **Block Relations** (4): Block1 ratios, support distance
 
 Total: **50 features**
 
-### Development Workflow
-
-#### Adding New Features
-1. Write feature function in `src/learning/feature_engineering/block_features.py`
-2. Add to YAML: `presets/feature_configs/block_classifier_vX.yaml`
-3. Rebuild dataset: `python scripts/ml_system/build_block_dataset.py ...`
-4. Retrain model: `python scripts/ml_system/train_block_classifier.py ...`
-
-#### Experimenting with Features
-```bash
-# List all features
-python -c "from src.learning.feature_engineering.registry import feature_registry; feature_registry.print_summary()"
-
-# Create new config version
-cp presets/feature_configs/block_classifier_v1.yaml \
-   presets/feature_configs/block_classifier_v2.yaml
-
-# Edit v2.yaml, then rebuild
-python scripts/ml_system/build_block_dataset.py \
-    --feature-config presets/feature_configs/block_classifier_v2.yaml \
-    --output data/ml/dataset_v2.pkl
-```
-
-### Documentation
-
-- **[AI_BLOCK_DETECTION.md](docs/specification/AI_BLOCK_DETECTION.md)**: Complete ML system specification
-- **[BLOCK_DETECTION.md](docs/specification/BLOCK_DETECTION.md)**: Rule-based system (original)
-
-### ML System Status
-
-**Implemented (MVP)**:
-- ✅ Feature Registry system (50+ features)
-- ✅ Dataset Builder (labels → training data)
-- ✅ BlockClassifier model (Dense layers)
-- ✅ Training pipeline
-- ✅ Synthetic label generation
-- ✅ Label import/export
-
-**TODO (Phase 2)**:
-- ⏳ Model Registry (multiple architectures)
-- ⏳ Evaluation system (metrics, confusion matrix)
-- ⏳ Inference system (batch prediction, ticker scanning)
-- ⏳ Preprocessing configs
-- ⏳ Training configs (callbacks, augmentation)
-
-**TODO (Phase 3)**:
-- ⏳ Ensemble models
-- ⏳ Signal generation (buy/sell)
-- ⏳ Auto ML / Hyperparameter optimization
-
 ## Common Pitfalls
 
-1. **Don't modify presets directly in DB**: Edit YAML files and run `update_presets_from_yaml.py`
-2. **Always backup DB before migrations**: `copy data\database\stock_data.db data\database\stock_data_backup.db`
-3. **Check for nullable fields**: Many condition fields are now nullable (optional conditions)
-4. **Understand Seed vs Redetection**: They have different purposes and different condition strictness
-5. **Windows paths**: This project uses Windows paths (`\` separators), not Unix paths
-6. **Virtual environment**: Always use `.venv/Scripts/python.exe`, not global Python
-7. **Block independence**: Blocks can start independently; they don't require prior blocks to exist
-8. **Timezone**: All dates are naive datetimes (no timezone), assumed KST (Korea Standard Time)
-9. **ML Feature changes require dataset rebuild**: When modifying features, rebuild the dataset before retraining
-10. **Label data format**: CSV must follow exact format (see AI_BLOCK_DETECTION.md)
+1. **YAML config is REQUIRED**: `detect_patterns.py` requires `--config` parameter
+2. **Always backup DB before migrations**: `cp data/database/stock_data.db data/database/stock_data_backup.db`
+3. **Use dynamic_block_detection table**: Old block1~6_detection tables no longer exist
+4. **YAML syntax matters**: Indentation must be correct, use spaces not tabs
+5. **Expression syntax**: Use lowercase `and`, `or`, `not` (not `AND`, `OR`, `NOT`)
+6. **Windows paths**: This project uses Windows paths (`\` separators)
+7. **Virtual environment**: Always use `.venv/Scripts/python.exe`
+8. **Block independence**: Blocks can start independently
+9. **Timezone**: All dates are naive datetimes (KST assumed)
+10. **Legacy scripts don't work**: Old scripts in `docs/archive/legacy_scripts/` are for reference only
+
+## System Migration (2025-10-24)
+
+**Major Update**: The system was migrated from fixed block1~6_detection tables to a dynamic YAML-based system.
+
+**What Changed**:
+- ✅ Single `dynamic_block_detection` table (replaces 6+ tables)
+- ✅ YAML configuration files (replaces database presets)
+- ✅ Unlimited block types (not limited to Block1~6)
+- ✅ Expression-based conditions (more flexible)
+- ✅ JSON storage for parent_blocks and metadata
+
+**What Stayed**:
+- ✅ Data collection system (unchanged)
+- ✅ Stock price data (unchanged)
+- ✅ ML system (unchanged)
+- ✅ Clean Architecture (unchanged)
+
+**Migration Path**: See `docs/archive/legacy_scripts/README.md` for migration guide from old system.

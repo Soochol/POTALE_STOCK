@@ -1,0 +1,27 @@
+version: "1.0"
+
+block_graph:
+  root_node: "block1"
+
+  nodes:
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "Volume Test"
+      description: "Volume MA 함수 테스트"
+
+      entry_conditions:
+        - name: "volume_test"
+          expression: "current.volume >= volume_ma(20) * 2.0"
+          description: "거래량이 20일 평균 대비 2배 이상"
+
+      exit_conditions:
+        - name: "dummy"
+          expression: "current.close < 0"
+          description: "종료 안 함"
+
+      parameters:
+        min_duration_candles: 1
+        max_duration_candles: 5
+
+  edges: []

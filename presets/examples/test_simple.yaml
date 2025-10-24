@@ -1,0 +1,32 @@
+# test_simple.yaml - 매우 간단한 테스트용
+#
+# Block1: 가장 기본적인 조건만
+# - 거래대금 10억 이상 (거의 모든 날 만족)
+
+version: "1.0"
+
+block_graph:
+  root_node: "block1"
+
+  nodes:
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "Simple Test Block"
+      description: "간단한 테스트 블록"
+
+      entry_conditions:
+        - name: "basic_trading_value"
+          expression: "(current.close * current.volume) >= 1000000000"
+          description: "거래대금 10억원 이상"
+
+      exit_conditions:
+        - name: "price_drop"
+          expression: "current.close < (current.close * 0.5)"
+          description: "종가가 반토막 (거의 안 일어남)"
+
+      parameters:
+        min_duration_candles: 1
+        max_duration_candles: 10
+
+  edges: []

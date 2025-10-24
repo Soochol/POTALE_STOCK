@@ -362,6 +362,47 @@ def is_new_high(days: int, context: dict) -> bool:
     return False
 
 
+@function_registry.register(
+    name='last_valid_volume',
+    category='volume',
+    description='가장 최근의 정상 거래일 거래량 반환 (거래량 > 0)',
+    params_schema={}
+)
+def last_valid_volume(context: dict) -> int:
+    """
+    가장 최근의 정상 거래일 거래량 반환
+
+    전일 데이터가 오류(거래량 0)인 경우를 대비하여,
+    현재 이전의 가장 최근 정상 거래일 거래량을 반환합니다.
+
+    Args:
+        context: 평가 컨텍스트
+            - all_stocks: 전체 주가 데이터 (현재까지)
+            - current: 현재 주가
+
+    Returns:
+        가장 최근 정상 거래일의 거래량 (없으면 0)
+
+    Example:
+        expression = "current.volume >= last_valid_volume() * 3.0"
+        # 전일이 데이터 오류여도 마지막 정상 거래일 기준으로 비교
+    """
+    all_stocks = context.get('all_stocks', [])
+    current = context.get('current')
+
+    if not all_stocks or not current:
+        return 0
+
+    # 현재 날짜 이전의 주가들을 역순으로 검색
+    for i in range(len(all_stocks) - 2, -1, -1):  # 현재(마지막) 제외하고 역순
+        stock = all_stocks[i]
+        if stock.ticker == current.ticker and stock.volume > 0:
+            return stock.volume
+
+    # 정상 거래일이 없으면 0 반환
+    return 0
+
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 모듈 로드 시 자동 실행
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

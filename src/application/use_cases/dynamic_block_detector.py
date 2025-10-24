@@ -75,14 +75,8 @@ class DynamicBlockDetector:
                 active_blocks=active_blocks_map
             )
 
-            # 1. 진행 중인 블록 업데이트 (종료 조건 확인)
-            self._update_active_blocks(
-                active_blocks_map,
-                current_stock.date,
-                context
-            )
-
-            # 2. 새로운 블록 감지 (진입 조건 확인)
+            # 1. 새로운 블록 감지 (peak 갱신 전에 먼저 체크!)
+            # 이렇게 해야 "block1.peak_volume보다 큼" 조건이 제대로 작동함
             new_blocks = self._detect_new_blocks(
                 ticker=ticker,
                 condition_name=condition_name,
@@ -93,9 +87,33 @@ class DynamicBlockDetector:
                 active_blocks_map=active_blocks_map
             )
 
-            # 새로운 블록을 active_blocks_map에 추가
+            # 2. 새로운 블록을 active_blocks_map에 추가
             for new_block in new_blocks:
                 active_blocks_map[new_block.block_id] = new_block
+
+            # 3. Context 재구성 (새로 추가된 블록 포함)
+            if new_blocks:
+                context = self._build_context(
+                    current=current_stock,
+                    prev=prev_stock,
+                    all_stocks=stocks[:i + 1],
+                    active_blocks=active_blocks_map
+                )
+
+            # 4. 진행 중인 블록 종료 조건 확인
+            # 새 블록이 추가되었으므로 EXISTS() 조건이 올바르게 평가됨
+            self._check_and_complete_blocks(
+                active_blocks_map,
+                current_stock.date,
+                context
+            )
+
+            # 5. 활성 블록들의 peak 갱신 (종료된 블록 제외)
+            self._update_peaks(
+                active_blocks_map,
+                current_stock.date,
+                context
+            )
 
         # 모든 블록 반환 (active_blocks_map에 모든 블록이 포함됨)
         return list(active_blocks_map.values())
@@ -138,14 +156,17 @@ class DynamicBlockDetector:
 
         return context
 
-    def _update_active_blocks(
+    def _check_and_complete_blocks(
         self,
         active_blocks_map: Dict[str, DynamicBlockDetection],
         current_date: date,
         context: dict
     ) -> None:
         """
-        진행 중인 블록 업데이트 (종료 조건 확인)
+        진행 중인 블록의 종료 조건 확인 및 완료 처리
+
+        Peak 갱신은 하지 않고, 종료 조건만 체크합니다.
+        새 블록이 감지된 후 호출되어 EXISTS() 조건을 올바르게 평가합니다.
 
         Args:
             active_blocks_map: 진행 중인 블록 맵
@@ -163,10 +184,6 @@ class DynamicBlockDetector:
             if not node:
                 continue
 
-            # Peak 갱신
-            current = context['current']
-            block.update_peak(current_date, current.high, current.volume)
-
             # 종료 조건 확인 (OR 조건)
             if self._check_exit_conditions(node, context):
                 blocks_to_complete.append(block_id)
@@ -175,6 +192,31 @@ class DynamicBlockDetector:
         for block_id in blocks_to_complete:
             block = active_blocks_map[block_id]
             block.complete(current_date)
+
+    def _update_peaks(
+        self,
+        active_blocks_map: Dict[str, DynamicBlockDetection],
+        current_date: date,
+        context: dict
+    ) -> None:
+        """
+        활성 블록들의 peak 갱신
+
+        종료된 블록은 제외하고, 진행 중인 블록만 peak를 갱신합니다.
+
+        Args:
+            active_blocks_map: 진행 중인 블록 맵
+            current_date: 현재 날짜
+            context: 평가 context
+        """
+        current = context['current']
+
+        for block_id, block in active_blocks_map.items():
+            if not block.is_active():
+                continue
+
+            # Peak 갱신
+            block.update_peak(current_date, current.high, current.volume)
 
     def _detect_new_blocks(
         self,

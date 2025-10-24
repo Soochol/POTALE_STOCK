@@ -1,42 +1,50 @@
 """
-블록 패턴 탐지 스크립트
+YAML 기반 동적 블록 패턴 탐지 스크립트
 
-데이터베이스에 저장된 주가 데이터로부터 Block1/2/3/4 패턴을 탐지합니다.
+YAML 설정 파일로부터 블록 정의를 읽어 주가 데이터에서 블록 패턴을 탐지합니다.
 
 Features:
-- Seed 탐지 + 5년 재탐지 통합 실행
-- 단일/다중 종목 지원
-- 프리셋 선택 가능
+- YAML 기반 다이나믹 블록 탐지
+- 무제한 블록 타입 지원 (Block1~Block99+)
+- ExpressionEngine으로 조건 평가
+- dynamic_block_detection 테이블에 저장
 - Rich 라이브러리로 결과 시각화
-- 데이터베이스에 자동 저장
 
 Usage:
-    # 기본: 아난티(025980) 전체 기간 탐지
-    uv run python scripts/detect_patterns.py --ticker 025980
+    # 기본: extended_pattern_example.yaml로 탐지
+    python scripts/rule_based_detection/detect_patterns.py \\
+        --ticker 025980 \\
+        --config presets/examples/extended_pattern_example.yaml
 
     # 다중 종목
-    uv run python scripts/detect_patterns.py --ticker 025980,005930,035720
+    python scripts/rule_based_detection/detect_patterns.py \\
+        --ticker 025980,005930,035720 \\
+        --config presets/examples/extended_pattern_example.yaml
 
     # 기간 지정
-    uv run python scripts/detect_patterns.py --ticker 025980 --from-date 2020-01-01
-
-    # 다른 프리셋 사용
-    uv run python scripts/detect_patterns.py --ticker 025980 --seed-preset strict_seed
+    python scripts/rule_based_detection/detect_patterns.py \\
+        --ticker 025980 \\
+        --config presets/examples/extended_pattern_example.yaml \\
+        --from-date 2020-01-01
 
     # 상세 출력
-    uv run python scripts/detect_patterns.py --ticker 025980 --verbose
+    python scripts/rule_based_detection/detect_patterns.py \\
+        --ticker 025980 \\
+        --config presets/examples/extended_pattern_example.yaml \\
+        --verbose
 
     # 미리보기만 (저장 안 함)
-    uv run python scripts/detect_patterns.py --ticker 025980 --dry-run
+    python scripts/rule_based_detection/detect_patterns.py \\
+        --ticker 025980 \\
+        --config presets/examples/simple_pattern_example.yaml \\
+        --dry-run
 """
 import argparse
-import io
 import os
 import sys
-from contextlib import redirect_stdout
 from datetime import date, datetime
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List
 
 from loguru import logger
 from rich import box
@@ -44,11 +52,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
-from rich.tree import Tree
 
 # Constants
-DEFAULT_SEED_PRESET = 'default_seed'
-DEFAULT_REDETECT_PRESET = 'default_redetect'
 DEFAULT_DB_PATH = 'data/database/stock_data.db'
 DEFAULT_FROM_DATE = date(2015, 1, 1)
 SEPARATOR_WIDTH = 80
@@ -65,30 +70,14 @@ if sys.platform == 'win32':
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.application.use_cases.pattern_detection.detect_patterns import (
-    DetectPatternsUseCase,
-)
-from src.infrastructure.database.connection import (
-    DatabaseConnection,
-    get_db_connection,
-)
-from src.infrastructure.repositories.detection.block1_repository import (
-    Block1Repository,
-)
-from src.infrastructure.repositories.detection.block2_repository import (
-    Block2Repository,
-)
-from src.infrastructure.repositories.detection.block3_repository import (
-    Block3Repository,
-)
-from src.infrastructure.repositories.detection.block4_repository import (
-    Block4Repository,
-)
-from src.infrastructure.repositories.preset.redetection_condition_preset_repository import (
-    RedetectionConditionPresetRepository,
-)
-from src.infrastructure.repositories.preset.seed_condition_preset_repository import (
-    SeedConditionPresetRepository,
+from src.application.services.block_graph_loader import BlockGraphLoader
+from src.application.use_cases.dynamic_block_detector import DynamicBlockDetector
+from src.application.services.indicators.block1_indicator_calculator import Block1IndicatorCalculator
+from src.domain.entities.conditions import ExpressionEngine, function_registry
+from src.domain.entities.detections import DynamicBlockDetection
+from src.infrastructure.database.connection import get_db_connection
+from src.infrastructure.repositories.dynamic_block_repository_impl import (
+    DynamicBlockRepositoryImpl,
 )
 from src.infrastructure.repositories.stock.sqlite_stock_repository import (
     SqliteStockRepository,
@@ -106,470 +95,279 @@ logger.add(
 console = Console()
 
 
-def _format_end_info(block_detection) -> str:
+def create_results_table(detections: List[DynamicBlockDetection], ticker: str) -> Table:
     """
-    블록 종료 정보 포맷팅
+    탐지 결과를 Rich Table로 생성
 
     Args:
-        block_detection: 블록 탐지 객체
+        detections: 탐지된 블록 리스트
+        ticker: 종목 코드
 
     Returns:
-        str: 종료 정보 문자열 (날짜 + 종료 이유 또는 '진행중')
+        Table: 탐지 결과 테이블
     """
-    end_info = block_detection.ended_at or '진행중'
-    if block_detection.ended_at and hasattr(block_detection, 'exit_reason') and block_detection.exit_reason:
-        end_info = f"{block_detection.ended_at} (종료: {block_detection.exit_reason})"
-    return end_info
-
-
-def _add_block_seed_to_tree(tree: Tree, block_seed, block_name: str) -> None:
-    """
-    블록 Seed 정보를 트리에 추가
-
-    Args:
-        tree: Rich Tree 객체
-        block_seed: 블록 Seed 객체
-        block_name: 블록 이름 (예: "Block1")
-    """
-    if not block_seed:
-        return
-
-    end_info = _format_end_info(block_seed)
-    block_info = f"[yellow]{block_name} Seed[/yellow]: {block_seed.started_at} ~ {end_info}"
-    block_branch = tree.add(block_info)
-    block_branch.add(f"진입가: {block_seed.entry_close:,.0f}원")
-
-    if hasattr(block_seed, 'peak_price') and block_seed.peak_price:
-        gain = (block_seed.peak_price - block_seed.entry_close) / block_seed.entry_close * 100
-        block_branch.add(f"최고가: {block_seed.peak_price:,.0f}원 ([green]+{gain:.1f}%[/green])")
-
-
-def _add_block_redetections_to_tree(
-    tree_branch,
-    block_repo,
-    pattern_id: int,
-    block_name: str
-) -> None:
-    """
-    블록 재탐지 정보를 트리 브랜치에 추가
-
-    Args:
-        tree_branch: Rich Tree 브랜치 객체
-        block_repo: 블록 Repository
-        pattern_id: 패턴 ID
-        block_name: 블록 이름 (예: "Block1")
-    """
-    if not pattern_id:
-        return
-
-    redetections = block_repo.find_by_pattern_and_condition(pattern_id, 'redetection')
-    if redetections:
-        redetect_branch = tree_branch.add(f"{block_name} 재탐지: [cyan]{len(redetections)}개[/cyan]")
-        for idx, redetection in enumerate(redetections, 1):
-            # 수익률 계산
-            gain_str = ""
-            if hasattr(redetection, 'peak_price') and redetection.peak_price and redetection.entry_close:
-                gain = (redetection.peak_price - redetection.entry_close) / redetection.entry_close * 100
-                gain_str = f" ([green]+{gain:.1f}%[/green])"
-
-            # 종료 정보 생성
-            end_info = _format_end_info(redetection)
-
-            # 상세 정보
-            detail = (
-                f"[{idx}] {redetection.started_at} ~ {end_info} | "
-                f"{redetection.entry_close:,.0f}원"
-            )
-            if hasattr(redetection, 'peak_price') and redetection.peak_price:
-                detail += f" → {redetection.peak_price:,.0f}원{gain_str}"
-
-            redetect_branch.add(detail)
-    else:
-        tree_branch.add(f"{block_name} 재탐지: [cyan]0개[/cyan]")
-
-
-def create_pattern_tree(
-    pattern: Dict,
-    pattern_num: int,
-    block1_repo,
-    block2_repo,
-    block3_repo,
-    block4_repo
-) -> Tree:
-    """
-    패턴 정보를 트리 형태로 생성
-
-    Args:
-        pattern: 패턴 정보 딕셔너리
-        pattern_num: 패턴 번호
-        block1_repo: Block1 Repository
-        block2_repo: Block2 Repository
-        block3_repo: Block3 Repository
-        block4_repo: Block4 Repository
-
-    Returns:
-        Tree: 패턴 정보가 담긴 Rich Tree 객체
-    """
-    tree = Tree(f"[bold cyan]Pattern #{pattern_num}[/bold cyan]")
-
-    # Pattern ID 추출 (모든 블록에서 사용)
-    pattern_id = pattern.get('pattern_id')
-
-    # Block1 Seed
-    block1_seed = pattern.get('seed_block1')
-    if block1_seed:
-        # 종료 정보 생성 (ended_at + exit_reason)
-        end_info = block1_seed.ended_at or '진행중'
-        if block1_seed.ended_at and hasattr(block1_seed, 'exit_reason') and block1_seed.exit_reason:
-            end_info = f"{block1_seed.ended_at} (종료: {block1_seed.exit_reason})"
-
-        b1_info = f"[yellow]Block1 Seed[/yellow]: {block1_seed.started_at} ~ {end_info}"
-        b1_branch = tree.add(b1_info)
-        b1_branch.add(f"진입가: {block1_seed.entry_close:,.0f}원")
-
-        if hasattr(block1_seed, 'peak_price') and block1_seed.peak_price:
-            gain = (block1_seed.peak_price - block1_seed.entry_close) / block1_seed.entry_close * 100
-            b1_branch.add(f"최고가: {block1_seed.peak_price:,.0f}원 ([green]+{gain:.1f}%[/green])")
-
-        # Block1 재탐지 상세
-        if pattern_id:
-            block1_redetections = block1_repo.find_by_pattern_and_condition(pattern_id, 'redetection')
-            if block1_redetections:
-                redetect_branch = b1_branch.add(f"Block1 재탐지: [cyan]{len(block1_redetections)}개[/cyan]")
-                for idx, redetection in enumerate(block1_redetections, 1):
-                    # 수익률 계산
-                    gain_str = ""
-                    if hasattr(redetection, 'peak_price') and redetection.peak_price and redetection.entry_close:
-                        gain = (redetection.peak_price - redetection.entry_close) / redetection.entry_close * 100
-                        gain_str = f" ([green]+{gain:.1f}%[/green])"
-
-                    # 종료 정보 생성
-                    end_info = redetection.ended_at or '진행중'
-                    if redetection.ended_at and hasattr(redetection, 'exit_reason') and redetection.exit_reason:
-                        end_info = f"{redetection.ended_at} (종료: {redetection.exit_reason})"
-
-                    # 상세 정보
-                    detail = (
-                        f"[{idx}] {redetection.started_at} ~ {end_info} | "
-                        f"{redetection.entry_close:,.0f}원"
-                    )
-                    if hasattr(redetection, 'peak_price') and redetection.peak_price:
-                        detail += f" → {redetection.peak_price:,.0f}원{gain_str}"
-
-                    redetect_branch.add(detail)
-            else:
-                b1_branch.add(f"Block1 재탐지: [cyan]0개[/cyan]")
-
-    # Block2 Seed
-    block2_seed = pattern.get('seed_block2')
-    if block2_seed:
-        # 종료 정보 생성 (ended_at + exit_reason)
-        end_info = block2_seed.ended_at or '진행중'
-        if block2_seed.ended_at and hasattr(block2_seed, 'exit_reason') and block2_seed.exit_reason:
-            end_info = f"{block2_seed.ended_at} (종료: {block2_seed.exit_reason})"
-
-        b2_info = f"[yellow]Block2 Seed[/yellow]: {block2_seed.started_at} ~ {end_info}"
-        b2_branch = tree.add(b2_info)
-        b2_branch.add(f"진입가: {block2_seed.entry_close:,.0f}원")
-
-        if hasattr(block2_seed, 'peak_price') and block2_seed.peak_price:
-            gain = (block2_seed.peak_price - block2_seed.entry_close) / block2_seed.entry_close * 100
-            b2_branch.add(f"최고가: {block2_seed.peak_price:,.0f}원 ([green]+{gain:.1f}%[/green])")
-
-        # Block2 재탐지 상세
-        if pattern_id:
-            block2_redetections = block2_repo.find_by_pattern_and_condition(pattern_id, 'redetection')
-            if block2_redetections:
-                redetect_branch = b2_branch.add(f"Block2 재탐지: [cyan]{len(block2_redetections)}개[/cyan]")
-                for idx, redetection in enumerate(block2_redetections, 1):
-                    # 수익률 계산
-                    gain_str = ""
-                    if hasattr(redetection, 'peak_price') and redetection.peak_price and redetection.entry_close:
-                        gain = (redetection.peak_price - redetection.entry_close) / redetection.entry_close * 100
-                        gain_str = f" ([green]+{gain:.1f}%[/green])"
-
-                    # 종료 정보 생성
-                    end_info = redetection.ended_at or '진행중'
-                    if redetection.ended_at and hasattr(redetection, 'exit_reason') and redetection.exit_reason:
-                        end_info = f"{redetection.ended_at} (종료: {redetection.exit_reason})"
-
-                    # 상세 정보
-                    detail = (
-                        f"[{idx}] {redetection.started_at} ~ {end_info} | "
-                        f"{redetection.entry_close:,.0f}원"
-                    )
-                    if hasattr(redetection, 'peak_price') and redetection.peak_price:
-                        detail += f" → {redetection.peak_price:,.0f}원{gain_str}"
-
-                    redetect_branch.add(detail)
-            else:
-                b2_branch.add(f"Block2 재탐지: [cyan]0개[/cyan]")
-
-    # Block3 Seed
-    block3_seed = pattern.get('seed_block3')
-    if block3_seed:
-        # 종료 정보 생성 (ended_at + exit_reason)
-        end_info = block3_seed.ended_at or '진행중'
-        if block3_seed.ended_at and hasattr(block3_seed, 'exit_reason') and block3_seed.exit_reason:
-            end_info = f"{block3_seed.ended_at} (종료: {block3_seed.exit_reason})"
-
-        b3_info = f"[yellow]Block3 Seed[/yellow]: {block3_seed.started_at} ~ {end_info}"
-        b3_branch = tree.add(b3_info)
-        b3_branch.add(f"진입가: {block3_seed.entry_close:,.0f}원")
-
-        if hasattr(block3_seed, 'peak_price') and block3_seed.peak_price:
-            gain = (block3_seed.peak_price - block3_seed.entry_close) / block3_seed.entry_close * 100
-            b3_branch.add(f"최고가: {block3_seed.peak_price:,.0f}원 ([green]+{gain:.1f}%[/green])")
-
-        # Block3 재탐지 상세
-        if pattern_id:
-            block3_redetections = block3_repo.find_by_pattern_and_condition(pattern_id, 'redetection')
-            if block3_redetections:
-                redetect_branch = b3_branch.add(f"Block3 재탐지: [cyan]{len(block3_redetections)}개[/cyan]")
-                for idx, redetection in enumerate(block3_redetections, 1):
-                    # 수익률 계산
-                    gain_str = ""
-                    if hasattr(redetection, 'peak_price') and redetection.peak_price and redetection.entry_close:
-                        gain = (redetection.peak_price - redetection.entry_close) / redetection.entry_close * 100
-                        gain_str = f" ([green]+{gain:.1f}%[/green])"
-
-                    # 종료 정보 생성
-                    end_info = redetection.ended_at or '진행중'
-                    if redetection.ended_at and hasattr(redetection, 'exit_reason') and redetection.exit_reason:
-                        end_info = f"{redetection.ended_at} (종료: {redetection.exit_reason})"
-
-                    # 상세 정보
-                    detail = (
-                        f"[{idx}] {redetection.started_at} ~ {end_info} | "
-                        f"{redetection.entry_close:,.0f}원"
-                    )
-                    if hasattr(redetection, 'peak_price') and redetection.peak_price:
-                        detail += f" → {redetection.peak_price:,.0f}원{gain_str}"
-
-                    redetect_branch.add(detail)
-            else:
-                b3_branch.add(f"Block3 재탐지: [cyan]0개[/cyan]")
-
-    # Block4 Seed (있으면)
-    block4_seed = pattern.get('seed_block4')
-    if block4_seed:
-        # 종료 정보 생성 (ended_at + exit_reason)
-        end_info = block4_seed.ended_at or '진행중'
-        if block4_seed.ended_at and hasattr(block4_seed, 'exit_reason') and block4_seed.exit_reason:
-            end_info = f"{block4_seed.ended_at} (종료: {block4_seed.exit_reason})"
-
-        b4_info = f"[yellow]Block4 Seed[/yellow]: {block4_seed.started_at} ~ {end_info}"
-        b4_branch = tree.add(b4_info)
-        b4_branch.add(f"진입가: {block4_seed.entry_close:,.0f}원")
-
-        if hasattr(block4_seed, 'peak_price') and block4_seed.peak_price:
-            gain = (block4_seed.peak_price - block4_seed.entry_close) / block4_seed.entry_close * 100
-            b4_branch.add(f"최고가: {block4_seed.peak_price:,.0f}원 ([green]+{gain:.1f}%[/green])")
-
-        # Block4 재탐지 상세
-        if pattern_id:
-            block4_redetections = block4_repo.find_by_pattern_and_condition(pattern_id, 'redetection')
-            if block4_redetections:
-                redetect_branch = b4_branch.add(f"Block4 재탐지: [cyan]{len(block4_redetections)}개[/cyan]")
-                for idx, redetection in enumerate(block4_redetections, 1):
-                    # 수익률 계산
-                    gain_str = ""
-                    if hasattr(redetection, 'peak_price') and redetection.peak_price and redetection.entry_close:
-                        gain = (redetection.peak_price - redetection.entry_close) / redetection.entry_close * 100
-                        gain_str = f" ([green]+{gain:.1f}%[/green])"
-
-                    # 종료 정보 생성
-                    end_info = redetection.ended_at or '진행중'
-                    if redetection.ended_at and hasattr(redetection, 'exit_reason') and redetection.exit_reason:
-                        end_info = f"{redetection.ended_at} (종료: {redetection.exit_reason})"
-
-                    # 상세 정보
-                    detail = (
-                        f"[{idx}] {redetection.started_at} ~ {end_info} | "
-                        f"{redetection.entry_close:,.0f}원"
-                    )
-                    if hasattr(redetection, 'peak_price') and redetection.peak_price:
-                        detail += f" → {redetection.peak_price:,.0f}원{gain_str}"
-
-                    redetect_branch.add(detail)
-            else:
-                b4_branch.add(f"Block4 재탐지: [cyan]0개[/cyan]")
-
-    return tree
-
-
-def create_summary_table(patterns: List[Dict], total_stats: Dict) -> Table:
-    """패턴 요약 테이블 생성"""
     table = Table(
-        title="패턴 탐지 요약",
+        title=f"Dynamic Block Detection Results - {ticker}",
         show_header=True,
-        header_style="bold magenta",
-        title_style="bold cyan",
+        header_style="bold cyan",
+        title_style="bold yellow",
         box=box.ROUNDED
     )
-    table.add_column("항목", style="bold cyan", width=20)
-    table.add_column("값", style="bold green", width=30)
 
-    table.add_row("총 패턴 수", f"{len(patterns)}개")
-    table.add_row("Block1 재탐지", f"{total_stats.get('block1_redetections', 0)}개")
-    table.add_row("Block2 재탐지", f"{total_stats.get('block2_redetections', 0)}개")
-    table.add_row("Block3 재탐지", f"{total_stats.get('block3_redetections', 0)}개")
-    table.add_row("Block4 재탐지", f"{total_stats.get('block4_redetections', 0)}개")
+    table.add_column("Block Type", style="cyan", width=12, justify="center")
+    table.add_column("Block ID", style="dim", width=15, justify="left")
+    table.add_column("Started", style="green", width=12, justify="center")
+    table.add_column("Ended", style="yellow", width=12, justify="center")
+    table.add_column("Peak Price", style="magenta", width=12, justify="right")
+    table.add_column("Peak Volume", style="blue", width=14, justify="right")
+    table.add_column("Status", style="bold", width=10, justify="center")
 
-    total_redetections = (
-        total_stats.get('block1_redetections', 0) +
-        total_stats.get('block2_redetections', 0) +
-        total_stats.get('block3_redetections', 0) +
-        total_stats.get('block4_redetections', 0)
-    )
-    table.add_row("총 재탐지", f"[bold]{total_redetections}개[/bold]")
+    # 블록 타입별로 정렬
+    sorted_detections = sorted(detections, key=lambda x: (x.block_type, x.started_at))
+
+    for detection in sorted_detections:
+        block_type_str = f"Block{detection.block_type}"
+        ended_str = str(detection.ended_at) if detection.ended_at else "Active"
+        peak_price_str = f"{detection.peak_price:,.0f}원" if detection.peak_price else "-"
+        peak_volume_str = f"{detection.peak_volume:,}" if detection.peak_volume else "-"
+
+        status_style = "green" if detection.status.value == "completed" else "yellow"
+        status_str = f"[{status_style}]{detection.status.value.upper()}[/{status_style}]"
+
+        table.add_row(
+            block_type_str,
+            detection.block_id,
+            str(detection.started_at) if detection.started_at else "-",
+            ended_str,
+            peak_price_str,
+            peak_volume_str,
+            status_str
+        )
 
     return table
 
 
-def detect_patterns_for_ticker(
+def create_summary_panel(
     ticker: str,
-    db: DatabaseConnection,
-    stock_repo: SqliteStockRepository,
-    seed_repo: SeedConditionPresetRepository,
-    redetect_repo: RedetectionConditionPresetRepository,
-    fromdate: date = None,
-    todate: date = None,
-    seed_preset: str = 'default_seed',
-    redetect_preset: str = 'default_redetect',
-    dry_run: bool = False,
-    verbose: bool = False
-) -> Dict:
+    config_path: str,
+    from_date: date,
+    to_date: date,
+    total_blocks: int,
+    by_type: dict,
+    elapsed_seconds: float
+) -> Panel:
     """
-    단일 종목에 대한 패턴 탐지 실행
+    요약 패널 생성
 
     Args:
         ticker: 종목 코드
-        db: 데이터베이스 연결
-        stock_repo: 주식 데이터 Repository
-        seed_repo: Seed 조건 프리셋 Repository
-        redetect_repo: 재탐지 조건 프리셋 Repository
-        fromdate: 시작 날짜 (None이면 전체)
-        todate: 종료 날짜 (None이면 전체)
-        seed_preset: Seed 프리셋 이름
-        redetect_preset: 재탐지 프리셋 이름
-        dry_run: True면 데이터베이스에 저장 안 함
-        verbose: 상세 출력 여부
+        config_path: YAML 설정 파일 경로
+        from_date: 시작 날짜
+        to_date: 종료 날짜
+        total_blocks: 총 탐지된 블록 수
+        by_type: 블록 타입별 개수 딕셔너리
+        elapsed_seconds: 소요 시간(초)
 
     Returns:
-        탐지 결과 딕셔너리
+        Panel: 요약 패널
     """
-    console.print(f"\n[bold cyan]{'=' * 80}[/bold cyan]")
-    console.print(f"[bold cyan]종목 {ticker} 패턴 탐지[/bold cyan]")
-    console.print(f"[bold cyan]{'=' * 80}[/bold cyan]\n")
+    by_type_str = ", ".join([f"Block{k}: {v}" for k, v in sorted(by_type.items())])
 
-    # 1. 데이터 로드
-    logger.info(f"종목 {ticker} 데이터 로드 시작")
-    console.print("[cyan]1. 종목 데이터 로드...[/cyan]")
+    content = (
+        f"[bold cyan]Ticker:[/bold cyan] {ticker}\n"
+        f"[bold cyan]Config:[/bold cyan] {config_path}\n"
+        f"[bold cyan]Period:[/bold cyan] {from_date} ~ {to_date}\n\n"
+        f"[bold green]Total Blocks Detected:[/bold green] {total_blocks}\n"
+        f"[bold yellow]By Type:[/bold yellow] {by_type_str}\n\n"
+        f"[bold magenta]Elapsed Time:[/bold magenta] {elapsed_seconds:.2f}s"
+    )
 
-    # 날짜 범위 자동 감지
-    if fromdate is None or todate is None:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console
-        ) as progress:
-            task = progress.add_task(f"   {ticker} 데이터 조회 중...", total=None)
+    return Panel(
+        content,
+        title="[bold yellow]Detection Summary[/bold yellow]",
+        border_style="yellow",
+        box=box.DOUBLE
+    )
 
-            # 전체 데이터 로드 (날짜 자동 감지)
-            stocks = stock_repo.get_stock_data(ticker, date(2015, 1, 1), date.today())
 
-            if stocks:
-                actual_fromdate = stocks[0].date
-                actual_todate = stocks[-1].date
-                logger.success(f"{ticker}: {len(stocks):,}건 로드 완료 ({actual_fromdate} ~ {actual_todate})")
-                console.print(f"   [green]OK[/green] {ticker}: {len(stocks):,}건 ({actual_fromdate} ~ {actual_todate})")
+def detect_patterns_for_ticker(
+    ticker: str,
+    config_path: str,
+    from_date: date,
+    to_date: date,
+    db_path: str,
+    verbose: bool = False,
+    dry_run: bool = False
+) -> List[DynamicBlockDetection]:
+    """
+    단일 종목에 대한 블록 패턴 탐지
+
+    Args:
+        ticker: 종목 코드
+        config_path: YAML 설정 파일 경로
+        from_date: 시작 날짜
+        to_date: 종료 날짜
+        db_path: 데이터베이스 파일 경로
+        verbose: 상세 출력 여부
+        dry_run: 저장하지 않고 미리보기만
+
+    Returns:
+        List[DynamicBlockDetection]: 탐지된 블록 리스트
+    """
+    start_time = datetime.now()
+
+    console.print(f"\n[bold cyan]{'='*SEPARATOR_WIDTH}[/bold cyan]")
+    console.print(f"[bold cyan]Dynamic Block Detection - {ticker}[/bold cyan]")
+    console.print(f"[bold cyan]{'='*SEPARATOR_WIDTH}[/bold cyan]\n")
+
+    # 1. YAML 로드
+    console.print("[cyan]1. Loading BlockGraph from YAML...[/cyan]")
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console
+    ) as progress:
+        task = progress.add_task(f"   Loading {config_path}...", total=None)
+
+        try:
+            loader = BlockGraphLoader()
+            block_graph = loader.load_from_file(config_path)
+            progress.update(task, completed=True)
+
+            if verbose:
+                console.print(f"   [green]OK[/green] Loaded {len(block_graph.nodes)} nodes, {len(block_graph.edges)} edges\n")
             else:
-                logger.error(f"{ticker}: 데이터 없음")
-                console.print(f"   [red]ERROR[/red] {ticker}: 데이터 없음")
-                return None
-    else:
-        stocks = stock_repo.get_stock_data(ticker, fromdate, todate)
-        console.print(f"   [green]OK[/green] {ticker}: {len(stocks):,}건 ({fromdate} ~ {todate})")
+                console.print(f"   [green]OK[/green] BlockGraph loaded\n")
+        except Exception as e:
+            console.print(f"   [red]ERROR[/red] Failed to load YAML: {e}\n")
+            raise
+
+    # 2. 데이터베이스 연결
+    console.print("[cyan]2. Connecting to database...[/cyan]")
+    db = get_db_connection(db_path)
+    session = db.get_session()
+    console.print(f"   [green]OK[/green] Connected to {db_path}\n")
+
+    # 3. 주가 데이터 로드
+    console.print("[cyan]3. Loading stock data...[/cyan]")
+    stock_repo = SqliteStockRepository()
+    stocks = stock_repo.get_stock_data(
+        ticker=ticker,
+        start_date=from_date,
+        end_date=to_date
+    )
 
     if not stocks:
-        console.print(f"   [yellow]WARNING[/yellow] {ticker}: 수집된 데이터가 없습니다.\n")
-        return None
+        console.print(f"   [red]ERROR[/red] No stock data found for {ticker}\n")
+        return []
 
-    # 2. 프리셋 로드
-    logger.info("프리셋 로드 중...")
-    console.print(f"\n[cyan]2. 프리셋 로드...[/cyan]")
-    seed_condition = seed_repo.load(seed_preset)
-    redetect_condition = redetect_repo.load(redetect_preset)
+    if verbose:
+        console.print(f"   [green]OK[/green] Loaded {len(stocks)} price records ({stocks[0].date} ~ {stocks[-1].date})\n")
+    else:
+        console.print(f"   [green]OK[/green] Loaded {len(stocks)} records\n")
 
-    if not seed_condition or not redetect_condition:
-        logger.error(f"프리셋을 찾을 수 없습니다: Seed={seed_preset}, Redetect={redetect_preset}")
-        console.print(f"   [red]ERROR[/red] 프리셋을 찾을 수 없습니다.")
-        console.print(f"   - Seed: {seed_preset}")
-        console.print(f"   - Redetect: {redetect_preset}\n")
-        return None
+    # 3.5. 지표 계산 (365일 신고가 등)
+    console.print("[cyan]3.5. Calculating indicators...[/cyan]")
+    indicator_calculator = Block1IndicatorCalculator()
+    stocks = indicator_calculator.calculate(
+        stocks=stocks,
+        new_high_days=365  # 365일 신고가 계산
+    )
+    console.print(f"   [green]OK[/green] Indicators calculated\n")
 
-    logger.success(f"프리셋 로드 완료: {seed_preset} / {redetect_preset}")
-    console.print(f"   [green]OK[/green] Seed 조건: {seed_preset}")
-    console.print(f"   [green]OK[/green] 재탐지 조건: {redetect_preset}")
+    # 4. 블록 탐지
+    console.print("[cyan]4. Detecting blocks...[/cyan]")
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console
+    ) as progress:
+        task = progress.add_task("   Running detection...", total=None)
 
-    # 3. 패턴 탐지 실행
-    logger.info("패턴 탐지 시작...")
-    console.print(f"\n[cyan]3. 패턴 탐지 실행...[/cyan]")
-    console.print(f"   (Block1/2/3/4 Seed + 5년 재탐지)\n")
+        try:
+            expression_engine = ExpressionEngine(function_registry)
+            detector = DynamicBlockDetector(block_graph, expression_engine)
 
-    use_case = DetectPatternsUseCase(db)
-
-    # DetectPatternsUseCase의 출력을 캡처
-    import io
-    from contextlib import redirect_stdout
-
-    if not verbose:
-        # verbose 모드가 아니면 Use Case 출력 숨기기
-        f = io.StringIO()
-        with redirect_stdout(f):
-            result = use_case.execute(
+            detections = detector.detect_blocks(
                 ticker=ticker,
                 stocks=stocks,
-                seed_condition=seed_condition,
-                redetection_condition=redetect_condition
+                condition_name="seed"
             )
-    else:
-        # verbose 모드면 모든 출력 표시
-        result = use_case.execute(
+
+            progress.update(task, completed=True)
+            console.print(f"   [green]OK[/green] Detected {len(detections)} blocks\n")
+        except Exception as e:
+            console.print(f"   [red]ERROR[/red] Detection failed: {e}\n")
+            raise
+
+    # 5. 데이터베이스 저장 (dry-run이 아닌 경우)
+    if not dry_run and detections:
+        console.print("[cyan]5. Saving to database...[/cyan]")
+        try:
+            repo = DynamicBlockRepositoryImpl(session)
+            saved_detections = repo.save_all(detections)
+            console.print(f"   [green]OK[/green] Saved {len(saved_detections)} blocks to dynamic_block_detection\n")
+        except Exception as e:
+            console.print(f"   [red]ERROR[/red] Save failed: {e}\n")
+            raise
+    elif dry_run:
+        console.print("[yellow]5. Skipping save (dry-run mode)[/yellow]\n")
+
+    # 6. 결과 출력
+    end_time = datetime.now()
+    elapsed = (end_time - start_time).total_seconds()
+
+    if detections:
+        # 타입별 집계
+        by_type = {}
+        for detection in detections:
+            by_type[detection.block_type] = by_type.get(detection.block_type, 0) + 1
+
+        # 요약 패널
+        summary_panel = create_summary_panel(
             ticker=ticker,
-            stocks=stocks,
-            seed_condition=seed_condition,
-            redetection_condition=redetect_condition
+            config_path=config_path,
+            from_date=from_date,
+            to_date=to_date,
+            total_blocks=len(detections),
+            by_type=by_type,
+            elapsed_seconds=elapsed
         )
+        console.print(summary_panel)
+        console.print()
 
-    return result
+        # 상세 테이블
+        results_table = create_results_table(detections, ticker)
+        console.print(results_table)
+        console.print()
+    else:
+        console.print("[yellow]No blocks detected.[/yellow]\n")
+
+    session.close()
+    return detections
 
 
-def main():
+def main() -> None:
     """CLI 진입점"""
     parser = argparse.ArgumentParser(
-        description="블록 패턴 탐지 스크립트",
+        description="YAML 기반 동적 블록 패턴 탐지",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 예시:
-  # 기본: 아난티(025980) 전체 기간 탐지
-  uv run python scripts/detect_patterns.py --ticker 025980
+  # 기본 사용법
+  python detect_patterns.py --ticker 025980 --config presets/examples/extended_pattern_example.yaml
 
   # 다중 종목
-  uv run python scripts/detect_patterns.py --ticker 025980,005930,035720
+  python detect_patterns.py --ticker 025980,005930 --config presets/examples/extended_pattern_example.yaml
 
   # 기간 지정
-  uv run python scripts/detect_patterns.py --ticker 025980 --from-date 2020-01-01
-
-  # 다른 프리셋 사용
-  uv run python scripts/detect_patterns.py --ticker 025980 --seed-preset strict_seed
+  python detect_patterns.py --ticker 025980 --config presets/examples/extended_pattern_example.yaml --from-date 2020-01-01
 
   # 상세 출력
-  uv run python scripts/detect_patterns.py --ticker 025980 --verbose
+  python detect_patterns.py --ticker 025980 --config presets/examples/extended_pattern_example.yaml --verbose
 
-  # 미리보기만 (저장 안 함)
-  uv run python scripts/detect_patterns.py --ticker 025980 --dry-run
+  # 미리보기 (저장 안 함)
+  python detect_patterns.py --ticker 025980 --config presets/examples/simple_pattern_example.yaml --dry-run
         """
     )
 
@@ -577,174 +375,104 @@ def main():
         "--ticker",
         type=str,
         required=True,
-        help="종목 코드 (예: 025980) 또는 쉼표로 구분된 여러 종목 (예: 025980,005930)"
+        help="종목 코드 (쉼표로 구분, 예: 025980,005930)"
+    )
+
+    parser.add_argument(
+        "--config",
+        type=str,
+        required=True,
+        help="YAML 설정 파일 경로 (예: presets/examples/extended_pattern_example.yaml)"
     )
 
     parser.add_argument(
         "--from-date",
         type=str,
         default=None,
-        help="시작 날짜 (YYYY-MM-DD, 기본값: DB의 최초 날짜)"
+        help=f"시작 날짜 (YYYY-MM-DD, 기본값: {DEFAULT_FROM_DATE})"
     )
 
     parser.add_argument(
         "--to-date",
         type=str,
         default=None,
-        help="종료 날짜 (YYYY-MM-DD, 기본값: DB의 최신 날짜)"
-    )
-
-    parser.add_argument(
-        "--seed-preset",
-        type=str,
-        default="default_seed",
-        help="Seed 조건 프리셋 이름 (기본값: default_seed)"
-    )
-
-    parser.add_argument(
-        "--redetect-preset",
-        type=str,
-        default="default_redetect",
-        help="재탐지 조건 프리셋 이름 (기본값: default_redetect)"
-    )
-
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="데이터베이스에 저장하지 않고 미리보기만 (현재 미구현)"
+        help="종료 날짜 (YYYY-MM-DD, 기본값: 오늘)"
     )
 
     parser.add_argument(
         "--verbose",
         action="store_true",
-        help="상세 출력 모드 (Use Case 내부 로그 표시)"
+        help="상세 출력"
+    )
+
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="미리보기만 (저장 안 함)"
     )
 
     parser.add_argument(
         "--db",
         type=str,
-        default="data/database/stock_data.db",
-        help="데이터베이스 파일 경로 (기본값: data/database/stock_data.db)"
+        default=DEFAULT_DB_PATH,
+        help=f"데이터베이스 파일 경로 (기본값: {DEFAULT_DB_PATH})"
     )
 
     args = parser.parse_args()
 
     # 날짜 파싱
-    fromdate = None
-    todate = None
-
     if args.from_date:
         try:
-            fromdate = datetime.strptime(args.from_date, "%Y-%m-%d").date()
+            from_date = datetime.strptime(args.from_date, "%Y-%m-%d").date()
         except ValueError:
             console.print(f"[red]에러:[/red] 잘못된 시작 날짜 형식: {args.from_date}")
             sys.exit(1)
+    else:
+        from_date = DEFAULT_FROM_DATE
 
     if args.to_date:
         try:
-            todate = datetime.strptime(args.to_date, "%Y-%m-%d").date()
+            to_date = datetime.strptime(args.to_date, "%Y-%m-%d").date()
         except ValueError:
             console.print(f"[red]에러:[/red] 잘못된 종료 날짜 형식: {args.to_date}")
             sys.exit(1)
+    else:
+        to_date = date.today()
 
-    # 종목 코드 파싱 (쉼표로 구분)
+    # YAML 파일 존재 확인
+    config_path = Path(args.config)
+    if not config_path.exists():
+        console.print(f"[red]에러:[/red] YAML 파일을 찾을 수 없습니다: {args.config}")
+        sys.exit(1)
+
+    # 종목 코드 파싱
     tickers = [t.strip() for t in args.ticker.split(',')]
 
-    console.print("\n" + "=" * 80)
-    console.print("[bold cyan]블록 패턴 탐지 시작[/bold cyan]")
-    console.print("=" * 80 + "\n")
-
-    # DB 연결
-    logger.info("데이터베이스 연결 중...")
-    console.print("[cyan]데이터베이스 연결...[/cyan]")
-    db = get_db_connection(args.db)
-    logger.success(f"DB 연결 완료: {args.db}")
-    console.print(f"   [green]OK[/green] DB 연결 완료: {args.db}\n")
-
-    # Repository 초기화
-    stock_repo = SqliteStockRepository(args.db)
-    seed_repo = SeedConditionPresetRepository(db)
-    redetect_repo = RedetectionConditionPresetRepository(db)
-    block1_repo = Block1Repository(db)
-    block2_repo = Block2Repository(db)
-    block3_repo = Block3Repository(db)
-    block4_repo = Block4Repository(db)
-
-    # 각 종목별로 탐지 실행
-    all_results = {}
-
-    for ticker in tickers:
-        try:
-            result = detect_patterns_for_ticker(
+    # 각 종목별 탐지 실행
+    try:
+        for ticker in tickers:
+            detect_patterns_for_ticker(
                 ticker=ticker,
-                db=db,
-                stock_repo=stock_repo,
-                seed_repo=seed_repo,
-                redetect_repo=redetect_repo,
-                fromdate=fromdate,
-                todate=todate,
-                seed_preset=args.seed_preset,
-                redetect_preset=args.redetect_preset,
-                dry_run=args.dry_run,
-                verbose=args.verbose
+                config_path=str(config_path),
+                from_date=from_date,
+                to_date=to_date,
+                db_path=args.db,
+                verbose=args.verbose,
+                dry_run=args.dry_run
             )
 
-            if result:
-                all_results[ticker] = result
+            # 다음 종목 전에 구분선
+            if len(tickers) > 1:
+                console.print("\n" + "="*SEPARATOR_WIDTH + "\n")
 
-        except KeyboardInterrupt:
-            console.print("\n[yellow]사용자에 의해 중단되었습니다.[/yellow]")
-            sys.exit(130)
-
-        except Exception as e:
-            console.print(f"\n[red]{ticker} 탐지 중 에러 발생:[/red] {e}")
-            if args.verbose:
-                import traceback
-                console.print(traceback.format_exc())
-            continue
-
-    # 결과 출력
-    console.print("\n" + "=" * 80)
-    console.print("[bold cyan]탐지 결과[/bold cyan]")
-    console.print("=" * 80 + "\n")
-
-    if not all_results:
-        console.print("[yellow]탐지된 패턴이 없습니다.[/yellow]")
-        return
-
-    # 각 종목별 결과 출력
-    for ticker, result in all_results.items():
-        patterns = result.get('patterns', [])
-        total_stats = result.get('total_stats', {})
-
-        if not patterns:
-            console.print(f"[yellow]{ticker}: 탐지된 패턴 없음[/yellow]\n")
-            continue
-
-        # 요약 테이블
-        summary_table = create_summary_table(patterns, total_stats)
-        console.print(summary_table)
-        console.print()
-
-        # 각 패턴 상세
-        for idx, pattern in enumerate(patterns, 1):
-            pattern_tree = create_pattern_tree(
-                pattern, idx, block1_repo, block2_repo, block3_repo, block4_repo
-            )
-            console.print(pattern_tree)
-            console.print()
-
-    # 최종 요약
-    total_patterns = sum(len(r.get('patterns', [])) for r in all_results.values())
-
-    console.print("=" * 80)
-    console.print(Panel(
-        f"[bold green]탐지 완료![/bold green]\n"
-        f"종목 수: {len(all_results)}개\n"
-        f"총 패턴: {total_patterns}개",
-        title="완료",
-        border_style="green"
-    ))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]사용자에 의해 중단되었습니다.[/yellow]")
+        sys.exit(130)
+    except Exception as e:
+        console.print(f"\n[red]에러 발생:[/red] {e}")
+        import traceback
+        console.print(traceback.format_exc())
+        sys.exit(1)
 
 
 if __name__ == "__main__":

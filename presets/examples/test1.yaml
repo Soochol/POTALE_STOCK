@@ -1,0 +1,55 @@
+# test1.yaml - 사용자 정의 블록 패턴
+#
+# Block1: 거래대금 300억 + 거래량 12개월 신고가 패턴
+#
+# 진입 조건:
+# - 거래대금 300억원 이상
+# - 거래량 12개월(365일) 신고가
+#
+# 종료 조건:
+# - 저가가 60일 이동평균 아래로 터치
+
+version: "1.0"
+
+block_graph:
+  # 시작 블록
+  root_node: "block1"
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 블록 노드 정의
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  nodes:
+    # ═══════════════════════════════════════════════════════
+    # Block 1 - 대량 거래대금 + 거래량 급등
+    # ═══════════════════════════════════════════════════════
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "High Trading Value with Volume Surge"
+      description: "거래대금 300억 이상 + 거래량 12개월 신고가 패턴"
+
+      # 진입 조건 (AND 조건: 모두 만족해야 함)
+      entry_conditions:
+        - name: "trading_value_threshold"
+          expression: "current.trading_value >= 30000000000"
+          description: "거래대금 300억원 이상"
+
+        - name: "volume_yearly_high"
+          expression: "is_volume_high(365)"
+          description: "거래량 12개월(365일) 신고가"
+
+      # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
+      exit_conditions:
+        - name: "low_below_ma60"
+          expression: "current.low < ma(60)"
+          description: "저가가 60일 이동평균 아래로 터치"
+
+      # 블록 파라미터
+      parameters:
+        min_duration_candles: 1
+        max_duration_candles: 100
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 블록 간 관계 (엣지)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  edges: []  # 단일 블록, 전이 없음

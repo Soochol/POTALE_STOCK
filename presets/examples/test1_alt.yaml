@@ -1,0 +1,119 @@
+# test1_alt.yaml - 블록 전이 패턴 (Block1 → Block2)
+#
+# Block1: 거래대금 300억 + 거래량 급등 패턴
+# Block2: 거래대금 500억 + 거래량 더 강한 급등 패턴
+#
+# 주요 특징:
+# - Block2가 시작되면 Block1은 자동 종료 (EXISTS 함수 사용)
+# - 순차적 패턴 감지 (Block1 → Block2)
+#
+# Block1 진입 조건:
+# - 거래대금 300억원 이상
+# - 거래량이 120일 평균 대비 2.5배 이상
+#
+# Block1 종료 조건:
+# - 저가가 60일 이동평균 아래로 터치
+# - Block2가 시작되면 자동 종료 ⭐
+#
+# Block2 진입 조건:
+# - 거래대금 500억원 이상 (Block1보다 높음)
+# - 거래량이 120일 평균 대비 3.0배 이상 (Block1보다 강함)
+#
+# Block2 종료 조건:
+# - 저가가 60일 이동평균 아래로 터치
+
+version: "1.0"
+
+block_graph:
+  # 시작 블록
+  root_node: "block1"
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 블록 노드 정의
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  nodes:
+    # ═══════════════════════════════════════════════════════
+    # Block 1 - 대량 거래대금 + 거래량 급등
+    # ═══════════════════════════════════════════════════════
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "High Trading Value with Volume Surge"
+      description: "거래대금 300억 이상 + 거래량 급등 패턴"
+
+      # 진입 조건 (AND 조건: 모두 만족해야 함)
+      entry_conditions:
+        - name: "trading_value_threshold"
+          expression: "(current.close * current.volume) >= 30000000000"
+          description: "거래대금 300억원 이상"
+
+        - name: "volume_surge"
+          expression: "current.volume >= volume_ma(120) * 2.5"
+          description: "거래량이 120일 평균 대비 2.5배 이상"
+
+        - name: "high_surge_rate"
+          expression: "prev and ((current.high - prev.close) / prev.close * 100) >= 10.0"
+          description: "고가 등락률 (전일 종가 대비) 10% 이상"
+
+      # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
+      exit_conditions:
+        - name: "low_below_ma60"
+          expression: "current.low < ma(60)"
+          description: "저가가 60일 이동평균 아래로 터치"
+
+        - name: "block2_started"
+          expression: "EXISTS('block2')"
+          description: "Block2가 시작되면 Block1 자동 종료"
+
+      # 블록 파라미터
+      parameters:
+        min_duration_candles: 1
+        max_duration_candles: 100
+
+    # ═══════════════════════════════════════════════════════
+    # Block 2 - 더 강한 거래대금 + 거래량 폭발
+    # ═══════════════════════════════════════════════════════
+    block2:
+      block_id: "block2"
+      block_type: 2
+      name: "Super Surge with Ultra High Trading Value"
+      description: "거래대금 1000억 이상 + 전일 대비 3배 + 365일 신고가 + Block1 초과 (극강 조건)"
+
+      # 진입 조건 (AND 조건: 모두 만족해야 함)
+      entry_conditions:
+        - name: "ultra_high_trading_value"
+          expression: "(current.close * current.volume) >= 100000000000"
+          description: "거래대금 1000억원 이상"
+
+        - name: "volume_surge_vs_prev"
+          expression: "current.volume >= last_valid_volume() * 3.0"
+          description: "직전 정상 거래일 대비 거래량 3배 이상 (300% 증가)"
+
+        - name: "price_yearly_high"
+          expression: "is_new_high(365)"
+          description: "가격 365일 신고가"
+
+        - name: "volume_exceeds_block1_peak"
+          expression: "EXISTS('block1') and block1.peak_volume and current.volume > block1.peak_volume"
+          description: "Block1 최고 거래량보다 큼"
+
+      # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
+      exit_conditions:
+        - name: "low_below_ma60"
+          expression: "current.low < ma(60)"
+          description: "저가가 60일 이동평균 아래로 터치"
+
+      # 블록 파라미터
+      parameters:
+        min_duration_candles: 1
+        max_duration_candles: 100
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 블록 간 관계 (엣지)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  edges:
+    - from_block: "block1"
+      to_block: "block2"
+      edge_type: "sequential"
+      priority: 1
+      description: "Block1에서 Block2로 전이 (더 강한 급등 시)"

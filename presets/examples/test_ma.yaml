@@ -1,0 +1,27 @@
+version: "1.0"
+
+block_graph:
+  root_node: "block1"
+
+  nodes:
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "MA Function Test"
+      description: "ma() 함수 테스트"
+
+      entry_conditions:
+        - name: "ma_breakout"
+          expression: "current.close >= ma(20)"
+          description: "종가가 20일 이동평균 이상"
+
+      exit_conditions:
+        - name: "ma_breakdown"
+          expression: "current.close < ma(60)"
+          description: "종가가 60일 이동평균 미만"
+
+      parameters:
+        min_duration_candles: 1
+        max_duration_candles: 10
+
+  edges: []
