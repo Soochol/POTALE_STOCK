@@ -101,7 +101,9 @@
       "Bash(if not exist docsarchivelegacy_codedomainentitiesconditions mkdir docsarchivelegacy_codedomainentitiesconditions)",
       "Bash(if not exist docsarchivelegacy_codedomainrepositories mkdir docsarchivelegacy_codedomainrepositories)",
       "Bash(if not exist docsarchivelegacy_codeinfrastructurecollectors mkdir docsarchivelegacy_codeinfrastructurecollectors)",
-      "Bash(if not exist docsarchivelegacy_codeinfrastructurerepositoriescondition mkdir docsarchivelegacy_codeinfrastructurerepositoriescondition)"
+      "Bash(if not exist docsarchivelegacy_codeinfrastructurerepositoriescondition mkdir docsarchivelegacy_codeinfrastructurerepositoriescondition)",
+      "Bash(find:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
