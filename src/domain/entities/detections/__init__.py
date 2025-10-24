@@ -9,6 +9,7 @@ from .block3_detection import Block3Detection
 from .block4_detection import Block4Detection
 from .block5_detection import Block5Detection
 from .block6_detection import Block6Detection
+from .dynamic_block_detection import DynamicBlockDetection, BlockStatus
 
 __all__ = [
     'BaseBlockDetection',
@@ -18,4 +19,6 @@ __all__ = [
     'Block4Detection',
     'Block5Detection',
     'Block6Detection',
+    'DynamicBlockDetection',
+    'BlockStatus',
 ]

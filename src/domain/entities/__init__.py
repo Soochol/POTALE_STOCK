@@ -18,6 +18,8 @@ from .detections import (
     Block4Detection,
     Block5Detection,
     Block6Detection,
+    DynamicBlockDetection,
+    BlockStatus,
 )
 
 # Condition entities (Dynamic System)
@@ -55,6 +57,8 @@ __all__ = [
     'Block4Detection',
     'Block5Detection',
     'Block6Detection',
+    'DynamicBlockDetection',
+    'BlockStatus',
 
     # Conditions (Dynamic System)
     'ExpressionEngine',
