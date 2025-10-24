@@ -1,7 +1,7 @@
 """
 Pattern Seed Detector Service
 
-Block1/2/3/4 Seed 탐지 서비스
+Block1/2/3/4/5/6 Seed 탐지 서비스
 """
 from typing import List, Optional
 from datetime import date, timedelta
@@ -14,11 +14,15 @@ from src.domain.entities import (
     Block2Detection,
     Block3Detection,
     Block4Detection,
+    Block5Detection,
+    Block6Detection,
 )
 from src.application.services.checkers.block1_checker import Block1Checker
 from src.application.services.checkers.block2_checker import Block2Checker
 from src.application.services.checkers.block3_checker import Block3Checker
 from src.application.services.checkers.block4_checker import Block4Checker
+from src.application.services.checkers.block5_checker import Block5Checker
+from src.application.services.checkers.block6_checker import Block6Checker
 
 class PatternSeedDetector:
     """
@@ -29,6 +33,8 @@ class PatternSeedDetector:
     - Block2 Seed: Block1 이후 첫 번째만
     - Block3 Seed: Block2 이후 첫 번째만
     - Block4 Seed: Block3 이후 첫 번째만
+    - Block5 Seed: Block4 이후 첫 번째만
+    - Block6 Seed: Block5 이후 첫 번째만
     """
 
     def __init__(self):
@@ -36,6 +42,8 @@ class PatternSeedDetector:
         self.block2_checker = Block2Checker()
         self.block3_checker = Block3Checker()
         self.block4_checker = Block4Checker()
+        self.block5_checker = Block5Checker()
+        self.block6_checker = Block6Checker()
 
     def _create_base_for_block(
         self,
@@ -448,5 +456,268 @@ class PatternSeedDetector:
                 )
 
                 return block4  # 첫 번째만!
+
+        return None
+    def find_first_block5_after_block4(
+        self,
+        block1: Block1Detection,
+        block2: Block2Detection,
+        block3: Block3Detection,
+        block4: Block4Detection,
+        stocks: List[Stock],
+        condition: SeedCondition
+    ) -> Optional[Block5Detection]:
+        """
+        Block4 이후 첫 번째 Block5 Seed 찾기
+
+        Args:
+            block1: Block1 Seed (Block2 volume_ratio 체크용)
+            block2: Block2 Seed (Block3 volume_ratio 체크용)
+            block3: Block3 Seed (Block4 volume_ratio 체크용)
+            block4: Block4 Seed (Block5 volume_ratio 체크용)
+            stocks: 주식 데이터 리스트
+            condition: Seed 조건
+
+        Returns:
+            Block5 Seed 또는 None
+        """
+        from src.domain.entities.conditions.block_conditions import Block5Condition
+
+        # Block4 종료일 이후부터 검색
+        start_search_date = block4.ended_at if block4.ended_at else block4.started_at + timedelta(days=1)
+
+        # Block5Condition 생성
+        block5_condition = Block5Condition(
+            base=self._create_base_for_block(condition, 5),
+            # Block2 추가 조건
+            block2_volume_ratio=condition.block2_volume_ratio,
+            block2_low_price_margin=condition.block2_low_price_margin,
+            block2_min_candles_from_block=condition.block2_min_candles_from_block,
+            block2_max_candles_from_block=condition.block2_max_candles_from_block,
+            block2_lookback_min_candles=condition.block2_lookback_min_candles,
+            block2_lookback_max_candles=condition.block2_lookback_max_candles,
+            # Block3 추가 조건
+            block3_volume_ratio=condition.block3_volume_ratio,
+            block3_low_price_margin=condition.block3_low_price_margin,
+            block3_min_candles_from_block=condition.block3_min_candles_from_block,
+            block3_max_candles_from_block=condition.block3_max_candles_from_block,
+            block3_lookback_min_candles=condition.block3_lookback_min_candles,
+            block3_lookback_max_candles=condition.block3_lookback_max_candles,
+            # Block4 추가 조건
+            block4_volume_ratio=condition.block4_volume_ratio,
+            block4_low_price_margin=condition.block4_low_price_margin,
+            block4_min_candles_from_block=condition.block4_min_candles_from_block,
+            block4_max_candles_from_block=condition.block4_max_candles_from_block,
+            block4_lookback_min_candles=condition.block4_lookback_min_candles,
+            block4_lookback_max_candles=condition.block4_lookback_max_candles,
+            # Block5 추가 조건
+            block5_volume_ratio=condition.block5_volume_ratio,
+            block5_low_price_margin=condition.block5_low_price_margin,
+            block5_min_candles_from_block=condition.block5_min_candles_from_block,
+            block5_max_candles_from_block=condition.block5_max_candles_from_block,
+            block5_lookback_min_candles=condition.block5_lookback_min_candles,
+            block5_lookback_max_candles=condition.block5_lookback_max_candles
+        )
+
+        # Block4 이후 데이터만 필터링
+        stocks_after = [s for s in stocks if s.date >= start_search_date]
+
+        for i, stock in enumerate(stocks_after):
+            # Block5 조건 체크
+            if not self.block5_checker.check_entry(
+                condition=block5_condition,
+                stock=stock,
+                all_stocks=stocks,
+                prev_seed_block1=block1,
+                prev_seed_block2=block2,
+                prev_seed_block3=block3,
+                prev_seed_block4=block4
+            ):
+                continue
+
+            # 최소/최대 캔들 수 검사 (선택적)
+            if block5_condition.block5_min_candles_from_block is not None:
+                if not self.block5_checker.check_min_candles(
+                    stock.date,
+                    block4,
+                    block5_condition.block5_min_candles_from_block,
+                    stocks
+                ):
+                    continue
+
+            if block5_condition.block5_max_candles_from_block is not None:
+                if not self.block5_checker.check_max_candles(
+                    stock.date,
+                    block4,
+                    block5_condition.block5_max_candles_from_block,
+                    stocks
+                ):
+                    continue
+
+            # Lookback 윈도우 검사
+            if not self.block5_checker.check_lookback_window(
+                stock.date,
+                block4,
+                block5_condition.block5_lookback_min_candles,
+                block5_condition.block5_lookback_max_candles,
+                stocks
+            ):
+                continue
+
+            # 모든 조건 통과 → Block5 Detection 생성
+            indicators = stock.indicators if hasattr(stock, 'indicators') else {}
+            block5 = Block5Detection(
+                block5_id=None,
+                ticker=stock.ticker,
+                started_at=stock.date,
+                ended_at=None,
+                entry_close=stock.close,
+                entry_rate=indicators.get('rate'),
+                prev_block_id=block4.block4_id,
+                prev_block_peak_price=block4.peak_price,
+                peak_price=stock.high,
+                peak_date=stock.date,
+                peak_volume=stock.volume,
+                condition_name="seed"
+            )
+
+            return block5  # 첫 번째만!
+
+        return None
+
+    def find_first_block6_after_block5(
+        self,
+        block1: Block1Detection,
+        block2: Block2Detection,
+        block3: Block3Detection,
+        block4: Block4Detection,
+        block5: Block5Detection,
+        stocks: List[Stock],
+        condition: SeedCondition
+    ) -> Optional[Block6Detection]:
+        """
+        Block5 이후 첫 번째 Block6 Seed 찾기
+
+        Args:
+            block1: Block1 Seed (Block2 volume_ratio 체크용)
+            block2: Block2 Seed (Block3 volume_ratio 체크용)
+            block3: Block3 Seed (Block4 volume_ratio 체크용)
+            block4: Block4 Seed (Block5 volume_ratio 체크용)
+            block5: Block5 Seed (Block6 volume_ratio 체크용)
+            stocks: 주식 데이터 리스트
+            condition: Seed 조건
+
+        Returns:
+            Block6 Seed 또는 None
+        """
+        from src.domain.entities.conditions.block_conditions import Block6Condition
+
+        # Block5 종료일 이후부터 검색
+        start_search_date = block5.ended_at if block5.ended_at else block5.started_at + timedelta(days=1)
+
+        # Block6Condition 생성
+        block6_condition = Block6Condition(
+            base=self._create_base_for_block(condition, 6),
+            # Block2 추가 조건
+            block2_volume_ratio=condition.block2_volume_ratio,
+            block2_low_price_margin=condition.block2_low_price_margin,
+            block2_min_candles_from_block=condition.block2_min_candles_from_block,
+            block2_max_candles_from_block=condition.block2_max_candles_from_block,
+            block2_lookback_min_candles=condition.block2_lookback_min_candles,
+            block2_lookback_max_candles=condition.block2_lookback_max_candles,
+            # Block3 추가 조건
+            block3_volume_ratio=condition.block3_volume_ratio,
+            block3_low_price_margin=condition.block3_low_price_margin,
+            block3_min_candles_from_block=condition.block3_min_candles_from_block,
+            block3_max_candles_from_block=condition.block3_max_candles_from_block,
+            block3_lookback_min_candles=condition.block3_lookback_min_candles,
+            block3_lookback_max_candles=condition.block3_lookback_max_candles,
+            # Block4 추가 조건
+            block4_volume_ratio=condition.block4_volume_ratio,
+            block4_low_price_margin=condition.block4_low_price_margin,
+            block4_min_candles_from_block=condition.block4_min_candles_from_block,
+            block4_max_candles_from_block=condition.block4_max_candles_from_block,
+            block4_lookback_min_candles=condition.block4_lookback_min_candles,
+            block4_lookback_max_candles=condition.block4_lookback_max_candles,
+            # Block5 추가 조건
+            block5_volume_ratio=condition.block5_volume_ratio,
+            block5_low_price_margin=condition.block5_low_price_margin,
+            block5_min_candles_from_block=condition.block5_min_candles_from_block,
+            block5_max_candles_from_block=condition.block5_max_candles_from_block,
+            block5_lookback_min_candles=condition.block5_lookback_min_candles,
+            block5_lookback_max_candles=condition.block5_lookback_max_candles,
+            # Block6 추가 조건
+            block6_volume_ratio=condition.block6_volume_ratio,
+            block6_low_price_margin=condition.block6_low_price_margin,
+            block6_min_candles_from_block=condition.block6_min_candles_from_block,
+            block6_max_candles_from_block=condition.block6_max_candles_from_block,
+            block6_lookback_min_candles=condition.block6_lookback_min_candles,
+            block6_lookback_max_candles=condition.block6_lookback_max_candles
+        )
+
+        # Block5 이후 데이터만 필터링
+        stocks_after = [s for s in stocks if s.date >= start_search_date]
+
+        for i, stock in enumerate(stocks_after):
+            # Block6 조건 체크
+            if not self.block6_checker.check_entry(
+                condition=block6_condition,
+                stock=stock,
+                all_stocks=stocks,
+                prev_seed_block1=block1,
+                prev_seed_block2=block2,
+                prev_seed_block3=block3,
+                prev_seed_block4=block4,
+                prev_seed_block5=block5
+            ):
+                continue
+
+            # 최소/최대 캔들 수 검사 (선택적)
+            if block6_condition.block6_min_candles_from_block is not None:
+                if not self.block6_checker.check_min_candles(
+                    stock.date,
+                    block5,
+                    block6_condition.block6_min_candles_from_block,
+                    stocks
+                ):
+                    continue
+
+            if block6_condition.block6_max_candles_from_block is not None:
+                if not self.block6_checker.check_max_candles(
+                    stock.date,
+                    block5,
+                    block6_condition.block6_max_candles_from_block,
+                    stocks
+                ):
+                    continue
+
+            # Lookback 윈도우 검사
+            if not self.block6_checker.check_lookback_window(
+                stock.date,
+                block5,
+                block6_condition.block6_lookback_min_candles,
+                block6_condition.block6_lookback_max_candles,
+                stocks
+            ):
+                continue
+
+            # 모든 조건 통과 → Block6 Detection 생성
+            indicators = stock.indicators if hasattr(stock, 'indicators') else {}
+            block6 = Block6Detection(
+                block6_id=None,
+                ticker=stock.ticker,
+                started_at=stock.date,
+                ended_at=None,
+                entry_close=stock.close,
+                entry_rate=indicators.get('rate'),
+                prev_block_id=block5.block5_id,
+                prev_block_peak_price=block5.peak_price,
+                peak_price=stock.high,
+                peak_date=stock.date,
+                peak_volume=stock.volume,
+                condition_name="seed"
+            )
+
+            return block6  # 첫 번째만!
 
         return None
