@@ -152,6 +152,24 @@ All blocks share the same condition structure (`BaseEntryCondition`), but each b
 
 This enables per-block optimization while maintaining code reusability.
 
+#### Lookback Validation (New!)
+**Backward-looking** block validation that verifies previous blocks exist within a specified candle range:
+- **Forward checks** (`min/max_candles_from_block`): From previous block start → validate candidate is in range
+- **Backward checks** (`lookback_min/max_candles`): From candidate date → validate previous block exists in range
+
+**Example**:
+```yaml
+block2:
+  min_candles_from_block: 2         # Block2 must be 2+ candles after Block1 starts (forward)
+  max_candles_from_block: 150       # Block2 must be within 150 candles from Block1 (forward)
+  lookback_min_candles: 2           # Block1 must be at least 2 candles before Block2 (backward)
+  lookback_max_candles: 150         # Block1 must be within 150 candles before Block2 (backward)
+```
+
+**Benefits**: Bidirectional validation, optional (null=skip), independent min/max ranges.
+
+**See**: [docs/features/LOOKBACK_VALIDATION.md](docs/features/LOOKBACK_VALIDATION.md) for detailed guide.
+
 ### Database Schema
 
 **Key Tables**:
