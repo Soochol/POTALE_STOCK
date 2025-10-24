@@ -15,18 +15,11 @@ from .stock import (
     InvestorTrading
 )
 
-# Block detection models
-from .blocks import (
-    Block1Detection,
-    Block2Detection,
-    Block3Detection,
-    Block4Detection,
-    Block5Detection,
-    Block6Detection
-)
+# Dynamic block detection models
+from .dynamic_block_detection_model import DynamicBlockDetectionModel
 
-# Pattern models
-from .patterns import BlockPattern
+# Seed pattern models
+from .seed_pattern_model import SeedPatternModel
 
 # Preset models
 from .presets import (
@@ -51,16 +44,11 @@ __all__ = [
     'MarketData',
     'InvestorTrading',
 
-    # Block detection models
-    'Block1Detection',
-    'Block2Detection',
-    'Block3Detection',
-    'Block4Detection',
-    'Block5Detection',
-    'Block6Detection',
+    # Dynamic block detection models
+    'DynamicBlockDetectionModel',
 
-    # Pattern models
-    'BlockPattern',
+    # Seed pattern models
+    'SeedPatternModel',
 
     # Preset models
     'SeedConditionPreset',

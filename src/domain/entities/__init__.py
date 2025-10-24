@@ -3,7 +3,7 @@ Domain Entities Package
 도메인 엔티티 패키지
 
 모든 엔티티를 중앙에서 export하여 기존 import 경로 유지:
-    from src.domain.entities import Stock, Block1Detection, ...
+    from src.domain.entities import Stock, DynamicBlockDetection, ...
 """
 
 # Core entities
@@ -12,12 +12,6 @@ from .core import Stock, DetectionResult
 # Detection entities
 from .detections import (
     BaseBlockDetection,
-    Block1Detection,
-    Block2Detection,
-    Block3Detection,
-    Block4Detection,
-    Block5Detection,
-    Block6Detection,
     DynamicBlockDetection,
     BlockStatus,
 )
@@ -36,7 +30,14 @@ from .block_graph import (
 )
 
 # Pattern entities
-from .patterns import BlockPattern
+from .patterns import (
+    SeedPattern,
+    SeedPatternStatus,
+    BlockFeatures,
+    RedetectionConfig,
+    ToleranceConfig,
+    MatchingWeights,
+)
 
 __all__ = [
     # Core
@@ -45,12 +46,6 @@ __all__ = [
 
     # Detections
     'BaseBlockDetection',
-    'Block1Detection',
-    'Block2Detection',
-    'Block3Detection',
-    'Block4Detection',
-    'Block5Detection',
-    'Block6Detection',
     'DynamicBlockDetection',
     'BlockStatus',
 
@@ -64,5 +59,10 @@ __all__ = [
     'BlockGraph',
 
     # Patterns
-    'BlockPattern',
+    'SeedPattern',
+    'SeedPatternStatus',
+    'BlockFeatures',
+    'RedetectionConfig',
+    'ToleranceConfig',
+    'MatchingWeights',
 ]

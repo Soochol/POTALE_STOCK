@@ -305,8 +305,9 @@ class DynamicBlockDetector:
             # 모든 조건이 True
             return True
 
-        except Exception:
+        except Exception as e:
             # 평가 중 에러 발생 시 False
+            print(f"  [ERROR] Entry condition evaluation failed for {node.block_id}: {e}")
             return False
 
     def _check_exit_conditions(

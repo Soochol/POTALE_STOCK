@@ -1,0 +1,33 @@
+# test1_alt_debug.yaml - 디버깅용 (고가 등락률 조건 제외)
+version: "1.0"
+
+block_graph:
+  pattern_type: "seed"
+  root_node: "block1"
+
+  nodes:
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "High Trading Value with Volume Surge"
+      description: "거래대금 300억 이상 + 거래량 급등 패턴"
+
+      entry_conditions:
+        - name: "trading_value_threshold"
+          expression: "(current.close * current.volume) >= 30000000000"
+          description: "거래대금 300억원 이상"
+
+        - name: "volume_surge"
+          expression: "is_volume_high(365)"
+          description: "신고 거래량"
+
+      exit_conditions:
+        - name: "low_below_ma60"
+          expression: "current.low < ma(all_stocks, 60)"
+          description: "저가가 60일 이동평균 아래로 터치"
+
+      parameters:
+        min_duration: 1
+        max_duration: 100
+
+  edges: []

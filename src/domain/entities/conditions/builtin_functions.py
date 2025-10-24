@@ -334,16 +334,38 @@ def is_volume_high(days: int, context: dict) -> bool:
 
     Returns:
         신고거래량이면 True, 아니면 False
-
-    Note:
-        현재는 indicators에서 조회만 함
     """
     current = context.get('current')
+
+    # 방법 1: indicators에 이미 계산되어 있는 경우
     if current and hasattr(current, 'indicators'):
         field_name = f'is_volume_high_{days}d'
-        return current.indicators.get(field_name, False)
+        indicator_value = current.indicators.get(field_name)
+        if indicator_value is not None:
+            return indicator_value
 
-    return False
+    # 방법 2: all_stocks에서 직접 계산
+    all_stocks = context.get('all_stocks', [])
+    if not all_stocks or not current:
+        print(f"  [DEBUG is_volume_high] No all_stocks or current")
+        return False
+
+    # 현재 날짜 기준 N일 전부터의 거래량들
+    cutoff_date = current.date - timedelta(days=days)
+    recent_volumes = [
+        s.volume for s in all_stocks
+        if s.ticker == current.ticker and cutoff_date <= s.date <= current.date
+    ]
+
+    if not recent_volumes:
+        print(f"  [DEBUG is_volume_high] No recent volumes for {days} days")
+        return False
+
+    # 현재 거래량이 N일 중 최대인지 확인
+    max_volume = max(recent_volumes)
+    is_high = current.volume == max_volume
+    print(f"  [DEBUG is_volume_high] date={current.date}, volume={current.volume:,}, max={max_volume:,}, is_high={is_high}")
+    return is_high
 
 
 @function_registry.register(
@@ -355,11 +377,31 @@ def is_volume_high(days: int, context: dict) -> bool:
 def is_new_high(days: int, context: dict) -> bool:
     """N일 신고가 여부"""
     current = context.get('current')
+
+    # 방법 1: indicators에 이미 계산되어 있는 경우
     if current and hasattr(current, 'indicators'):
         field_name = f'is_new_high_{days}d'
-        return current.indicators.get(field_name, False)
+        indicator_value = current.indicators.get(field_name)
+        if indicator_value is not None:
+            return indicator_value
 
-    return False
+    # 방법 2: all_stocks에서 직접 계산
+    all_stocks = context.get('all_stocks', [])
+    if not all_stocks or not current:
+        return False
+
+    # 현재 날짜 기준 N일 전부터의 고가들
+    cutoff_date = current.date - timedelta(days=days)
+    recent_highs = [
+        s.high for s in all_stocks
+        if s.ticker == current.ticker and cutoff_date <= s.date <= current.date
+    ]
+
+    if not recent_highs:
+        return False
+
+    # 현재 고가가 N일 중 최대인지 확인
+    return current.high == max(recent_highs)
 
 
 @function_registry.register(

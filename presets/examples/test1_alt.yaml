@@ -25,6 +25,9 @@
 version: "1.0"
 
 block_graph:
+  # 패턴 타입
+  pattern_type: "seed"
+
   # 시작 블록
   root_node: "block1"
 
@@ -48,8 +51,8 @@ block_graph:
           description: "거래대금 300억원 이상"
 
         - name: "volume_surge"
-          expression: "is_volume_high(365)"
-          description: "신고 거래량"
+          expression: "is_volume_high(200)"
+          description: "N일 신고 거래량"
 
         - name: "high_surge_rate"
           expression: "prev and ((current.high - prev.close) / prev.close * 100) >= 10.0"
@@ -58,17 +61,17 @@ block_graph:
       # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
       exit_conditions:
         - name: "low_below_ma60"
-          expression: "current.low < ma(60)"
+          expression: "current.low < ma(all_stocks, 60)"
           description: "저가가 60일 이동평균 아래로 터치"
 
         - name: "block2_started"
-          expression: "EXISTS('block2')"
+          expression: "exists('block2')"
           description: "Block2가 시작되면 Block1 자동 종료"
 
       # 블록 파라미터
       parameters:
-        min_duration_candles: 1
-        max_duration_candles: 100
+        min_duration: 1
+        max_duration: 100
 
     # ═══════════════════════════════════════════════════════
     # Block 2 - 더 강한 거래대금 + 거래량 폭발
@@ -87,26 +90,34 @@ block_graph:
 
         - name: "volume_surge_vs_prev"
           expression: "current.volume >= last_valid_volume() * 3.0"
-          description: "직전 정상 거래일 대비 거래량 3배 이상 (300% 증가)"
+          description: "직전 정상 거래일 대비 거래량 N배 이상 (N * 100% 증가)"
 
         - name: "price_yearly_high"
           expression: "is_new_high(365)"
           description: "가격 365일 신고가"
+          
+        - name: "high_surge_rate"
+          expression: "prev and ((current.high - prev.close) / prev.close * 100) >= 10.0"
+          description: "고가 등락률 (전일 종가 대비) 10% 이상"
 
         - name: "volume_exceeds_block1_peak"
-          expression: "EXISTS('block1') and block1.peak_volume and current.volume > block1.peak_volume"
+          expression: "exists('block1') and block1.peak_volume and current.volume > block1.peak_volume"
           description: "Block1 최고 거래량보다 큼"
 
       # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
       exit_conditions:
         - name: "low_below_ma60"
-          expression: "current.low < ma(60)"
+          expression: "current.low < ma(all_stocks, 60)"
           description: "저가가 60일 이동평균 아래로 터치"
+
+        - name: "block3_started"
+          expression: "exists('block3')"
+          description: "Block3가 시작되면 Block2 자동 종료"
 
       # 블록 파라미터
       parameters:
-        min_duration_candles: 1
-        max_duration_candles: 100
+        min_duration: 1
+        max_duration: 100
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 블록 간 관계 (엣지)
