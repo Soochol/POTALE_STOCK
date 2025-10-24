@@ -1,0 +1,220 @@
+# Extended Pattern Example: 6-Block Sequential Pattern
+#
+# This YAML demonstrates the system's ability to support unlimited block types
+# without any code changes. This pattern defines Block1 through Block6 in a
+# sequential chain.
+#
+# Pattern Flow:
+#   Block1 (Initial Surge)
+#   → Block2 (First Continuation)
+#   → Block3 (Second Continuation)
+#   → Block4 (Third Continuation)
+#   → Block5 (Fourth Continuation)
+#   → Block6 (Final Peak)
+
+block_graph:
+  root_node: "block1"
+
+  nodes:
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "Initial Surge"
+      description: "첫 번째 급등 구간"
+
+      entry_conditions:
+        - name: "price_threshold"
+          expression: "current.close >= 10000"
+          description: "종가 10,000원 이상"
+
+        - name: "volume_spike"
+          expression: "current.volume >= 1000000"
+          description: "거래량 100만주 이상"
+
+      exit_conditions:
+        - name: "price_drop"
+          expression: "current.close < 9000"
+          description: "종가 9,000원 미만으로 하락"
+
+      parameters:
+        min_duration: 1
+        max_duration: 100
+
+      metadata:
+        color: "#FF6B6B"
+        priority: 1
+
+    block2:
+      block_id: "block2"
+      block_type: 2
+      name: "First Continuation"
+      description: "첫 번째 지속 구간"
+
+      entry_conditions:
+        - name: "price_advance"
+          expression: "current.close >= 11000"
+          description: "종가 11,000원 이상"
+
+        - name: "volume_maintained"
+          expression: "current.volume >= 800000"
+          description: "거래량 80만주 이상 유지"
+
+      exit_conditions:
+        - name: "price_drop"
+          expression: "current.close < 10000"
+          description: "종가 10,000원 미만으로 하락"
+
+      parameters:
+        min_duration: 1
+        max_duration: 100
+
+      metadata:
+        color: "#4ECDC4"
+        priority: 2
+
+    block3:
+      block_id: "block3"
+      block_type: 3
+      name: "Second Continuation"
+      description: "두 번째 지속 구간"
+
+      entry_conditions:
+        - name: "price_advance"
+          expression: "current.close >= 12000"
+          description: "종가 12,000원 이상"
+
+      exit_conditions:
+        - name: "volume_drop"
+          expression: "current.volume < 500000"
+          description: "거래량 50만주 미만으로 감소"
+
+      parameters:
+        min_duration: 1
+        max_duration: 100
+
+      metadata:
+        color: "#95E1D3"
+        priority: 3
+
+    block4:
+      block_id: "block4"
+      block_type: 4
+      name: "Third Continuation"
+      description: "세 번째 지속 구간"
+
+      entry_conditions:
+        - name: "price_advance"
+          expression: "current.close >= 13000"
+          description: "종가 13,000원 이상"
+
+        - name: "volume_maintained"
+          expression: "current.volume >= 600000"
+          description: "거래량 60만주 이상 유지"
+
+      exit_conditions:
+        - name: "price_drop"
+          expression: "current.close < 12000"
+          description: "종가 12,000원 미만으로 하락"
+
+      parameters:
+        min_duration: 1
+        max_duration: 100
+
+      metadata:
+        color: "#F38181"
+        priority: 4
+
+    block5:
+      block_id: "block5"
+      block_type: 5
+      name: "Fourth Continuation"
+      description: "네 번째 지속 구간"
+
+      entry_conditions:
+        - name: "price_advance"
+          expression: "current.close >= 14000"
+          description: "종가 14,000원 이상"
+
+        - name: "high_volume"
+          expression: "current.volume >= 700000"
+          description: "거래량 70만주 이상"
+
+      exit_conditions:
+        - name: "price_drop"
+          expression: "current.close < 13000"
+          description: "종가 13,000원 미만으로 하락"
+
+        - name: "volume_drop"
+          expression: "current.volume < 400000"
+          description: "거래량 40만주 미만으로 감소"
+
+      parameters:
+        min_duration: 1
+        max_duration: 100
+
+      metadata:
+        color: "#AA96DA"
+        priority: 5
+
+    block6:
+      block_id: "block6"
+      block_type: 6
+      name: "Final Peak"
+      description: "최종 고점 구간"
+
+      entry_conditions:
+        - name: "final_peak"
+          expression: "current.close >= 15000"
+          description: "종가 15,000원 이상 (최종 고점)"
+
+        - name: "strong_volume"
+          expression: "current.volume >= 800000"
+          description: "거래량 80만주 이상 (강한 거래량)"
+
+      exit_conditions:
+        - name: "major_drop"
+          expression: "current.close < 14000"
+          description: "종가 14,000원 미만으로 하락"
+
+        - name: "volume_exhaustion"
+          expression: "current.volume < 300000"
+          description: "거래량 30만주 미만 (거래량 소진)"
+
+      parameters:
+        min_duration: 1
+        max_duration: 100
+
+      metadata:
+        color: "#FCBAD3"
+        priority: 6
+
+  edges:
+    - from_block: "block1"
+      to_block: "block2"
+      edge_type: "sequential"
+      priority: 1
+      description: "Block1 다음 Block2 진입"
+
+    - from_block: "block2"
+      to_block: "block3"
+      edge_type: "sequential"
+      priority: 1
+      description: "Block2 다음 Block3 진입"
+
+    - from_block: "block3"
+      to_block: "block4"
+      edge_type: "sequential"
+      priority: 1
+      description: "Block3 다음 Block4 진입"
+
+    - from_block: "block4"
+      to_block: "block5"
+      edge_type: "sequential"
+      priority: 1
+      description: "Block4 다음 Block5 진입"
+
+    - from_block: "block5"
+      to_block: "block6"
+      edge_type: "sequential"
+      priority: 1
+      description: "Block5 다음 Block6 진입"
