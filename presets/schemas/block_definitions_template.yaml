@@ -1,0 +1,302 @@
+# Block Definitions Template - 블록 정의 템플릿
+#
+# 이 파일은 블록을 정의하는 YAML 템플릿입니다.
+# 사용자는 이 템플릿을 참고하여 새로운 블록을 정의할 수 있습니다.
+
+version: "1.0"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Block Graph Definition - 블록 그래프 정의
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+block_graph:
+  # 루트 노드 (시작 블록)
+  root_node: "block1"
+
+  # 노드 정의 (블록들)
+  nodes:
+    # ═══════════════════════════════════════════════════════════
+    # Block 1 - 초기 급등 감지
+    # ═══════════════════════════════════════════════════════════
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "Initial Surge"
+      description: "주가의 초기 급등 구간 감지"
+
+      # 진입 조건 (AND 조건: 모두 만족해야 함)
+      entry_conditions:
+        - name: "ma_breakout"
+          expression: "(current.high >= ma(120)) and (current.close >= ma(120))"
+          description: "120일 이동평균 돌파"
+
+        - name: "volume_spike"
+          expression: "current.volume >= volume_ma(20) * 3"
+          description: "거래량 급등 (20일 평균의 3배)"
+
+        - name: "price_threshold"
+          expression: "current.close >= 10000"
+          description: "최소 가격 조건"
+
+      # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
+      exit_conditions:
+        - name: "ma_breakdown"
+          expression: "current.close < ma(120)"
+          description: "120일 이동평균 이탈"
+
+        - name: "volume_dry_up"
+          expression: "current.volume < volume_ma(20)"
+          description: "거래량 감소"
+
+      # 블록 파라미터
+      parameters:
+        min_duration_candles: 1  # 최소 지속 캔들 수
+        max_duration_candles: 50  # 최대 지속 캔들 수
+        track_peak_price: true  # 최고가 추적 여부
+        track_peak_volume: true  # 최대 거래량 추적 여부
+
+    # ═══════════════════════════════════════════════════════════
+    # Block 2 - 지속 구간
+    # ═══════════════════════════════════════════════════════════
+    block2:
+      block_id: "block2"
+      block_type: 2
+      name: "Continuation Phase"
+      description: "Block1 이후 지속 구간"
+
+      entry_conditions:
+        - name: "block1_exists"
+          expression: "EXISTS('block1')"
+          description: "Block1이 존재해야 함"
+
+        - name: "time_window"
+          expression: |
+            candles_between(block1.started_at, current.date) >= 2 and
+            candles_between(block1.started_at, current.date) <= 150
+          description: "Block1 시작 후 2~150 캔들 내"
+
+        - name: "price_support"
+          expression: "within_range(current.close, block1.peak_price, 10.0)"
+          description: "Block1 고가의 ±10% 범위"
+
+        - name: "volume_condition"
+          expression: "current.volume >= volume_ma(20) * 1.5"
+          description: "거래량 1.5배 이상"
+
+      exit_conditions:
+        - name: "price_breakdown"
+          expression: "current.close < block1.peak_price * 0.85"
+          description: "Block1 고가 대비 15% 이상 하락"
+
+      parameters:
+        min_candles_from_block1: 2
+        max_candles_from_block1: 150
+        price_tolerance_pct: 10.0
+
+    # ═══════════════════════════════════════════════════════════
+    # Block 3 - 추가 상승
+    # ═══════════════════════════════════════════════════════════
+    block3:
+      block_id: "block3"
+      block_type: 3
+      name: "Further Advancement"
+      description: "Block2 이후 추가 상승"
+
+      entry_conditions:
+        - name: "block2_exists"
+          expression: "EXISTS('block2')"
+          description: "Block2가 존재해야 함"
+
+        - name: "time_window"
+          expression: |
+            candles_between(block2.started_at, current.date) >= 2 and
+            candles_between(block2.started_at, current.date) <= 150
+          description: "Block2 시작 후 2~150 캔들 내"
+
+        - name: "new_high"
+          expression: "current.high > block2.peak_price"
+          description: "Block2 고가 돌파"
+
+      exit_conditions:
+        - name: "price_breakdown"
+          expression: "current.close < block2.peak_price * 0.90"
+          description: "Block2 고가 대비 10% 이상 하락"
+
+      parameters:
+        min_candles_from_block2: 2
+        max_candles_from_block2: 150
+
+  # ═══════════════════════════════════════════════════════════
+  # Edges - 블록 간 관계 정의
+  # ═══════════════════════════════════════════════════════════
+  edges:
+    # Block1 → Block2 (순차)
+    - from_block: "block1"
+      to_block: "block2"
+      edge_type: "sequential"
+      priority: 1
+
+    # Block2 → Block3 (순차)
+    - from_block: "block2"
+      to_block: "block3"
+      edge_type: "sequential"
+      priority: 1
+
+    # Block1 → Block3 (스킵 - 선택적)
+    - from_block: "block1"
+      to_block: "block3"
+      edge_type: "optional"
+      priority: 2
+      condition: "candles_between(block1.ended_at, current.date) >= 30"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Advanced Example - 분기(Branching) 예제
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+advanced_example:
+  description: "Block1 이후 거래량에 따라 Block2A 또는 Block2B로 분기"
+
+  nodes:
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "Initial Surge"
+      entry_conditions:
+        - expression: "current.high >= ma(120) and current.volume >= volume_ma(20) * 3"
+
+    block2a:
+      block_id: "block2a"
+      block_type: 2
+      name: "High Volume Continuation"
+      entry_conditions:
+        - expression: "EXISTS('block1') and current.volume >= volume_ma(20) * 2"
+
+    block2b:
+      block_id: "block2b"
+      block_type: 2
+      name: "Low Volume Consolidation"
+      entry_conditions:
+        - expression: "EXISTS('block1') and current.volume < volume_ma(20) * 2"
+
+    block3:
+      block_id: "block3"
+      block_type: 3
+      name: "Convergence"
+      entry_conditions:
+        - expression: "EXISTS('block2a') or EXISTS('block2b')"
+
+  edges:
+    # Block1 → Block2A (고거래량 경로)
+    - from_block: "block1"
+      to_block: "block2a"
+      edge_type: "conditional"
+      condition: "current.volume >= volume_ma(20) * 2"
+      priority: 1
+
+    # Block1 → Block2B (저거래량 경로)
+    - from_block: "block1"
+      to_block: "block2b"
+      edge_type: "conditional"
+      condition: "current.volume < volume_ma(20) * 2"
+      priority: 2
+
+    # Block2A → Block3 (병합)
+    - from_block: "block2a"
+      to_block: "block3"
+      edge_type: "sequential"
+
+    # Block2B → Block3 (병합)
+    - from_block: "block2b"
+      to_block: "block3"
+      edge_type: "sequential"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Validation Schema - 블록 정의 검증 스키마
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+validation_schema:
+  block_node:
+    required_fields:
+      - block_id
+      - block_type
+      - name
+      - entry_conditions
+
+    optional_fields:
+      - description
+      - exit_conditions
+      - parameters
+      - metadata
+
+    field_types:
+      block_id: string
+      block_type: integer (>= 1)
+      name: string
+      description: string
+      entry_conditions: list[object]
+      exit_conditions: list[object]
+      parameters: dict
+      metadata: dict
+
+  condition:
+    required_fields:
+      - expression
+
+    optional_fields:
+      - name
+      - description
+
+    field_types:
+      name: string
+      expression: string
+      description: string
+
+  edge:
+    required_fields:
+      - from_block
+      - to_block
+
+    optional_fields:
+      - edge_type
+      - condition
+      - priority
+
+    field_types:
+      from_block: string
+      to_block: string
+      edge_type: enum[sequential, conditional, optional, branching]
+      condition: string (expression)
+      priority: integer
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Usage Guide - 사용 가이드
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+usage_guide:
+  step1:
+    description: "이 템플릿을 복사하여 새 파일 생성"
+    example: "cp block_definitions_template.yaml my_strategy.yaml"
+
+  step2:
+    description: "블록 노드 정의 (block_graph.nodes)"
+    tips:
+      - "각 블록에 고유한 block_id 부여"
+      - "entry_conditions에 진입 조건 표현식 작성"
+      - "exit_conditions에 종료 조건 표현식 작성"
+      - "parameters에 블록별 파라미터 설정"
+
+  step3:
+    description: "엣지 정의 (block_graph.edges)"
+    tips:
+      - "순차적 전이는 edge_type: sequential"
+      - "조건부 분기는 edge_type: conditional + condition 추가"
+      - "선택적 스킵은 edge_type: optional"
+      - "우선순위는 priority로 설정 (낮을수록 먼저 평가)"
+
+  step4:
+    description: "YAML 파일 검증"
+    command: "python scripts/validate_block_definitions.py my_strategy.yaml"
+
+  step5:
+    description: "감지 실행"
+    command: "python scripts/detect_patterns.py --config my_strategy.yaml --ticker 025980"

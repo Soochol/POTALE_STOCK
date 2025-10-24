@@ -1,0 +1,269 @@
+# Function Library - 표현식에서 사용 가능한 함수 라이브러리
+#
+# 이 파일은 FunctionRegistry에 등록된 모든 함수의 메타데이터를 정의합니다.
+# 사용자가 새로운 함수를 추가할 때 이 파일을 참고할 수 있습니다.
+
+version: "1.0"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Moving Average Functions - 이동평균 함수
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+moving_average:
+  ma:
+    description: "단순 이동평균 (Simple Moving Average)"
+    parameters:
+      - name: period
+        type: int
+        description: "이동평균 기간 (예: 120)"
+        required: true
+    returns:
+      type: float
+      description: "이동평균 값"
+    usage: "current.high >= ma(120)"
+    examples:
+      - "ma(5)  # 5일 이동평균"
+      - "ma(20)  # 20일 이동평균"
+      - "ma(120)  # 120일 이동평균"
+
+  volume_ma:
+    description: "거래량 이동평균"
+    parameters:
+      - name: period
+        type: int
+        description: "이동평균 기간"
+        required: true
+    returns:
+      type: float
+      description: "거래량 이동평균 값"
+    usage: "current.volume >= volume_ma(20) * 3"
+    examples:
+      - "volume_ma(20)  # 20일 거래량 평균"
+      - "volume_ma(60)  # 60일 거래량 평균"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Time Functions - 시간 관련 함수
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+time:
+  candles_between:
+    description: "두 날짜 사이의 캔들(거래일) 수 계산"
+    parameters:
+      - name: start_date
+        type: date
+        description: "시작 날짜"
+        required: true
+      - name: end_date
+        type: date
+        description: "종료 날짜"
+        required: true
+    returns:
+      type: int
+      description: "거래일 수"
+    usage: "candles_between(block1.started_at, current.date) >= 2"
+    examples:
+      - "candles_between(block1.started_at, current.date)  # Block1 시작부터 현재까지"
+      - "candles_between(block2.ended_at, current.date)  # Block2 종료부터 현재까지"
+
+  days_since:
+    description: "특정 날짜로부터 경과한 일수 (현재 기준)"
+    parameters:
+      - name: past_date
+        type: date
+        description: "과거 날짜"
+        required: true
+    returns:
+      type: int
+      description: "경과 일수"
+    usage: "days_since(block1.ended_at) <= 30"
+    examples:
+      - "days_since(block1.ended_at)  # Block1 종료 후 경과 일수"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Price Functions - 가격 관련 함수
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+price:
+  within_range:
+    description: "값이 기준 값의 ±N% 범위 내에 있는지 확인"
+    parameters:
+      - name: value
+        type: float
+        description: "확인할 값"
+        required: true
+      - name: base
+        type: float
+        description: "기준 값"
+        required: true
+      - name: tolerance_pct
+        type: float
+        description: "허용 오차 (%, 예: 10.0 = ±10%)"
+        required: true
+    returns:
+      type: bool
+      description: "범위 내 여부"
+    usage: "within_range(current.close, block1.peak_price, 10.0)"
+    examples:
+      - "within_range(current.close, 10000, 5.0)  # 종가가 10000의 ±5% 범위 내"
+      - "within_range(current.close, block1.peak_price, 10.0)  # Block1 고가의 ±10% 범위"
+
+  is_new_high:
+    description: "N일 내 최고가 여부 확인"
+    parameters:
+      - name: period
+        type: int
+        description: "확인 기간 (일)"
+        required: true
+    returns:
+      type: bool
+      description: "최고가 여부"
+    usage: "is_new_high(120)"
+    examples:
+      - "is_new_high(120)  # 120일 내 최고가 갱신"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Volume Functions - 거래량 관련 함수
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+volume:
+  is_volume_high:
+    description: "거래량이 N개월 평균 대비 높은지 확인 (indicators에서 조회)"
+    parameters:
+      - name: period
+        type: int
+        description: "기간 (일, 예: 120)"
+        required: true
+    returns:
+      type: bool
+      description: "거래량 급등 여부"
+    usage: "is_volume_high(120)"
+    examples:
+      - "is_volume_high(120)  # indicators['is_volume_high_120d'] 조회"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Technical Indicators - 기술 지표 함수
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+technical:
+  rsi:
+    description: "RSI (Relative Strength Index) 계산"
+    parameters:
+      - name: period
+        type: int
+        description: "RSI 기간 (일반적으로 14)"
+        required: true
+    returns:
+      type: float
+      description: "RSI 값 (0~100)"
+    usage: "rsi(14) >= 70"
+    examples:
+      - "rsi(14) >= 70  # 과매수 구간"
+      - "rsi(14) <= 30  # 과매도 구간"
+
+  bollinger_upper:
+    description: "볼린저 밴드 상단선"
+    parameters:
+      - name: period
+        type: int
+        description: "볼린저 밴드 기간 (일반적으로 20)"
+        required: true
+      - name: std_dev
+        type: float
+        description: "표준편차 배수 (기본값: 2.0)"
+        required: false
+        default: 2.0
+    returns:
+      type: float
+      description: "볼린저 밴드 상단선 값"
+    usage: "current.close >= bollinger_upper(20)"
+    examples:
+      - "bollinger_upper(20)  # 20일 볼린저 밴드 상단"
+
+  bollinger_lower:
+    description: "볼린저 밴드 하단선"
+    parameters:
+      - name: period
+        type: int
+        description: "볼린저 밴드 기간"
+        required: true
+      - name: std_dev
+        type: float
+        description: "표준편차 배수 (기본값: 2.0)"
+        required: false
+        default: 2.0
+    returns:
+      type: float
+      description: "볼린저 밴드 하단선 값"
+    usage: "current.close <= bollinger_lower(20)"
+    examples:
+      - "bollinger_lower(20)  # 20일 볼린저 밴드 하단"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Block Relationship Functions - 블록 관계 함수
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+block:
+  EXISTS:
+    description: "블록 존재 여부 확인"
+    parameters:
+      - name: block_name
+        type: string
+        description: "블록 변수명 (예: 'block1', 'block2')"
+        required: true
+    returns:
+      type: bool
+      description: "블록 존재 여부"
+    usage: "EXISTS('block1')"
+    examples:
+      - "EXISTS('block1')  # Block1이 context에 존재하는지 확인"
+      - "EXISTS('block2')  # Block2가 context에 존재하는지 확인"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Function Extension Guide - 새 함수 추가 방법
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+extension_guide:
+  how_to_add_new_function:
+    step1:
+      description: "builtin_functions.py에 새 함수 작성"
+      code: |
+        @function_registry.register(
+            'my_function',
+            category='custom',
+            description='내 함수 설명',
+            params_schema={'param1': int}
+        )
+        def my_function(param1: int, context: dict) -> float:
+            # 함수 구현
+            return result
+
+    step2:
+      description: "function_library.yaml에 함수 문서 추가"
+      code: |
+        custom:
+          my_function:
+            description: "내 함수 설명"
+            parameters:
+              - name: param1
+                type: int
+                description: "파라미터 설명"
+                required: true
+            returns:
+              type: float
+              description: "반환값 설명"
+
+    step3:
+      description: "테스트 작성"
+      code: |
+        def test_my_function():
+            engine = ExpressionEngine(function_registry)
+            context = {...}
+            result = engine.evaluate("my_function(10)", context)
+            assert result == expected
+
+  best_practices:
+    - "함수명은 명확하고 직관적으로 작성"
+    - "파라미터는 최소화하되, 필요한 경우 context로 추가 정보 전달"
+    - "반환 타입을 명확히 정의 (bool, float, int, etc.)"
+    - "에러 처리를 철저히 (유효하지 않은 입력 대비)"
+    - "함수 문서화 필수 (docstring + 이 YAML 파일)"

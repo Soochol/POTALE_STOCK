@@ -1,0 +1,227 @@
+# Data Schema - 표현식에서 사용 가능한 데이터 필드 정의
+#
+# 이 파일은 조건 표현식에서 참조할 수 있는 모든 데이터 필드를 정의합니다.
+# 사용자가 YAML에서 조건을 작성할 때 이 스키마를 참고하여 올바른 필드를 사용할 수 있습니다.
+
+version: "1.0"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Context Variables - 표현식에서 사용 가능한 컨텍스트 변수
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+context_variables:
+  # 현재 캔들 (Stock 객체)
+  current:
+    type: Stock
+    description: "현재 캔들 데이터"
+    fields:
+      ticker:
+        type: string
+        description: "종목 코드 (예: 025980)"
+
+      date:
+        type: date
+        description: "날짜 (예: 2024-01-01)"
+
+      open:
+        type: float
+        description: "시가"
+
+      high:
+        type: float
+        description: "고가"
+
+      low:
+        type: float
+        description: "저가"
+
+      close:
+        type: float
+        description: "종가"
+
+      volume:
+        type: int
+        description: "거래량"
+
+      # Indicators (딕셔너리)
+      indicators:
+        type: dict
+        description: "기술 지표 딕셔너리"
+        available_keys:
+          - ma_5
+          - ma_20
+          - ma_60
+          - ma_120
+          - volume_ma_20
+          - volume_ma_60
+          - is_volume_high_120d
+          - rsi_14
+          - bollinger_upper_20
+          - bollinger_lower_20
+
+  # 이전 캔들 (Stock 객체)
+  prev:
+    type: Stock
+    description: "이전 캔들 데이터 (current의 바로 전날)"
+    fields:
+      # current와 동일한 필드 구조
+
+  # 블록 감지 객체들
+  block1:
+    type: Block1Detection
+    description: "Block1 감지 객체"
+    fields:
+      ticker:
+        type: string
+        description: "종목 코드"
+
+      started_at:
+        type: date
+        description: "블록 시작 날짜"
+
+      ended_at:
+        type: date
+        description: "블록 종료 날짜 (None이면 진행 중)"
+
+      peak_price:
+        type: float
+        description: "블록 내 최고가"
+
+      peak_volume:
+        type: int
+        description: "블록 내 최대 거래량"
+
+      status:
+        type: string
+        description: "블록 상태 (active, completed, failed)"
+
+  block2:
+    type: Block2Detection
+    description: "Block2 감지 객체"
+    # block1과 동일한 필드 구조
+
+  block3:
+    type: Block3Detection
+    description: "Block3 감지 객체"
+    # block1과 동일한 필드 구조
+
+  block4:
+    type: Block4Detection
+    description: "Block4 감지 객체"
+    # block1과 동일한 필드 구조
+
+  # 전체 주가 데이터 (리스트)
+  all_stocks:
+    type: List[Stock]
+    description: "전체 주가 데이터 리스트 (과거 ~ 현재)"
+    usage: "ma() 등의 함수에서 내부적으로 사용"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Common Expression Patterns - 자주 사용되는 표현식 패턴
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+common_patterns:
+  price_comparisons:
+    - "current.close >= {value}"
+    - "current.high >= current.close * {ratio}"
+    - "current.low <= current.close * {ratio}"
+    - "current.close >= ma({period})"
+    - "current.high >= ma({period})"
+
+  volume_conditions:
+    - "current.volume >= {value}"
+    - "current.volume >= prev.volume * {ratio}"
+    - "current.volume >= volume_ma({period}) * {ratio}"
+    - "is_volume_high({period})"
+
+  indicator_conditions:
+    - "current.ma_{period} >= {value}"
+    - "current.rsi_14 >= {value}"
+    - "current.rsi_14 <= {value}"
+    - "current.close >= bollinger_upper({period})"
+    - "current.close <= bollinger_lower({period})"
+
+  block_relationships:
+    - "EXISTS('block{n}')"
+    - "candles_between(block{n}.started_at, current.date) >= {min_candles}"
+    - "candles_between(block{n}.started_at, current.date) <= {max_candles}"
+    - "days_since(block{n}.ended_at) <= {max_days}"
+    - "within_range(current.close, block{n}.peak_price, {tolerance_pct})"
+
+  combined_conditions:
+    - "(current.close >= {value}) and (current.volume >= {volume})"
+    - "(current.high >= ma({period})) and is_volume_high({period})"
+    - "EXISTS('block1') and candles_between(block1.started_at, current.date) >= {min_candles}"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Validation Rules - 표현식 작성 시 주의사항
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+validation_rules:
+  allowed_operators:
+    arithmetic:
+      - "+"
+      - "-"
+      - "*"
+      - "/"
+      - "%"
+      - "//"
+      - "**"
+
+    comparison:
+      - ">"
+      - "<"
+      - ">="
+      - "<="
+      - "=="
+      - "!="
+
+    logical:
+      - "and"
+      - "or"
+      - "not"
+
+  naming_conventions:
+    - "변수명은 소문자와 언더스코어 사용 (예: current, block1, all_stocks)"
+    - "함수명은 소문자와 언더스코어 사용 (예: ma, candles_between)"
+    - "논리 연산자는 소문자 사용 (and, or, not - 대문자 AND, OR, NOT 아님!)"
+
+  best_practices:
+    - "복잡한 표현식은 여러 줄로 나누어 작성"
+    - "괄호를 적극 사용하여 우선순위 명확히 표시"
+    - "주석을 활용하여 조건의 의도 설명"
+    - "재사용 가능한 표현식은 템플릿으로 정의"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Examples - 실제 사용 예시
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+examples:
+  simple_price_condition:
+    expression: "current.close >= 10000"
+    description: "종가가 10,000원 이상"
+
+  ma_breakout:
+    expression: "(current.high >= ma(120)) and (current.close >= ma(120))"
+    description: "120일 이동평균 돌파 (고가와 종가 모두 MA 이상)"
+
+  volume_spike:
+    expression: "current.volume >= volume_ma(20) * 3"
+    description: "거래량이 20일 평균의 3배 이상"
+
+  block_continuation:
+    expression: |
+      EXISTS('block1') and
+      candles_between(block1.started_at, current.date) >= 2 and
+      candles_between(block1.started_at, current.date) <= 150 and
+      within_range(current.close, block1.peak_price, 10.0)
+    description: "Block1 이후 2~150 캔들 내에 Block1 고가 ±10% 범위에서 재진입"
+
+  complex_entry:
+    expression: |
+      (current.close >= 10000) and
+      (current.high >= ma(120)) and
+      (current.volume >= prev.volume * 2) and
+      is_volume_high(120) and
+      (current.rsi_14 >= 50)
+    description: "복합 진입 조건: 가격, MA, 거래량, RSI 모두 만족"
