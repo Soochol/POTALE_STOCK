@@ -1,0 +1,132 @@
+# Simple Redetection Pattern
+#
+# Relaxed conditions for finding similar historical patterns
+# based on seed patterns stored in DB
+
+block_graph:
+  pattern_type: "redetection"
+  root_node: "block1"
+
+  # Redetection configuration
+  redetection_config:
+    # Tolerance ranges
+    tolerance:
+      price_range: 0.10      # Price ±10% allowed
+      volume_range: 0.30     # Volume ±30% allowed
+      time_range: 10         # Candle count ±10 allowed
+
+    # Pattern matching weights
+    matching_weights:
+      price_shape: 0.4       # Price shape similarity 40%
+      volume_shape: 0.3      # Volume shape similarity 30%
+      timing: 0.3            # Timing similarity 30%
+
+    # Similarity threshold
+    min_similarity_score: 0.70  # Must be 70%+ similar to match
+
+    # Cooldown period
+    min_detection_interval_days: 20  # Minimum 20 days between redetections
+
+    metadata:
+      description: "Find historical patterns similar to seed patterns"
+      target_period: "5 years"
+
+  nodes:
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "Initial Surge (Redetection)"
+      description: "Relaxed conditions: 4%+ surge, 2x volume"
+
+      entry_conditions:
+        # Relaxed conditions
+        - name: "moderate_price_surge"
+          expression: "current.close >= ma(all_stocks, 120) * 1.04"
+          description: "Close >= 120-day MA * 1.04 (seed: 1.08)"
+
+        - name: "moderate_volume_spike"
+          expression: "current.volume >= avg(all_stocks[-20:], 'volume') * 2"
+          description: "Volume >= 20-day avg * 2 (seed: 3x)"
+
+      exit_conditions:
+        - name: "moderate_drop"
+          expression: "current.close < ma(all_stocks, 120) * 0.97"
+          description: "Close < 120-day MA * 0.97"
+
+      parameters:
+        min_duration: 1
+        max_duration: 150
+
+      metadata:
+        color: "#FFB6B6"
+        priority: 1
+        detection_quality: "medium"
+
+    block2:
+      block_id: "block2"
+      block_type: 2
+      name: "Continuation (Redetection)"
+      description: "Sustained rise with volume"
+
+      entry_conditions:
+        - name: "moderate_price_advance"
+          expression: "current.close >= block1.peak_price * 1.03"
+          description: "Close >= Block1 peak * 1.03 (seed: 1.05)"
+
+        - name: "moderate_volume"
+          expression: "current.volume >= avg(all_stocks[-20:], 'volume') * 1.5"
+          description: "Volume >= 20-day avg * 1.5 (seed: 2x)"
+
+      exit_conditions:
+        - name: "volume_decline"
+          expression: "current.volume < avg(all_stocks[-20:], 'volume') * 0.9"
+          description: "Volume < 20-day avg * 0.9"
+
+      parameters:
+        min_duration: 1
+        max_duration: 100
+
+      metadata:
+        color: "#8FE7D7"
+        priority: 2
+
+    block3:
+      block_id: "block3"
+      block_type: 3
+      name: "Peak Formation (Redetection)"
+      description: "Peak formation zone"
+
+      entry_conditions:
+        - name: "moderate_final_peak"
+          expression: "current.close >= block2.peak_price * 1.02"
+          description: "Close >= Block2 peak * 1.02 (seed: 1.03)"
+
+      exit_conditions:
+        - name: "moderate_price_drop"
+          expression: "current.close < block2.peak_price * 0.97"
+          description: "Close < Block2 peak * 0.97"
+
+        - name: "volume_weak"
+          expression: "current.volume < avg(all_stocks[-20:], 'volume') * 1.2"
+          description: "Volume < 20-day avg * 1.2"
+
+      parameters:
+        min_duration: 1
+        max_duration: 80
+
+      metadata:
+        color: "#C5F1E7"
+        priority: 3
+
+  edges:
+    - from_block: "block1"
+      to_block: "block2"
+      edge_type: "sequential"
+      priority: 1
+      description: "Block1 -> Block2"
+
+    - from_block: "block2"
+      to_block: "block3"
+      edge_type: "sequential"
+      priority: 1
+      description: "Block2 -> Block3"

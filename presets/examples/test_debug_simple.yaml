@@ -1,0 +1,29 @@
+# test_debug_simple.yaml - 디버깅용 매우 간단한 조건
+version: "1.0"
+
+block_graph:
+  pattern_type: "seed"
+  root_node: "block1"
+
+  nodes:
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "Simple Trading Value Test"
+      description: "거래대금 100억 이상만 체크"
+
+      entry_conditions:
+        - name: "trading_value"
+          expression: "(current.close * current.volume) >= 10000000000"
+          description: "거래대금 100억원 이상"
+
+      exit_conditions:
+        - name: "trading_value_drop"
+          expression: "(current.close * current.volume) < 5000000000"
+          description: "거래대금 50억 미만"
+
+      parameters:
+        min_duration: 1
+        max_duration: 50
+
+  edges: []

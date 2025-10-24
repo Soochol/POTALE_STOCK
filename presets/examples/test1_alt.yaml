@@ -9,7 +9,7 @@
 #
 # Block1 진입 조건:
 # - 거래대금 300억원 이상
-# - 거래량이 120일 평균 대비 2.5배 이상
+# - 365일 신고 거래량
 #
 # Block1 종료 조건:
 # - 저가가 60일 이동평균 아래로 터치
@@ -48,8 +48,8 @@ block_graph:
           description: "거래대금 300억원 이상"
 
         - name: "volume_surge"
-          expression: "current.volume >= volume_ma(120) * 2.5"
-          description: "거래량이 120일 평균 대비 2.5배 이상"
+          expression: "is_volume_high(365)"
+          description: "신고 거래량"
 
         - name: "high_surge_rate"
           expression: "prev and ((current.high - prev.close) / prev.close * 100) >= 10.0"
@@ -83,7 +83,7 @@ block_graph:
       entry_conditions:
         - name: "ultra_high_trading_value"
           expression: "(current.close * current.volume) >= 100000000000"
-          description: "거래대금 1000억원 이상"
+          description: "거래대금 N억원 이상"
 
         - name: "volume_surge_vs_prev"
           expression: "current.volume >= last_valid_volume() * 3.0"

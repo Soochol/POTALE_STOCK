@@ -34,7 +34,7 @@ class AutomatedRedetection:
         Session = sessionmaker(bind=engine)
         self.session = Session()
 
-        self.stock_repo = SqliteStockRepository(self.session)
+        self.stock_repo = SqliteStockRepository(db_path=db_path)
         self.seed_pattern_repo = SeedPatternRepositoryImpl(self.session)
         self.detection_repo = DynamicBlockRepositoryImpl(self.session)
         self.block_graph_loader = BlockGraphLoader()
@@ -141,9 +141,15 @@ class AutomatedRedetection:
     ) -> dict:
         """Single seed pattern redetection"""
 
+        # Set default dates
+        if from_date is None:
+            from_date = date(2015, 1, 1)
+        if to_date is None:
+            to_date = date.today()
+
         # Load historical stock data
         print(f"📊 Loading stock data for {ticker}...")
-        stocks = self.stock_repo.find_by_ticker_and_date_range(
+        stocks = self.stock_repo.get_stock_data(
             ticker=ticker,
             start_date=from_date,
             end_date=to_date

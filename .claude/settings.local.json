@@ -90,7 +90,18 @@
       "Bash(if not exist testsunitlearningevaluation mkdir testsunitlearningevaluation)",
       "Bash(dir:*)",
       "Bash(if exist test_indicator_debug.py del test_indicator_debug.py)",
-      "Bash(if exist test_block2_conditions.py del test_block2_conditions.py)"
+      "Bash(if exist test_block2_conditions.py del test_block2_conditions.py)",
+      "Bash(PYTHONIOENCODING=utf-8 python:*)",
+      "Bash(awk:*)",
+      "Bash(c:/myCode/potale_stock/.venv/Scripts/python.exe:*)",
+      "Bash(set PYTHONIOENCODING=utf-8:*)",
+      "Bash(export PYTHONIOENCODING=utf-8)",
+      "Bash(if not exist docsarchivelegacy_codecli mkdir docsarchivelegacy_codecli)",
+      "Bash(if not exist docsarchivelegacy_codedomainentitiescore mkdir docsarchivelegacy_codedomainentitiescore)",
+      "Bash(if not exist docsarchivelegacy_codedomainentitiesconditions mkdir docsarchivelegacy_codedomainentitiesconditions)",
+      "Bash(if not exist docsarchivelegacy_codedomainrepositories mkdir docsarchivelegacy_codedomainrepositories)",
+      "Bash(if not exist docsarchivelegacy_codeinfrastructurecollectors mkdir docsarchivelegacy_codeinfrastructurecollectors)",
+      "Bash(if not exist docsarchivelegacy_codeinfrastructurerepositoriescondition mkdir docsarchivelegacy_codeinfrastructurerepositoriescondition)"
     ],
     "deny": [],
     "ask": []
