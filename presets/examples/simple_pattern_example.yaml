@@ -1,0 +1,110 @@
+# Simple Pattern Example - 간단한 순차 패턴 예제
+#
+# 이 파일은 동적 블록 시스템의 사용 예제입니다.
+# Block1 → Block2 → Block3 순차 패턴을 정의합니다.
+
+version: "1.0"
+
+block_graph:
+  # 시작 블록
+  root_node: "block1"
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 블록 노드 정의
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  nodes:
+    # ═══════════════════════════════════════════════════════
+    # Block 1 - 초기 급등
+    # ═══════════════════════════════════════════════════════
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "Initial Surge"
+      description: "주가의 초기 급등 구간 감지"
+
+      # 진입 조건 (AND 조건: 모두 만족해야 함)
+      entry_conditions:
+        - name: "price_threshold"
+          expression: "current.close >= 10000"
+          description: "최소 가격 조건"
+
+        - name: "volume_spike"
+          expression: "current.volume >= 1000000"
+          description: "최소 거래량 조건"
+
+      # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
+      exit_conditions:
+        - name: "price_drop"
+          expression: "current.close < 9000"
+          description: "가격 하락으로 종료"
+
+      # 블록 파라미터
+      parameters:
+        min_duration_candles: 1
+        max_duration_candles: 50
+
+    # ═══════════════════════════════════════════════════════
+    # Block 2 - 지속 구간
+    # ═══════════════════════════════════════════════════════
+    block2:
+      block_id: "block2"
+      block_type: 2
+      name: "Continuation Phase"
+      description: "Block1 이후 지속 구간"
+
+      entry_conditions:
+        - name: "price_continuation"
+          expression: "current.close >= 11000"
+          description: "가격 상승 지속"
+
+        - name: "volume_support"
+          expression: "current.volume >= 800000"
+          description: "거래량 지지"
+
+      exit_conditions:
+        - name: "price_breakdown"
+          expression: "current.close < 10000"
+          description: "가격 이탈"
+
+      parameters:
+        min_duration_candles: 1
+        max_duration_candles: 30
+
+    # ═══════════════════════════════════════════════════════
+    # Block 3 - 추가 상승
+    # ═══════════════════════════════════════════════════════
+    block3:
+      block_id: "block3"
+      block_type: 3
+      name: "Further Advancement"
+      description: "Block2 이후 추가 상승"
+
+      entry_conditions:
+        - name: "breakout"
+          expression: "current.close >= 12000"
+          description: "신고가 돌파"
+
+      exit_conditions:
+        - name: "exhaustion"
+          expression: "current.volume < 500000"
+          description: "거래량 소진"
+
+      parameters:
+        min_duration_candles: 1
+        max_duration_candles: 20
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 블록 간 관계 (엣지)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  edges:
+    # Block1 → Block2 (순차)
+    - from_block: "block1"
+      to_block: "block2"
+      edge_type: "sequential"
+      priority: 1
+
+    # Block2 → Block3 (순차)
+    - from_block: "block2"
+      to_block: "block3"
+      edge_type: "sequential"
+      priority: 1
