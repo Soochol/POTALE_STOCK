@@ -81,7 +81,8 @@
       "Bash(del presetsfeature_configsblock_classifier_v1.yaml)",
       "Read(//c/**)",
       "Bash(cd:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

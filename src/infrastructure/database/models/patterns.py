@@ -20,6 +20,9 @@ class BlockPattern(Base):
     seed_block1_id = Column(String(50), ForeignKey('block1_detection.block1_id'), nullable=False, comment='Block1 Seed ID')
     seed_block2_id = Column(String(50), ForeignKey('block2_detection.block2_id'), nullable=False, comment='Block2 Seed ID')
     seed_block3_id = Column(String(50), ForeignKey('block3_detection.block3_id'), nullable=False, comment='Block3 Seed ID')
+    seed_block4_id = Column(String(50), ForeignKey('block4_detection.block4_id'), nullable=True, comment='Block4 Seed ID (선택적)')
+    seed_block5_id = Column(String(50), ForeignKey('block5_detection.block5_id'), nullable=True, comment='Block5 Seed ID (선택적)')
+    seed_block6_id = Column(String(50), ForeignKey('block6_detection.block6_id'), nullable=True, comment='Block6 Seed ID (선택적)')
 
     # 재탐지 기간
     redetection_start = Column(Date, nullable=False, comment='재탐지 시작일 (Block1 Seed 시작일)')
@@ -33,6 +36,9 @@ class BlockPattern(Base):
     seed_block1 = relationship("Block1Detection", foreign_keys=[seed_block1_id])
     seed_block2 = relationship("Block2Detection", foreign_keys=[seed_block2_id])
     seed_block3 = relationship("Block3Detection", foreign_keys=[seed_block3_id])
+    seed_block4 = relationship("Block4Detection", foreign_keys=[seed_block4_id])
+    seed_block5 = relationship("Block5Detection", foreign_keys=[seed_block5_id])
+    seed_block6 = relationship("Block6Detection", foreign_keys=[seed_block6_id])
 
     block1_detections = relationship("Block1Detection", back_populates="pattern", foreign_keys="Block1Detection.pattern_id")
     block2_detections = relationship("Block2Detection", back_populates="pattern", foreign_keys="Block2Detection.pattern_id")

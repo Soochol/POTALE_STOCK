@@ -37,6 +37,9 @@ class BlockPatternRepository:
                     existing.seed_block1_id = pattern.seed_block1_id
                     existing.seed_block2_id = pattern.seed_block2_id
                     existing.seed_block3_id = pattern.seed_block3_id
+                    existing.seed_block4_id = pattern.seed_block4_id
+                    existing.seed_block5_id = pattern.seed_block5_id
+                    existing.seed_block6_id = pattern.seed_block6_id
                     existing.redetection_start = pattern.redetection_start
                     existing.redetection_end = pattern.redetection_end
                     session.commit()
@@ -48,6 +51,9 @@ class BlockPatternRepository:
                 seed_block1_id=pattern.seed_block1_id,
                 seed_block2_id=pattern.seed_block2_id,
                 seed_block3_id=pattern.seed_block3_id,
+                seed_block4_id=pattern.seed_block4_id,
+                seed_block5_id=pattern.seed_block5_id,
+                seed_block6_id=pattern.seed_block6_id,
                 redetection_start=pattern.redetection_start,
                 redetection_end=pattern.redetection_end
             )
@@ -82,7 +88,10 @@ class BlockPatternRepository:
                 seed_block2_id=pattern_model.seed_block2_id,
                 seed_block3_id=pattern_model.seed_block3_id,
                 redetection_start=pattern_model.redetection_start,
-                redetection_end=pattern_model.redetection_end
+                redetection_end=pattern_model.redetection_end,
+                seed_block4_id=pattern_model.seed_block4_id,
+                seed_block5_id=pattern_model.seed_block5_id,
+                seed_block6_id=pattern_model.seed_block6_id
             )
 
     def find_by_ticker(self, ticker: str) -> List[BlockPattern]:
@@ -138,7 +147,10 @@ class BlockPatternRepository:
                 seed_block2_id=pattern_model.seed_block2_id,
                 seed_block3_id=pattern_model.seed_block3_id,
                 redetection_start=pattern_model.redetection_start,
-                redetection_end=pattern_model.redetection_end
+                redetection_end=pattern_model.redetection_end,
+                seed_block4_id=pattern_model.seed_block4_id,
+                seed_block5_id=pattern_model.seed_block5_id,
+                seed_block6_id=pattern_model.seed_block6_id
             )
 
     def delete(self, pattern_id: int) -> bool:
