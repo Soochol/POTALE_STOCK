@@ -1,28 +1,10 @@
 """
-Condition Entities
-진입/종료 조건 엔티티
+Conditions Module - 동적 조건 시스템
+
+표현식 기반 조건 평가, 함수 레지스트리, 블록 관계 관리
 """
-from .base_entry_condition import BaseEntryCondition, Block1ExitConditionType
-from .block_conditions import (
-    Block1Condition,
-    Block2Condition,
-    Block3Condition,
-    Block4Condition,
-    Block5Condition,
-    Block6Condition,
-)
-from .seed_condition import SeedCondition
-from .redetection_condition import RedetectionCondition
+from .expression_engine import ExpressionEngine
 
 __all__ = [
-    'BaseEntryCondition',
-    'Block1ExitConditionType',
-    'Block1Condition',
-    'Block2Condition',
-    'Block3Condition',
-    'Block4Condition',
-    'Block5Condition',
-    'Block6Condition',
-    'SeedCondition',
-    'RedetectionCondition',
+    'ExpressionEngine',
 ]

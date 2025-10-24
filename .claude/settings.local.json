@@ -82,7 +82,8 @@
       "Read(//c/**)",
       "Bash(cd:*)",
       "Bash(findstr:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git tag:*)"
     ],
     "deny": [],
     "ask": []

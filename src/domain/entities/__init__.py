@@ -20,19 +20,13 @@ from .detections import (
     Block6Detection,
 )
 
-# Condition entities
+# Condition entities (Dynamic System)
 from .conditions import (
-    BaseEntryCondition,
-    Block1ExitConditionType,
-    Block1Condition,
-    Block2Condition,
-    Block3Condition,
-    Block4Condition,
-    Block5Condition,
-    Block6Condition,
-    SeedCondition,
-    RedetectionCondition,
+    ExpressionEngine,
 )
+
+# Old conditions (backed up to backup/old_system)
+# BaseEntryCondition, Block1Condition, etc. are no longer used
 
 # Pattern entities
 from .patterns import BlockPattern
@@ -54,17 +48,8 @@ __all__ = [
     'Block5Detection',
     'Block6Detection',
 
-    # Conditions
-    'BaseEntryCondition',
-    'Block1ExitConditionType',
-    'Block1Condition',
-    'Block2Condition',
-    'Block3Condition',
-    'Block4Condition',
-    'Block5Condition',
-    'Block6Condition',
-    'SeedCondition',
-    'RedetectionCondition',
+    # Conditions (Dynamic System)
+    'ExpressionEngine',
 
     # Patterns
     'BlockPattern',
