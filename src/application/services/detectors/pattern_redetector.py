@@ -1,7 +1,7 @@
 """
 Pattern Redetector Service
 
-Block1/2/3/4 재탐지 서비스
+Block1/2/3/4/5/6 재탐지 서비스
 가격 범위 필터 + 완화된 조건 적용
 """
 from typing import List, Optional
@@ -15,11 +15,15 @@ from src.domain.entities import (
     Block2Detection,
     Block3Detection,
     Block4Detection,
+    Block5Detection,
+    Block6Detection,
 )
 from src.application.services.checkers.block1_checker import Block1Checker
 from src.application.services.checkers.block2_checker import Block2Checker
 from src.application.services.checkers.block3_checker import Block3Checker
 from src.application.services.checkers.block4_checker import Block4Checker
+from src.application.services.checkers.block5_checker import Block5Checker
+from src.application.services.checkers.block6_checker import Block6Checker
 
 class PatternRedetector:
     """
@@ -30,6 +34,8 @@ class PatternRedetector:
     - Block2 재탐지: seed_peak ± tolerance + low > block1_seed
     - Block3 재탐지: seed_peak ± tolerance + low > block2_seed
     - Block4 재탐지: seed_peak ± tolerance + low > block3_seed
+    - Block5 재탐지: seed_peak ± tolerance + low > block4_seed
+    - Block6 재탐지: seed_peak ± tolerance + low > block5_seed
     - Cooldown: 20일
     """
 
@@ -38,6 +44,8 @@ class PatternRedetector:
         self.block2_checker = Block2Checker()
         self.block3_checker = Block3Checker()
         self.block4_checker = Block4Checker()
+        self.block5_checker = Block5Checker()
+        self.block6_checker = Block6Checker()
 
     def _get_range_high(
         self,
@@ -581,6 +589,315 @@ class PatternRedetector:
                 )
 
                 redetections.append(block4)
+                last_redetection_date = stock.date
+
+        return redetections
+    def redetect_block5(
+        self,
+        stocks: List[Stock],
+        seed_block1: Block1Detection,
+        seed_block2: Block2Detection,
+        seed_block3: Block3Detection,
+        seed_block4: Block4Detection,
+        seed_block5: Block5Detection,
+        condition: RedetectionCondition,
+        pattern_id: int,
+        redetection_start: date,
+        redetection_end: date
+    ) -> List[Block5Detection]:
+        """
+        Block5 재탐지
+
+        Args:
+            stocks: 주식 데이터 리스트
+            seed_block1: Block1 Seed (Block2 조건 체크용)
+            seed_block2: Block2 Seed (Block3 조건 체크용)
+            seed_block3: Block3 Seed (Block4 조건 체크용)
+            seed_block4: Block4 Seed (저가 마진 체크용)
+            seed_block5: Block5 Seed (가격 범위 기준)
+            condition: 재탐지 조건
+            pattern_id: 패턴 ID
+            redetection_start: 재탐지 시작일
+            redetection_end: 재탐지 종료일
+
+        Returns:
+            Block5 재탐지 리스트
+        """
+        from src.domain.entities.conditions.block_conditions import Block5Condition
+
+        # Block5Condition 생성
+        block5_condition = Block5Condition(
+            base=self._create_base_for_block(condition, 5),
+            # Block2 추가 조건
+            block2_volume_ratio=condition.block2_volume_ratio,
+            block2_low_price_margin=condition.block2_low_price_margin,
+            block2_min_candles_from_block=condition.block2_min_candles_from_block,
+            block2_max_candles_from_block=condition.block2_max_candles_from_block,
+            block2_lookback_min_candles=condition.block2_lookback_min_candles,
+            block2_lookback_max_candles=condition.block2_lookback_max_candles,
+            # Block3 추가 조건
+            block3_volume_ratio=condition.block3_volume_ratio,
+            block3_low_price_margin=condition.block3_low_price_margin,
+            block3_min_candles_from_block=condition.block3_min_candles_from_block,
+            block3_max_candles_from_block=condition.block3_max_candles_from_block,
+            block3_lookback_min_candles=condition.block3_lookback_min_candles,
+            block3_lookback_max_candles=condition.block3_lookback_max_candles,
+            # Block4 추가 조건
+            block4_volume_ratio=condition.block4_volume_ratio,
+            block4_low_price_margin=condition.block4_low_price_margin,
+            block4_min_candles_from_block=condition.block4_min_candles_from_block,
+            block4_max_candles_from_block=condition.block4_max_candles_from_block,
+            block4_lookback_min_candles=condition.block4_lookback_min_candles,
+            block4_lookback_max_candles=condition.block4_lookback_max_candles,
+            # Block5 추가 조건
+            block5_volume_ratio=condition.block5_volume_ratio,
+            block5_low_price_margin=condition.block5_low_price_margin,
+            block5_min_candles_from_block=condition.block5_min_candles_from_block,
+            block5_max_candles_from_block=condition.block5_max_candles_from_block,
+            block5_lookback_min_candles=condition.block5_lookback_min_candles,
+            block5_lookback_max_candles=condition.block5_lookback_max_candles
+        )
+
+        # 가격 범위 계산 (Block5 Seed 기준)
+        tolerance = condition.block5_tolerance_pct / 100.0
+        price_min = seed_block5.peak_price * (1 - tolerance)
+        price_max = seed_block5.peak_price * (1 + tolerance)
+
+        # 재탐지 기간 내 데이터만 필터링
+        stocks_in_period = [
+            s for s in stocks
+            if redetection_start <= s.date <= redetection_end
+        ]
+
+        redetections = []
+        last_redetection_date = None
+
+        for i, stock in enumerate(stocks_in_period):
+            # 가격 범위 체크
+            if not (price_min <= stock.high <= price_max):
+                continue
+
+            # 저가 마진 체크 (Block4 Seed 기준) - OR 조건
+            low_margin = condition.block5_low_price_margin / 100.0
+            threshold_price = stock.low * (1 + low_margin)
+
+            meets_db_peak = threshold_price > seed_block4.peak_price
+            range_high = self._get_range_high(
+                seed_block4.started_at,
+                stock.date,
+                stock.ticker,
+                stocks
+            )
+            meets_range_high = range_high is not None and threshold_price > range_high
+
+            if not (meets_db_peak or meets_range_high):
+                continue
+
+            # Min start interval 체크
+            if last_redetection_date:
+                days_diff = (stock.date - last_redetection_date).days
+                if days_diff < condition.base.block1_min_start_interval_days:
+                    continue
+
+            # Lookback 윈도우 검사
+            if not self.block5_checker.check_lookback_window(
+                stock.date,
+                seed_block4,
+                condition.block5_lookback_min_candles,
+                condition.block5_lookback_max_candles,
+                stocks
+            ):
+                continue
+
+            # Block5 기본 조건 체크
+            if self.block5_checker.check_entry(
+                condition=block5_condition,
+                stock=stock,
+                all_stocks=stocks,
+                prev_seed_block1=seed_block1,
+                prev_seed_block2=seed_block2,
+                prev_seed_block3=seed_block3,
+                prev_seed_block4=seed_block4
+            ):
+                # Block5 재탐지 생성
+                indicators = stock.indicators if hasattr(stock, 'indicators') else {}
+                block5 = Block5Detection(
+                    block5_id=None,
+                    ticker=stock.ticker,
+                    started_at=stock.date,
+                    ended_at=None,
+                    entry_close=stock.close,
+                    entry_rate=indicators.get('rate'),
+                    prev_block_id=seed_block4.block4_id,
+                    prev_block_peak_price=seed_block4.peak_price,
+                    peak_price=stock.high,
+                    peak_date=stock.date,
+                    peak_volume=stock.volume,
+                    condition_name="redetection",
+                    pattern_id=pattern_id
+                )
+
+                redetections.append(block5)
+                last_redetection_date = stock.date
+
+        return redetections
+
+    def redetect_block6(
+        self,
+        stocks: List[Stock],
+        seed_block1: Block1Detection,
+        seed_block2: Block2Detection,
+        seed_block3: Block3Detection,
+        seed_block4: Block4Detection,
+        seed_block5: Block5Detection,
+        seed_block6: Block6Detection,
+        condition: RedetectionCondition,
+        pattern_id: int,
+        redetection_start: date,
+        redetection_end: date
+    ) -> List[Block6Detection]:
+        """
+        Block6 재탐지
+
+        Args:
+            stocks: 주식 데이터 리스트
+            seed_block1: Block1 Seed (Block2 조건 체크용)
+            seed_block2: Block2 Seed (Block3 조건 체크용)
+            seed_block3: Block3 Seed (Block4 조건 체크용)
+            seed_block4: Block4 Seed (Block5 조건 체크용)
+            seed_block5: Block5 Seed (저가 마진 체크용)
+            seed_block6: Block6 Seed (가격 범위 기준)
+            condition: 재탐지 조건
+            pattern_id: 패턴 ID
+            redetection_start: 재탐지 시작일
+            redetection_end: 재탐지 종료일
+
+        Returns:
+            Block6 재탐지 리스트
+        """
+        from src.domain.entities.conditions.block_conditions import Block6Condition
+
+        # Block6Condition 생성
+        block6_condition = Block6Condition(
+            base=self._create_base_for_block(condition, 6),
+            # Block2 추가 조건
+            block2_volume_ratio=condition.block2_volume_ratio,
+            block2_low_price_margin=condition.block2_low_price_margin,
+            block2_min_candles_from_block=condition.block2_min_candles_from_block,
+            block2_max_candles_from_block=condition.block2_max_candles_from_block,
+            block2_lookback_min_candles=condition.block2_lookback_min_candles,
+            block2_lookback_max_candles=condition.block2_lookback_max_candles,
+            # Block3 추가 조건
+            block3_volume_ratio=condition.block3_volume_ratio,
+            block3_low_price_margin=condition.block3_low_price_margin,
+            block3_min_candles_from_block=condition.block3_min_candles_from_block,
+            block3_max_candles_from_block=condition.block3_max_candles_from_block,
+            block3_lookback_min_candles=condition.block3_lookback_min_candles,
+            block3_lookback_max_candles=condition.block3_lookback_max_candles,
+            # Block4 추가 조건
+            block4_volume_ratio=condition.block4_volume_ratio,
+            block4_low_price_margin=condition.block4_low_price_margin,
+            block4_min_candles_from_block=condition.block4_min_candles_from_block,
+            block4_max_candles_from_block=condition.block4_max_candles_from_block,
+            block4_lookback_min_candles=condition.block4_lookback_min_candles,
+            block4_lookback_max_candles=condition.block4_lookback_max_candles,
+            # Block5 추가 조건
+            block5_volume_ratio=condition.block5_volume_ratio,
+            block5_low_price_margin=condition.block5_low_price_margin,
+            block5_min_candles_from_block=condition.block5_min_candles_from_block,
+            block5_max_candles_from_block=condition.block5_max_candles_from_block,
+            block5_lookback_min_candles=condition.block5_lookback_min_candles,
+            block5_lookback_max_candles=condition.block5_lookback_max_candles,
+            # Block6 추가 조건
+            block6_volume_ratio=condition.block6_volume_ratio,
+            block6_low_price_margin=condition.block6_low_price_margin,
+            block6_min_candles_from_block=condition.block6_min_candles_from_block,
+            block6_max_candles_from_block=condition.block6_max_candles_from_block,
+            block6_lookback_min_candles=condition.block6_lookback_min_candles,
+            block6_lookback_max_candles=condition.block6_lookback_max_candles
+        )
+
+        # 가격 범위 계산 (Block6 Seed 기준)
+        tolerance = condition.block6_tolerance_pct / 100.0
+        price_min = seed_block6.peak_price * (1 - tolerance)
+        price_max = seed_block6.peak_price * (1 + tolerance)
+
+        # 재탐지 기간 내 데이터만 필터링
+        stocks_in_period = [
+            s for s in stocks
+            if redetection_start <= s.date <= redetection_end
+        ]
+
+        redetections = []
+        last_redetection_date = None
+
+        for i, stock in enumerate(stocks_in_period):
+            # 가격 범위 체크
+            if not (price_min <= stock.high <= price_max):
+                continue
+
+            # 저가 마진 체크 (Block5 Seed 기준) - OR 조건
+            low_margin = condition.block6_low_price_margin / 100.0
+            threshold_price = stock.low * (1 + low_margin)
+
+            meets_db_peak = threshold_price > seed_block5.peak_price
+            range_high = self._get_range_high(
+                seed_block5.started_at,
+                stock.date,
+                stock.ticker,
+                stocks
+            )
+            meets_range_high = range_high is not None and threshold_price > range_high
+
+            if not (meets_db_peak or meets_range_high):
+                continue
+
+            # Min start interval 체크
+            if last_redetection_date:
+                days_diff = (stock.date - last_redetection_date).days
+                if days_diff < condition.base.block1_min_start_interval_days:
+                    continue
+
+            # Lookback 윈도우 검사
+            if not self.block6_checker.check_lookback_window(
+                stock.date,
+                seed_block5,
+                condition.block6_lookback_min_candles,
+                condition.block6_lookback_max_candles,
+                stocks
+            ):
+                continue
+
+            # Block6 기본 조건 체크
+            if self.block6_checker.check_entry(
+                condition=block6_condition,
+                stock=stock,
+                all_stocks=stocks,
+                prev_seed_block1=seed_block1,
+                prev_seed_block2=seed_block2,
+                prev_seed_block3=seed_block3,
+                prev_seed_block4=seed_block4,
+                prev_seed_block5=seed_block5
+            ):
+                # Block6 재탐지 생성
+                indicators = stock.indicators if hasattr(stock, 'indicators') else {}
+                block6 = Block6Detection(
+                    block6_id=None,
+                    ticker=stock.ticker,
+                    started_at=stock.date,
+                    ended_at=None,
+                    entry_close=stock.close,
+                    entry_rate=indicators.get('rate'),
+                    prev_block_id=seed_block5.block5_id,
+                    prev_block_peak_price=seed_block5.peak_price,
+                    peak_price=stock.high,
+                    peak_date=stock.date,
+                    peak_volume=stock.volume,
+                    condition_name="redetection",
+                    pattern_id=pattern_id
+                )
+
+                redetections.append(block6)
                 last_redetection_date = stock.date
 
         return redetections
