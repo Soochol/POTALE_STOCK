@@ -221,9 +221,13 @@ class PatternRedetector:
         # Block2 전용 파라미터가 있으면 사용, 없으면 Block1 값으로 fallback
         block2_condition = Block2Condition(
             base=self._create_base_for_block(condition, 2),
-            # Block2 추가 조건 (2개 필드)
+            # Block2 추가 조건
             block2_volume_ratio=condition.block2_volume_ratio,
-            block2_low_price_margin=condition.block2_low_price_margin
+            block2_low_price_margin=condition.block2_low_price_margin,
+            block2_min_candles_from_block=condition.block2_min_candles_from_block,
+            block2_max_candles_from_block=condition.block2_max_candles_from_block,
+            block2_lookback_min_candles=condition.block2_lookback_min_candles,
+            block2_lookback_max_candles=condition.block2_lookback_max_candles
         )
 
         # 가격 범위 계산 (Block2 Seed 기준)
@@ -267,6 +271,16 @@ class PatternRedetector:
                 days_diff = (stock.date - last_redetection_date).days
                 if days_diff < condition.base.block1_min_start_interval_days:
                     continue
+
+            # Lookback 윈도우 검사
+            if not self.block2_checker.check_lookback_window(
+                stock.date,
+                seed_block1,
+                condition.block2_lookback_min_candles,
+                condition.block2_lookback_max_candles,
+                stocks
+            ):
+                continue
 
             # Block2 기본 조건 체크
             if self.block2_checker.check_entry(
@@ -330,12 +344,20 @@ class PatternRedetector:
         # Block3 전용 파라미터가 있으면 사용, 없으면 Block1 값으로 fallback
         block3_condition = Block3Condition(
             base=self._create_base_for_block(condition, 3),
-            # Block2 추가 조건 (2개 필드)
+            # Block2 추가 조건
             block2_volume_ratio=condition.block2_volume_ratio,
             block2_low_price_margin=condition.block2_low_price_margin,
-            # Block3 추가 조건 (2개 필드)
+            block2_min_candles_from_block=condition.block2_min_candles_from_block,
+            block2_max_candles_from_block=condition.block2_max_candles_from_block,
+            block2_lookback_min_candles=condition.block2_lookback_min_candles,
+            block2_lookback_max_candles=condition.block2_lookback_max_candles,
+            # Block3 추가 조건
             block3_volume_ratio=condition.block3_volume_ratio,
-            block3_low_price_margin=condition.block3_low_price_margin
+            block3_low_price_margin=condition.block3_low_price_margin,
+            block3_min_candles_from_block=condition.block3_min_candles_from_block,
+            block3_max_candles_from_block=condition.block3_max_candles_from_block,
+            block3_lookback_min_candles=condition.block3_lookback_min_candles,
+            block3_lookback_max_candles=condition.block3_lookback_max_candles
         )
 
         # 가격 범위 계산 (Block3 Seed 기준)
@@ -379,6 +401,16 @@ class PatternRedetector:
                 days_diff = (stock.date - last_redetection_date).days
                 if days_diff < condition.base.block1_min_start_interval_days:
                     continue
+
+            # Lookback 윈도우 검사
+            if not self.block3_checker.check_lookback_window(
+                stock.date,
+                seed_block2,
+                condition.block3_lookback_min_candles,
+                condition.block3_lookback_max_candles,
+                stocks
+            ):
+                continue
 
             # Block3 기본 조건 체크
             if self.block3_checker.check_entry(
@@ -446,15 +478,27 @@ class PatternRedetector:
         # Block4 전용 파라미터가 있으면 사용, 없으면 Block1 값으로 fallback
         block4_condition = Block4Condition(
             base=self._create_base_for_block(condition, 4),
-            # Block2 추가 조건 (2개 필드)
+            # Block2 추가 조건
             block2_volume_ratio=condition.block2_volume_ratio,
             block2_low_price_margin=condition.block2_low_price_margin,
-            # Block3 추가 조건 (2개 필드)
+            block2_min_candles_from_block=condition.block2_min_candles_from_block,
+            block2_max_candles_from_block=condition.block2_max_candles_from_block,
+            block2_lookback_min_candles=condition.block2_lookback_min_candles,
+            block2_lookback_max_candles=condition.block2_lookback_max_candles,
+            # Block3 추가 조건
             block3_volume_ratio=condition.block3_volume_ratio,
             block3_low_price_margin=condition.block3_low_price_margin,
-            # Block4 추가 조건 (2개 필드)
+            block3_min_candles_from_block=condition.block3_min_candles_from_block,
+            block3_max_candles_from_block=condition.block3_max_candles_from_block,
+            block3_lookback_min_candles=condition.block3_lookback_min_candles,
+            block3_lookback_max_candles=condition.block3_lookback_max_candles,
+            # Block4 추가 조건
             block4_volume_ratio=condition.block4_volume_ratio,
-            block4_low_price_margin=condition.block4_low_price_margin
+            block4_low_price_margin=condition.block4_low_price_margin,
+            block4_min_candles_from_block=condition.block4_min_candles_from_block,
+            block4_max_candles_from_block=condition.block4_max_candles_from_block,
+            block4_lookback_min_candles=condition.block4_lookback_min_candles,
+            block4_lookback_max_candles=condition.block4_lookback_max_candles
         )
 
         # 가격 범위 계산 (Block4 Seed 기준)
@@ -498,6 +542,16 @@ class PatternRedetector:
                 days_diff = (stock.date - last_redetection_date).days
                 if days_diff < condition.base.block1_min_start_interval_days:
                     continue
+
+            # Lookback 윈도우 검사
+            if not self.block4_checker.check_lookback_window(
+                stock.date,
+                seed_block3,
+                condition.block4_lookback_min_candles,
+                condition.block4_lookback_max_candles,
+                stocks
+            ):
+                continue
 
             # Block4 기본 조건 체크
             if self.block4_checker.check_entry(

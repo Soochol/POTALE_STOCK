@@ -392,11 +392,11 @@ class DetectBlocksIntegratedUseCase:
             return False
 
         # 2. 최소 캔들 수 체크 (옵션)
-        if condition.min_candles_after_block1 is not None:
+        if condition.block2_min_candles_from_block is not None:
             if not self.block2_checker.check_min_candles(
                 stock.date,
                 prev_block1,
-                condition.min_candles_after_block1,
+                condition.block2_min_candles_from_block,
                 all_stocks
             ):
                 return False
@@ -426,11 +426,11 @@ class DetectBlocksIntegratedUseCase:
             return False
 
         # 2. 최소 캔들 수 체크 (옵션)
-        if condition.min_candles_after_block2 is not None:
+        if condition.block3_min_candles_from_block is not None:
             if not self.block3_checker.check_min_candles(
                 stock.date,
                 prev_block2,
-                condition.min_candles_after_block2,
+                condition.block3_min_candles_from_block,
                 all_stocks
             ):
                 return False

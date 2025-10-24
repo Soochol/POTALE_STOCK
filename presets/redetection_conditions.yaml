@@ -159,9 +159,15 @@ default_redetect:
     # └─────────────────────────────────────────────────────────────────────┘
     volume_ratio:               10.0      # 거래량비: Block3 최고 대비 10%
     low_price_margin:           5.0      # 저가마진: Block3 최고가 대비 5%
-    min_candles_after_block3:   1         # 최소 캔들 간격 (Block3 포함 카운팅)
+    min_candles_from_block:     1         # 최소 캔들 간격 (Block3 포함 카운팅)
                                            # 예: 1개 = Block3 시작일 포함 2번째 캔들부터 Block4 탐지 가능
-    max_candles_after_block3:   1000      # 최대 캔들 간격 (Block3 포함, null=무제한)
+    max_candles_from_block:     1000      # 최대 캔들 간격 (Block3 포함, null=무제한)
+
+    # Lookback 검증 (Block4 후보 발견 시, 과거에 Block3가 존재하는지 확인)
+    lookback_min_candles:       null      # Lookback 최소 범위 (null=체크 안함)
+                                           # 예: 1 = Block4 후보일 기준 과거 최소 1개 캔들 이내에 Block3 있어야 함
+    lookback_max_candles:       null      # Lookback 최대 범위 (null=체크 안함)
+                                           # 예: 1000 = Block4 후보일 기준 과거 최대 1000개 캔들 이내에 Block3 있어야 함
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │              🔍 재탐지 전용: Block4 가격 범위 (가장 넓음)            │
@@ -205,9 +211,15 @@ default_redetect:
     # └─────────────────────────────────────────────────────────────────────┘
     volume_ratio:               10.0      # 거래량비: Block4 최고 대비 10%
     low_price_margin:           5.0      # 저가마진: Block4 최고가 대비 5%
-    min_candles_after_block4:   1         # 최소 캔들 간격 (Block4 포함 카운팅)
+    min_candles_from_block:     1         # 최소 캔들 간격 (Block4 포함 카운팅)
                                            # 예: 1개 = Block4 시작일 포함 2번째 캔들부터 Block5 탐지 가능
-    max_candles_after_block4:   1000      # 최대 캔들 간격 (Block4 포함, null=무제한)
+    max_candles_from_block:     1000      # 최대 캔들 간격 (Block4 포함, null=무제한)
+
+    # Lookback 검증 (Block5 후보 발견 시, 과거에 Block4가 존재하는지 확인)
+    lookback_min_candles:       null      # Lookback 최소 범위 (null=체크 안함)
+                                           # 예: 1 = Block5 후보일 기준 과거 최소 1개 캔들 이내에 Block4 있어야 함
+    lookback_max_candles:       null      # Lookback 최대 범위 (null=체크 안함)
+                                           # 예: 1000 = Block5 후보일 기준 과거 최대 1000개 캔들 이내에 Block4 있어야 함
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │                  🔍 재탐지 전용: Block5 가격 범위                    │
@@ -251,9 +263,15 @@ default_redetect:
     # └─────────────────────────────────────────────────────────────────────┘
     volume_ratio:               10.0      # 거래량비: Block5 최고 대비 10%
     low_price_margin:           5.0      # 저가마진: Block5 최고가 대비 5%
-    min_candles_after_block5:   1         # 최소 캔들 간격 (Block5 포함 카운팅)
+    min_candles_from_block:     1         # 최소 캔들 간격 (Block5 포함 카운팅)
                                            # 예: 1개 = Block5 시작일 포함 2번째 캔들부터 Block6 탐지 가능
-    max_candles_after_block5:   1000      # 최대 캔들 간격 (Block5 포함, null=무제한)
+    max_candles_from_block:     1000      # 최대 캔들 간격 (Block5 포함, null=무제한)
+
+    # Lookback 검증 (Block6 후보 발견 시, 과거에 Block5가 존재하는지 확인)
+    lookback_min_candles:       null      # Lookback 최소 범위 (null=체크 안함)
+                                           # 예: 1 = Block6 후보일 기준 과거 최소 1개 캔들 이내에 Block5 있어야 함
+    lookback_max_candles:       null      # Lookback 최대 범위 (null=체크 안함)
+                                           # 예: 1000 = Block6 후보일 기준 과거 최대 1000개 캔들 이내에 Block5 있어야 함
 
     # ┌─────────────────────────────────────────────────────────────────────┐
     # │                  🔍 재탐지 전용: Block6 가격 범위                    │

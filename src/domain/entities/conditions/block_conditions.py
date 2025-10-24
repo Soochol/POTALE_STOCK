@@ -80,8 +80,10 @@ class Block2Condition:
     # ===== Block2 전용 조건 =====
     block2_volume_ratio: Optional[float] = None  # 블록1 최고 거래량의 N% (단위: %)
     block2_low_price_margin: Optional[float] = None  # 저가 마진 (단위: %)
-    block2_min_candles_after_block1: Optional[int] = None  # 블록1 시작 후 최소 캔들 수
-    block2_max_candles_after_block1: Optional[int] = None  # 블록1 시작 후 최대 캔들 수
+    block2_min_candles_from_block: Optional[int] = None  # 블록1 시작부터 최소 캔들 수
+    block2_max_candles_from_block: Optional[int] = None  # 블록1 시작부터 최대 캔들 수
+    block2_lookback_min_candles: Optional[int] = None  # Lookback 최소 범위 (Block2 후보일 기준 과거 캔들)
+    block2_lookback_max_candles: Optional[int] = None  # Lookback 최대 범위 (Block2 후보일 기준 과거 캔들)
 
     def validate(self) -> bool:
         """조건 유효성 검사"""
@@ -94,7 +96,7 @@ class Block2Condition:
         if self.block2_low_price_margin is not None and self.block2_low_price_margin < 0:
             return False
 
-        if self.block2_min_candles_after_block1 is not None and self.block2_min_candles_after_block1 < 0:
+        if self.block2_min_candles_from_block is not None and self.block2_min_candles_from_block < 0:
             return False
 
         return True
@@ -136,14 +138,18 @@ class Block3Condition:
     # ===== Block2 조건 (독립적인 값) =====
     block2_volume_ratio: Optional[float] = None
     block2_low_price_margin: Optional[float] = None
-    block2_min_candles_after_block1: Optional[int] = None
-    block2_max_candles_after_block1: Optional[int] = None
+    block2_min_candles_from_block: Optional[int] = None
+    block2_max_candles_from_block: Optional[int] = None
+    block2_lookback_min_candles: Optional[int] = None  # Lookback 최소 범위 (Block2 후보일 기준 과거 캔들)
+    block2_lookback_max_candles: Optional[int] = None  # Lookback 최대 범위 (Block2 후보일 기준 과거 캔들)
 
     # ===== Block3 전용 조건 =====
     block3_volume_ratio: Optional[float] = None
     block3_low_price_margin: Optional[float] = None
-    block3_min_candles_after_block2: Optional[int] = None
-    block3_max_candles_after_block2: Optional[int] = None
+    block3_min_candles_from_block: Optional[int] = None
+    block3_max_candles_from_block: Optional[int] = None
+    block3_lookback_min_candles: Optional[int] = None  # Lookback 최소 범위 (Block3 후보일 기준 과거 캔들)
+    block3_lookback_max_candles: Optional[int] = None  # Lookback 최대 범위 (Block3 후보일 기준 과거 캔들)
 
     def validate(self) -> bool:
         """조건 유효성 검사"""
@@ -155,7 +161,7 @@ class Block3Condition:
             return False
         if self.block2_low_price_margin is not None and self.block2_low_price_margin < 0:
             return False
-        if self.block2_min_candles_after_block1 is not None and self.block2_min_candles_after_block1 < 0:
+        if self.block2_min_candles_from_block is not None and self.block2_min_candles_from_block < 0:
             return False
 
         # Block3 조건 검증
@@ -163,7 +169,7 @@ class Block3Condition:
             return False
         if self.block3_low_price_margin is not None and self.block3_low_price_margin < 0:
             return False
-        if self.block3_min_candles_after_block2 is not None and self.block3_min_candles_after_block2 < 0:
+        if self.block3_min_candles_from_block is not None and self.block3_min_candles_from_block < 0:
             return False
 
         return True
@@ -205,20 +211,26 @@ class Block4Condition:
     # ===== Block2 조건 (독립적인 값) =====
     block2_volume_ratio: Optional[float] = None
     block2_low_price_margin: Optional[float] = None
-    block2_min_candles_after_block1: Optional[int] = None
-    block2_max_candles_after_block1: Optional[int] = None
+    block2_min_candles_from_block: Optional[int] = None
+    block2_max_candles_from_block: Optional[int] = None
+    block2_lookback_min_candles: Optional[int] = None  # Lookback 최소 범위 (Block2 후보일 기준 과거 캔들)
+    block2_lookback_max_candles: Optional[int] = None  # Lookback 최대 범위 (Block2 후보일 기준 과거 캔들)
 
     # ===== Block3 조건 (독립적인 값) =====
     block3_volume_ratio: Optional[float] = None
     block3_low_price_margin: Optional[float] = None
-    block3_min_candles_after_block2: Optional[int] = None
-    block3_max_candles_after_block2: Optional[int] = None
+    block3_min_candles_from_block: Optional[int] = None
+    block3_max_candles_from_block: Optional[int] = None
+    block3_lookback_min_candles: Optional[int] = None  # Lookback 최소 범위 (Block3 후보일 기준 과거 캔들)
+    block3_lookback_max_candles: Optional[int] = None  # Lookback 최대 범위 (Block3 후보일 기준 과거 캔들)
 
     # ===== Block4 전용 조건 =====
     block4_volume_ratio: Optional[float] = None
     block4_low_price_margin: Optional[float] = None
-    block4_min_candles_after_block3: Optional[int] = None
-    block4_max_candles_after_block3: Optional[int] = None
+    block4_min_candles_from_block: Optional[int] = None
+    block4_max_candles_from_block: Optional[int] = None
+    block4_lookback_min_candles: Optional[int] = None  # Lookback 최소 범위 (Block4 후보일 기준 과거 캔들)
+    block4_lookback_max_candles: Optional[int] = None  # Lookback 최대 범위 (Block4 후보일 기준 과거 캔들)
 
     def validate(self) -> bool:
         """조건 유효성 검사"""
@@ -230,7 +242,7 @@ class Block4Condition:
             return False
         if self.block2_low_price_margin is not None and self.block2_low_price_margin < 0:
             return False
-        if self.block2_min_candles_after_block1 is not None and self.block2_min_candles_after_block1 < 0:
+        if self.block2_min_candles_from_block is not None and self.block2_min_candles_from_block < 0:
             return False
 
         # Block3 조건 검증
@@ -238,7 +250,7 @@ class Block4Condition:
             return False
         if self.block3_low_price_margin is not None and self.block3_low_price_margin < 0:
             return False
-        if self.block3_min_candles_after_block2 is not None and self.block3_min_candles_after_block2 < 0:
+        if self.block3_min_candles_from_block is not None and self.block3_min_candles_from_block < 0:
             return False
 
         # Block4 조건 검증
@@ -246,7 +258,7 @@ class Block4Condition:
             return False
         if self.block4_low_price_margin is not None and self.block4_low_price_margin < 0:
             return False
-        if self.block4_min_candles_after_block3 is not None and self.block4_min_candles_after_block3 < 0:
+        if self.block4_min_candles_from_block is not None and self.block4_min_candles_from_block < 0:
             return False
 
         return True
@@ -291,26 +303,34 @@ class Block5Condition:
     # ===== Block2 조건 (독립적인 값) =====
     block2_volume_ratio: Optional[float] = None
     block2_low_price_margin: Optional[float] = None
-    block2_min_candles_after_block1: Optional[int] = None
-    block2_max_candles_after_block1: Optional[int] = None
+    block2_min_candles_from_block: Optional[int] = None
+    block2_max_candles_from_block: Optional[int] = None
+    block2_lookback_min_candles: Optional[int] = None  # Lookback 최소 범위 (Block2 후보일 기준 과거 캔들)
+    block2_lookback_max_candles: Optional[int] = None  # Lookback 최대 범위 (Block2 후보일 기준 과거 캔들)
 
     # ===== Block3 조건 (독립적인 값) =====
     block3_volume_ratio: Optional[float] = None
     block3_low_price_margin: Optional[float] = None
-    block3_min_candles_after_block2: Optional[int] = None
-    block3_max_candles_after_block2: Optional[int] = None
+    block3_min_candles_from_block: Optional[int] = None
+    block3_max_candles_from_block: Optional[int] = None
+    block3_lookback_min_candles: Optional[int] = None  # Lookback 최소 범위 (Block3 후보일 기준 과거 캔들)
+    block3_lookback_max_candles: Optional[int] = None  # Lookback 최대 범위 (Block3 후보일 기준 과거 캔들)
 
     # ===== Block4 조건 (독립적인 값) =====
     block4_volume_ratio: Optional[float] = None
     block4_low_price_margin: Optional[float] = None
-    block4_min_candles_after_block3: Optional[int] = None
-    block4_max_candles_after_block3: Optional[int] = None
+    block4_min_candles_from_block: Optional[int] = None
+    block4_max_candles_from_block: Optional[int] = None
+    block4_lookback_min_candles: Optional[int] = None  # Lookback 최소 범위 (Block4 후보일 기준 과거 캔들)
+    block4_lookback_max_candles: Optional[int] = None  # Lookback 최대 범위 (Block4 후보일 기준 과거 캔들)
 
     # ===== Block5 전용 조건 =====
     block5_volume_ratio: Optional[float] = None
     block5_low_price_margin: Optional[float] = None
-    block5_min_candles_after_block4: Optional[int] = None
-    block5_max_candles_after_block4: Optional[int] = None
+    block5_min_candles_from_block: Optional[int] = None
+    block5_max_candles_from_block: Optional[int] = None
+    block5_lookback_min_candles: Optional[int] = None  # Lookback 최소 범위 (Block5 후보일 기준 과거 캔들)
+    block5_lookback_max_candles: Optional[int] = None  # Lookback 최대 범위 (Block5 후보일 기준 과거 캔들)
 
     def validate(self) -> bool:
         """조건 유효성 검사"""
@@ -322,7 +342,7 @@ class Block5Condition:
             return False
         if self.block2_low_price_margin is not None and self.block2_low_price_margin < 0:
             return False
-        if self.block2_min_candles_after_block1 is not None and self.block2_min_candles_after_block1 < 0:
+        if self.block2_min_candles_from_block is not None and self.block2_min_candles_from_block < 0:
             return False
 
         # Block3 조건 검증
@@ -330,7 +350,7 @@ class Block5Condition:
             return False
         if self.block3_low_price_margin is not None and self.block3_low_price_margin < 0:
             return False
-        if self.block3_min_candles_after_block2 is not None and self.block3_min_candles_after_block2 < 0:
+        if self.block3_min_candles_from_block is not None and self.block3_min_candles_from_block < 0:
             return False
 
         # Block4 조건 검증
@@ -338,7 +358,7 @@ class Block5Condition:
             return False
         if self.block4_low_price_margin is not None and self.block4_low_price_margin < 0:
             return False
-        if self.block4_min_candles_after_block3 is not None and self.block4_min_candles_after_block3 < 0:
+        if self.block4_min_candles_from_block is not None and self.block4_min_candles_from_block < 0:
             return False
 
         # Block5 조건 검증
@@ -346,7 +366,7 @@ class Block5Condition:
             return False
         if self.block5_low_price_margin is not None and self.block5_low_price_margin < 0:
             return False
-        if self.block5_min_candles_after_block4 is not None and self.block5_min_candles_after_block4 < 0:
+        if self.block5_min_candles_from_block is not None and self.block5_min_candles_from_block < 0:
             return False
 
         return True
@@ -394,32 +414,42 @@ class Block6Condition:
     # ===== Block2 조건 (독립적인 값) =====
     block2_volume_ratio: Optional[float] = None
     block2_low_price_margin: Optional[float] = None
-    block2_min_candles_after_block1: Optional[int] = None
-    block2_max_candles_after_block1: Optional[int] = None
+    block2_min_candles_from_block: Optional[int] = None
+    block2_max_candles_from_block: Optional[int] = None
+    block2_lookback_min_candles: Optional[int] = None  # Lookback 최소 범위 (Block2 후보일 기준 과거 캔들)
+    block2_lookback_max_candles: Optional[int] = None  # Lookback 최대 범위 (Block2 후보일 기준 과거 캔들)
 
     # ===== Block3 조건 (독립적인 값) =====
     block3_volume_ratio: Optional[float] = None
     block3_low_price_margin: Optional[float] = None
-    block3_min_candles_after_block2: Optional[int] = None
-    block3_max_candles_after_block2: Optional[int] = None
+    block3_min_candles_from_block: Optional[int] = None
+    block3_max_candles_from_block: Optional[int] = None
+    block3_lookback_min_candles: Optional[int] = None  # Lookback 최소 범위 (Block3 후보일 기준 과거 캔들)
+    block3_lookback_max_candles: Optional[int] = None  # Lookback 최대 범위 (Block3 후보일 기준 과거 캔들)
 
     # ===== Block4 조건 (독립적인 값) =====
     block4_volume_ratio: Optional[float] = None
     block4_low_price_margin: Optional[float] = None
-    block4_min_candles_after_block3: Optional[int] = None
-    block4_max_candles_after_block3: Optional[int] = None
+    block4_min_candles_from_block: Optional[int] = None
+    block4_max_candles_from_block: Optional[int] = None
+    block4_lookback_min_candles: Optional[int] = None  # Lookback 최소 범위 (Block4 후보일 기준 과거 캔들)
+    block4_lookback_max_candles: Optional[int] = None  # Lookback 최대 범위 (Block4 후보일 기준 과거 캔들)
 
     # ===== Block5 조건 (독립적인 값) =====
     block5_volume_ratio: Optional[float] = None
     block5_low_price_margin: Optional[float] = None
-    block5_min_candles_after_block4: Optional[int] = None
-    block5_max_candles_after_block4: Optional[int] = None
+    block5_min_candles_from_block: Optional[int] = None
+    block5_max_candles_from_block: Optional[int] = None
+    block5_lookback_min_candles: Optional[int] = None  # Lookback 최소 범위 (Block5 후보일 기준 과거 캔들)
+    block5_lookback_max_candles: Optional[int] = None  # Lookback 최대 범위 (Block5 후보일 기준 과거 캔들)
 
     # ===== Block6 전용 조건 =====
     block6_volume_ratio: Optional[float] = None
     block6_low_price_margin: Optional[float] = None
-    block6_min_candles_after_block5: Optional[int] = None
-    block6_max_candles_after_block5: Optional[int] = None
+    block6_min_candles_from_block: Optional[int] = None
+    block6_max_candles_from_block: Optional[int] = None
+    block6_lookback_min_candles: Optional[int] = None  # Lookback 최소 범위 (Block6 후보일 기준 과거 캔들)
+    block6_lookback_max_candles: Optional[int] = None  # Lookback 최대 범위 (Block6 후보일 기준 과거 캔들)
 
     def validate(self) -> bool:
         """조건 유효성 검사"""
@@ -431,7 +461,7 @@ class Block6Condition:
             return False
         if self.block2_low_price_margin is not None and self.block2_low_price_margin < 0:
             return False
-        if self.block2_min_candles_after_block1 is not None and self.block2_min_candles_after_block1 < 0:
+        if self.block2_min_candles_from_block is not None and self.block2_min_candles_from_block < 0:
             return False
 
         # Block3 조건 검증
@@ -439,7 +469,7 @@ class Block6Condition:
             return False
         if self.block3_low_price_margin is not None and self.block3_low_price_margin < 0:
             return False
-        if self.block3_min_candles_after_block2 is not None and self.block3_min_candles_after_block2 < 0:
+        if self.block3_min_candles_from_block is not None and self.block3_min_candles_from_block < 0:
             return False
 
         # Block4 조건 검증
@@ -447,7 +477,7 @@ class Block6Condition:
             return False
         if self.block4_low_price_margin is not None and self.block4_low_price_margin < 0:
             return False
-        if self.block4_min_candles_after_block3 is not None and self.block4_min_candles_after_block3 < 0:
+        if self.block4_min_candles_from_block is not None and self.block4_min_candles_from_block < 0:
             return False
 
         # Block5 조건 검증
@@ -455,7 +485,7 @@ class Block6Condition:
             return False
         if self.block5_low_price_margin is not None and self.block5_low_price_margin < 0:
             return False
-        if self.block5_min_candles_after_block4 is not None and self.block5_min_candles_after_block4 < 0:
+        if self.block5_min_candles_from_block is not None and self.block5_min_candles_from_block < 0:
             return False
 
         # Block6 조건 검증
@@ -463,7 +493,7 @@ class Block6Condition:
             return False
         if self.block6_low_price_margin is not None and self.block6_low_price_margin < 0:
             return False
-        if self.block6_min_candles_after_block5 is not None and self.block6_min_candles_after_block5 < 0:
+        if self.block6_min_candles_from_block is not None and self.block6_min_candles_from_block < 0:
             return False
 
         return True

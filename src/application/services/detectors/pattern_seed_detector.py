@@ -168,8 +168,8 @@ class PatternSeedDetector:
             # Block2 추가 조건 (4개 필드: volume, low_price_margin, min/max_candles)
             block2_volume_ratio=condition.block2_volume_ratio,
             block2_low_price_margin=condition.block2_low_price_margin,
-            block2_min_candles_after_block1=condition.block2_min_candles_after_block1,
-            block2_max_candles_after_block1=condition.block2_max_candles_after_block1
+            block2_min_candles_from_block=condition.block2_min_candles_from_block,
+            block2_max_candles_from_block=condition.block2_max_candles_from_block
         )
 
         # Block1 이후 데이터만 필터링
@@ -186,23 +186,33 @@ class PatternSeedDetector:
                 continue
 
             # 최소/최대 캔들 수 검사 (선택적)
-            if block2_condition.block2_min_candles_after_block1 is not None:
+            if block2_condition.block2_min_candles_from_block is not None:
                 if not self.block2_checker.check_min_candles(
                     stock.date,
                     block1,
-                    block2_condition.block2_min_candles_after_block1,
+                    block2_condition.block2_min_candles_from_block,
                     stocks
                 ):
                     continue
 
-            if block2_condition.block2_max_candles_after_block1 is not None:
+            if block2_condition.block2_max_candles_from_block is not None:
                 if not self.block2_checker.check_max_candles(
                     stock.date,
                     block1,
-                    block2_condition.block2_max_candles_after_block1,
+                    block2_condition.block2_max_candles_from_block,
                     stocks
                 ):
                     continue
+
+            # Lookback 윈도우 검사
+            if not self.block2_checker.check_lookback_window(
+                stock.date,
+                block1,
+                block2_condition.block2_lookback_min_candles,
+                block2_condition.block2_lookback_max_candles,
+                stocks
+            ):
+                continue
 
             # 모든 조건 통과 → Block2 Detection 생성
                 indicators = stock.indicators if hasattr(stock, 'indicators') else {}
@@ -256,13 +266,13 @@ class PatternSeedDetector:
             # Block2 추가 조건 (4개 필드)
             block2_volume_ratio=condition.block2_volume_ratio,
             block2_low_price_margin=condition.block2_low_price_margin,
-            block2_min_candles_after_block1=condition.block2_min_candles_after_block1,
-            block2_max_candles_after_block1=condition.block2_max_candles_after_block1,
+            block2_min_candles_from_block=condition.block2_min_candles_from_block,
+            block2_max_candles_from_block=condition.block2_max_candles_from_block,
             # Block3 추가 조건 (4개 필드)
             block3_volume_ratio=condition.block3_volume_ratio,
             block3_low_price_margin=condition.block3_low_price_margin,
-            block3_min_candles_after_block2=condition.block3_min_candles_after_block2,
-            block3_max_candles_after_block2=condition.block3_max_candles_after_block2
+            block3_min_candles_from_block=condition.block3_min_candles_from_block,
+            block3_max_candles_from_block=condition.block3_max_candles_from_block
         )
 
         # Block2 이후 데이터만 필터링
@@ -280,23 +290,33 @@ class PatternSeedDetector:
                 continue
 
             # 최소/최대 캔들 수 검사 (선택적)
-            if block3_condition.block3_min_candles_after_block2 is not None:
+            if block3_condition.block3_min_candles_from_block is not None:
                 if not self.block3_checker.check_min_candles(
                     stock.date,
                     block2,
-                    block3_condition.block3_min_candles_after_block2,
+                    block3_condition.block3_min_candles_from_block,
                     stocks
                 ):
                     continue
 
-            if block3_condition.block3_max_candles_after_block2 is not None:
+            if block3_condition.block3_max_candles_from_block is not None:
                 if not self.block3_checker.check_max_candles(
                     stock.date,
                     block2,
-                    block3_condition.block3_max_candles_after_block2,
+                    block3_condition.block3_max_candles_from_block,
                     stocks
                 ):
                     continue
+
+            # Lookback 윈도우 검사
+            if not self.block3_checker.check_lookback_window(
+                stock.date,
+                block2,
+                block3_condition.block3_lookback_min_candles,
+                block3_condition.block3_lookback_max_candles,
+                stocks
+            ):
+                continue
 
             # 모든 조건 통과 → Block3 Detection 생성
                 indicators = stock.indicators if hasattr(stock, 'indicators') else {}
@@ -352,18 +372,18 @@ class PatternSeedDetector:
             # Block2 추가 조건 (4개 필드)
             block2_volume_ratio=condition.block2_volume_ratio,
             block2_low_price_margin=condition.block2_low_price_margin,
-            block2_min_candles_after_block1=condition.block2_min_candles_after_block1,
-            block2_max_candles_after_block1=condition.block2_max_candles_after_block1,
+            block2_min_candles_from_block=condition.block2_min_candles_from_block,
+            block2_max_candles_from_block=condition.block2_max_candles_from_block,
             # Block3 추가 조건 (4개 필드)
             block3_volume_ratio=condition.block3_volume_ratio,
             block3_low_price_margin=condition.block3_low_price_margin,
-            block3_min_candles_after_block2=condition.block3_min_candles_after_block2,
-            block3_max_candles_after_block2=condition.block3_max_candles_after_block2,
+            block3_min_candles_from_block=condition.block3_min_candles_from_block,
+            block3_max_candles_from_block=condition.block3_max_candles_from_block,
             # Block4 추가 조건 (4개 필드)
             block4_volume_ratio=condition.block4_volume_ratio,
             block4_low_price_margin=condition.block4_low_price_margin,
-            block4_min_candles_after_block3=condition.block4_min_candles_after_block3,
-            block4_max_candles_after_block3=condition.block4_max_candles_after_block3
+            block4_min_candles_from_block=condition.block4_min_candles_from_block,
+            block4_max_candles_from_block=condition.block4_max_candles_from_block
         )
 
         # Block3 이후 데이터만 필터링
@@ -382,23 +402,33 @@ class PatternSeedDetector:
                 continue
 
             # 최소/최대 캔들 수 검사 (선택적)
-            if block4_condition.block4_min_candles_after_block3 is not None:
+            if block4_condition.block4_min_candles_from_block is not None:
                 if not self.block4_checker.check_min_candles(
                     stock.date,
                     block3,
-                    block4_condition.block4_min_candles_after_block3,
+                    block4_condition.block4_min_candles_from_block,
                     stocks
                 ):
                     continue
 
-            if block4_condition.block4_max_candles_after_block3 is not None:
+            if block4_condition.block4_max_candles_from_block is not None:
                 if not self.block4_checker.check_max_candles(
                     stock.date,
                     block3,
-                    block4_condition.block4_max_candles_after_block3,
+                    block4_condition.block4_max_candles_from_block,
                     stocks
                 ):
                     continue
+
+            # Lookback 윈도우 검사
+            if not self.block4_checker.check_lookback_window(
+                stock.date,
+                block3,
+                block4_condition.block4_lookback_min_candles,
+                block4_condition.block4_lookback_max_candles,
+                stocks
+            ):
+                continue
 
             # 모든 조건 통과 → Block4 Detection 생성
                 indicators = stock.indicators if hasattr(stock, 'indicators') else {}

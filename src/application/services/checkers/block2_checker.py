@@ -354,6 +354,70 @@ class Block2Checker:
         # max_candles 이내여야 함
         return candles_count <= max_candles
 
+    def check_lookback_window(
+        self,
+        current_date: date,
+        prev_seed_block1: Optional[Block1Detection],
+        lookback_min_candles: Optional[int],
+        lookback_max_candles: Optional[int],
+        all_stocks: List[Stock],
+    ) -> bool:
+        """
+        Lookback 검증: Block2 후보일 기준 과거에 Block1이 적절한 범위 내에 존재하는지 확인
+
+        이 메소드는 후보일에서 과거로 거슬러 올라가 이전 블록이 있는지 확인합니다.
+        min_candles_from_block는 "앞으로" 보는 검증이고,
+        lookback은 "뒤로" 보는 검증입니다.
+
+        Args:
+            current_date: Block2 후보일
+            prev_seed_block1: 이전 Seed Block1 탐지 결과
+            lookback_min_candles: 과거 최소 캔들 범위 (None=체크 안함)
+            lookback_max_candles: 과거 최대 캔들 범위 (None=체크 안함)
+            all_stocks: 전체 주식 데이터 (날짜순 정렬)
+
+        Returns:
+            조건 만족 여부 (True: Block1이 적절한 범위에 있음, False: 범위 밖)
+
+        Example:
+            >>> # Block1 시작일: 2024-01-08
+            >>> # Block2 후보일: 2024-01-12
+            >>> # 실제 캔들: 1/8, 1/9, 1/10, 1/11, 1/12 (5개)
+            >>> # lookback_min=1, lookback_max=150
+            >>> check_lookback_window(...) # True (5개는 1~150 범위 내)
+
+        Note:
+            - lookback_min_candles와 lookback_max_candles가 모두 None이면 체크 스킵 (True)
+            - prev_seed_block1이 None이면 체크 스킵 (True)
+            - 거래일 기준 카운트 (공휴일/거래정지 자동 제외)
+        """
+        # 조건이 없으면 스킵
+        if lookback_min_candles is None and lookback_max_candles is None:
+            return True
+
+        # 이전 Block1이 없으면 스킵
+        if prev_seed_block1 is None:
+            return True
+
+        # 후보일에서 Block1 시작일까지의 캔들 수 계산
+        candles_count = self._count_candles_between(
+            prev_seed_block1.started_at,
+            current_date,
+            all_stocks
+        )
+
+        # 최소 범위 체크
+        if lookback_min_candles is not None:
+            if candles_count < lookback_min_candles:
+                return False
+
+        # 최대 범위 체크
+        if lookback_max_candles is not None:
+            if candles_count > lookback_max_candles:
+                return False
+
+        return True
+
     def _count_candles_between(
         self, start_date: date, end_date: date, all_stocks: List[Stock]
     ) -> int:

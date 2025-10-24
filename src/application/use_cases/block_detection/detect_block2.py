@@ -187,24 +187,35 @@ class DetectBlock2UseCase:
                 return False
 
         # 3. 최소 캔들 수 검사 (선택적)
-        if condition.min_candles_after_block1 is not None:
+        if condition.block2_min_candles_from_block is not None:
             if not self.checker.check_min_candles(
                 stock.date,
                 prev_block1,
-                condition.min_candles_after_block1,
+                condition.block2_min_candles_from_block,
                 all_stocks
             ):
                 return False
 
         # 4. 최대 캔들 수 검사 (선택적)
-        if condition.max_candles_after_block1 is not None:
+        if condition.block2_max_candles_from_block is not None:
             if not self.checker.check_max_candles(
                 stock.date,
                 prev_block1,
-                condition.max_candles_after_block1,
+                condition.block2_max_candles_from_block,
                 all_stocks
             ):
                 return False
+
+        # 5. Lookback 윈도우 검사 (선택적)
+        # Block2 후보일 기준 과거에 Block1이 적절한 범위에 있는지 확인
+        if not self.checker.check_lookback_window(
+            stock.date,
+            prev_block1,
+            condition.block2_lookback_min_candles,
+            condition.block2_lookback_max_candles,
+            all_stocks
+        ):
+            return False
 
         return True
 

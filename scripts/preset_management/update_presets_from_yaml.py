@@ -219,10 +219,10 @@ def print_conditions_table(
         table1.add_row(
             "min_candles",
             "-",
-            f"{block2['min_candles_after_block1']}개",
-            f"{block3['min_candles_after_block2']}개",
-            f"{block4['min_candles_after_block3']}개",
-            "이전 블록 시작 후 최소"
+            f"{block2['min_candles_from_block']}개",
+            f"{block3['min_candles_from_block']}개",
+            f"{block4['min_candles_from_block']}개",
+            "이전 블록 시작부터 최소"
         )
 
         def format_max_candles(val):
@@ -231,10 +231,10 @@ def print_conditions_table(
         table1.add_row(
             "max_candles",
             "-",
-            format_max_candles(block2.get('max_candles_after_block1')),
-            format_max_candles(block3.get('max_candles_after_block2')),
-            format_max_candles(block4.get('max_candles_after_block3')),
-            "이전 블록 시작 후 최대"
+            format_max_candles(block2.get('max_candles_from_block')),
+            format_max_candles(block3.get('max_candles_from_block')),
+            format_max_candles(block4.get('max_candles_from_block')),
+            "이전 블록 시작부터 최대"
         )
 
     console.print(table1)
@@ -492,22 +492,28 @@ def update_seed_conditions(
                     base=base,
                     block2_volume_ratio=block2["volume_ratio"],
                     block2_low_price_margin=block2["low_price_margin"],
-                    block2_min_candles_after_block1=block2["min_candles_after_block1"],
-                    block2_max_candles_after_block1=block2.get(
-                        "max_candles_after_block1"
+                    block2_min_candles_from_block=block2["min_candles_from_block"],
+                    block2_max_candles_from_block=block2.get(
+                        "max_candles_from_block"
                     ),
+                    block2_lookback_min_candles=block2.get("lookback_min_candles"),
+                    block2_lookback_max_candles=block2.get("lookback_max_candles"),
                     block3_volume_ratio=block3["volume_ratio"],
                     block3_low_price_margin=block3["low_price_margin"],
-                    block3_min_candles_after_block2=block3["min_candles_after_block2"],
-                    block3_max_candles_after_block2=block3.get(
-                        "max_candles_after_block2"
+                    block3_min_candles_from_block=block3["min_candles_from_block"],
+                    block3_max_candles_from_block=block3.get(
+                        "max_candles_from_block"
                     ),
+                    block3_lookback_min_candles=block3.get("lookback_min_candles"),
+                    block3_lookback_max_candles=block3.get("lookback_max_candles"),
                     block4_volume_ratio=block4["volume_ratio"],
                     block4_low_price_margin=block4["low_price_margin"],
-                    block4_min_candles_after_block3=block4["min_candles_after_block3"],
-                    block4_max_candles_after_block3=block4.get(
-                        "max_candles_after_block3"
+                    block4_min_candles_from_block=block4["min_candles_from_block"],
+                    block4_max_candles_from_block=block4.get(
+                        "max_candles_from_block"
                     ),
+                    block4_lookback_min_candles=block4.get("lookback_min_candles"),
+                    block4_lookback_max_candles=block4.get("lookback_max_candles"),
                     # Block2 전용 파라미터 (Optional)
                     block2_entry_surge_rate=block2.get("entry_surge_rate"),
                     block2_entry_ma_period=block2.get("entry_ma_period"),
@@ -678,10 +684,22 @@ def update_redetection_conditions(
                     block4_redetection_max_days_after_seed=block4["redetection_max_days_after_seed"],
                     block2_volume_ratio=block2["volume_ratio"],
                     block2_low_price_margin=block2["low_price_margin"],
+                    block2_min_candles_from_block=block2.get("min_candles_from_block"),
+                    block2_max_candles_from_block=block2.get("max_candles_from_block"),
+                    block2_lookback_min_candles=block2.get("lookback_min_candles"),
+                    block2_lookback_max_candles=block2.get("lookback_max_candles"),
                     block3_volume_ratio=block3["volume_ratio"],
                     block3_low_price_margin=block3["low_price_margin"],
+                    block3_min_candles_from_block=block3.get("min_candles_from_block"),
+                    block3_max_candles_from_block=block3.get("max_candles_from_block"),
+                    block3_lookback_min_candles=block3.get("lookback_min_candles"),
+                    block3_lookback_max_candles=block3.get("lookback_max_candles"),
                     block4_volume_ratio=block4["volume_ratio"],
                     block4_low_price_margin=block4["low_price_margin"],
+                    block4_min_candles_from_block=block4.get("min_candles_from_block"),
+                    block4_max_candles_from_block=block4.get("max_candles_from_block"),
+                    block4_lookback_min_candles=block4.get("lookback_min_candles"),
+                    block4_lookback_max_candles=block4.get("lookback_max_candles"),
                     # Block2 전용 파라미터 (Optional)
                     block2_entry_surge_rate=block2.get("entry_surge_rate"),
                     block2_entry_ma_period=block2.get("entry_ma_period"),

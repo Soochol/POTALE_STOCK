@@ -351,7 +351,7 @@ class Block4Checker:
         Note:
             - 거래일 기준 카운팅 (_count_candles_between 사용)
             - 공휴일/거래정지일은 자동 제외됨
-            - YAML 설정 예: min_candles_after_block3: 4
+            - YAML 설정 예: min_candles_from_block: 4
         """
         if prev_block3 is None:
             # 직전 블록3가 없으면 조건 무시
@@ -401,6 +401,54 @@ class Block4Checker:
 
         # max_candles 이내여야 함
         return candles_count <= max_candles
+
+    def check_lookback_window(
+        self,
+        current_date: date,
+        prev_seed_block3: Optional[Block3Detection],
+        lookback_min_candles: Optional[int],
+        lookback_max_candles: Optional[int],
+        all_stocks: List[Stock],
+    ) -> bool:
+        """
+        Lookback 검증: Block4 후보일 기준 과거에 Block3가 적절한 범위 내에 존재하는지 확인
+
+        Args:
+            current_date: Block4 후보일
+            prev_seed_block3: 이전 Seed Block3 탐지 결과
+            lookback_min_candles: 과거 최소 캔들 범위 (None=체크 안함)
+            lookback_max_candles: 과거 최대 캔들 범위 (None=체크 안함)
+            all_stocks: 전체 주식 데이터 (날짜순 정렬)
+
+        Returns:
+            조건 만족 여부 (True: Block3가 적절한 범위에 있음, False: 범위 밖)
+        """
+        # 조건이 없으면 스킵
+        if lookback_min_candles is None and lookback_max_candles is None:
+            return True
+
+        # 이전 Block3가 없으면 스킵
+        if prev_seed_block3 is None:
+            return True
+
+        # 후보일에서 Block3 시작일까지의 캔들 수 계산
+        candles_count = self._count_candles_between(
+            prev_seed_block3.started_at,
+            current_date,
+            all_stocks
+        )
+
+        # 최소 범위 체크
+        if lookback_min_candles is not None:
+            if candles_count < lookback_min_candles:
+                return False
+
+        # 최대 범위 체크
+        if lookback_max_candles is not None:
+            if candles_count > lookback_max_candles:
+                return False
+
+        return True
 
     def _count_candles_between(
         self,

@@ -80,7 +80,8 @@
       "Bash(move docsspecificationAI_BLOCK_DETECTION.md docsarchiveAI_BLOCK_DETECTION_V1.md)",
       "Bash(del presetsfeature_configsblock_classifier_v1.yaml)",
       "Read(//c/**)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

@@ -453,34 +453,34 @@ class DetectPatternsUseCase:
             base=seed_condition.base,
             block2_volume_ratio=seed_condition.block2_volume_ratio,
             block2_low_price_margin=seed_condition.block2_low_price_margin,
-            block2_min_candles_after_block1=seed_condition.block2_min_candles_after_block1,
-            block2_max_candles_after_block1=seed_condition.block2_max_candles_after_block1
+            block2_min_candles_from_block=seed_condition.block2_min_candles_from_block,
+            block2_max_candles_from_block=seed_condition.block2_max_candles_from_block
         )
         block3_condition = Block3Condition(
             base=seed_condition.base,
             block2_volume_ratio=seed_condition.block2_volume_ratio,
             block2_low_price_margin=seed_condition.block2_low_price_margin,
-            block2_min_candles_after_block1=seed_condition.block2_min_candles_after_block1,
-            block2_max_candles_after_block1=seed_condition.block2_max_candles_after_block1,
+            block2_min_candles_from_block=seed_condition.block2_min_candles_from_block,
+            block2_max_candles_from_block=seed_condition.block2_max_candles_from_block,
             block3_volume_ratio=seed_condition.block3_volume_ratio,
             block3_low_price_margin=seed_condition.block3_low_price_margin,
-            block3_min_candles_after_block2=seed_condition.block3_min_candles_after_block2,
-            block3_max_candles_after_block2=seed_condition.block3_max_candles_after_block2
+            block3_min_candles_from_block=seed_condition.block3_min_candles_from_block,
+            block3_max_candles_from_block=seed_condition.block3_max_candles_from_block
         )
         block4_condition = Block4Condition(
             base=seed_condition.base,
             block2_volume_ratio=seed_condition.block2_volume_ratio,
             block2_low_price_margin=seed_condition.block2_low_price_margin,
-            block2_min_candles_after_block1=seed_condition.block2_min_candles_after_block1,
-            block2_max_candles_after_block1=seed_condition.block2_max_candles_after_block1,
+            block2_min_candles_from_block=seed_condition.block2_min_candles_from_block,
+            block2_max_candles_from_block=seed_condition.block2_max_candles_from_block,
             block3_volume_ratio=seed_condition.block3_volume_ratio,
             block3_low_price_margin=seed_condition.block3_low_price_margin,
-            block3_min_candles_after_block2=seed_condition.block3_min_candles_after_block2,
-            block3_max_candles_after_block2=seed_condition.block3_max_candles_after_block2,
+            block3_min_candles_from_block=seed_condition.block3_min_candles_from_block,
+            block3_max_candles_from_block=seed_condition.block3_max_candles_from_block,
             block4_volume_ratio=seed_condition.block4_volume_ratio,
             block4_low_price_margin=seed_condition.block4_low_price_margin,
-            block4_min_candles_after_block3=seed_condition.block4_min_candles_after_block3,
-            block4_max_candles_after_block3=seed_condition.block4_max_candles_after_block3
+            block4_min_candles_from_block=seed_condition.block4_min_candles_from_block,
+            block4_max_candles_from_block=seed_condition.block4_max_candles_from_block
         )
 
         # 종료 조건 체크 통계

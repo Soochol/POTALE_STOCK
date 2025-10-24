@@ -356,6 +356,54 @@ class Block6Checker:
 
         return candles_count <= max_candles
 
+    def check_lookback_window(
+        self,
+        current_date: date,
+        prev_seed_block5: Optional[Block5Detection],
+        lookback_min_candles: Optional[int],
+        lookback_max_candles: Optional[int],
+        all_stocks: List[Stock],
+    ) -> bool:
+        """
+        Lookback 검증: Block6 후보일 기준 과거에 Block5가 적절한 범위 내에 존재하는지 확인
+
+        Args:
+            current_date: Block6 후보일
+            prev_seed_block5: 이전 Seed Block5 탐지 결과
+            lookback_min_candles: 과거 최소 캔들 범위 (None=체크 안함)
+            lookback_max_candles: 과거 최대 캔들 범위 (None=체크 안함)
+            all_stocks: 전체 주식 데이터 (날짜순 정렬)
+
+        Returns:
+            조건 만족 여부 (True: Block5가 적절한 범위에 있음, False: 범위 밖)
+        """
+        # 조건이 없으면 스킵
+        if lookback_min_candles is None and lookback_max_candles is None:
+            return True
+
+        # 이전 Block5가 없으면 스킵
+        if prev_seed_block5 is None:
+            return True
+
+        # 후보일에서 Block5 시작일까지의 캔들 수 계산
+        candles_count = self._count_candles_between(
+            prev_seed_block5.started_at,
+            current_date,
+            all_stocks
+        )
+
+        # 최소 범위 체크
+        if lookback_min_candles is not None:
+            if candles_count < lookback_min_candles:
+                return False
+
+        # 최대 범위 체크
+        if lookback_max_candles is not None:
+            if candles_count > lookback_max_candles:
+                return False
+
+        return True
+
     def _count_candles_between(
         self,
         start_date: date,
