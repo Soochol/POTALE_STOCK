@@ -427,3 +427,208 @@ class TestBlockGraphLoader:
 
         edge = graph.edges[0]
         assert edge.edge_type == EdgeType.SEQUENTIAL
+
+    def test_load_seed_pattern_type(self):
+        """pattern_type이 "seed"인 경우"""
+        data = {
+            'block_graph': {
+                'pattern_type': 'seed',
+                'root_node': 'block1',
+                'nodes': {
+                    'block1': {
+                        'block_id': 'block1',
+                        'block_type': 1,
+                        'name': 'Seed Block1',
+                        'entry_conditions': ['true']
+                    }
+                }
+            }
+        }
+
+        loader = BlockGraphLoader()
+        graph = loader.load_from_dict(data)
+
+        assert graph.pattern_type == 'seed'
+        assert graph.redetection_config is None
+
+    def test_load_redetection_pattern_type_with_config(self):
+        """pattern_type이 "redetection"이고 redetection_config가 있는 경우"""
+        data = {
+            'block_graph': {
+                'pattern_type': 'redetection',
+                'root_node': 'block1',
+                'redetection_config': {
+                    'seed_pattern_reference': 'seed_v1',
+                    'tolerance': {
+                        'price_range': 0.08,
+                        'volume_range': 0.35,
+                        'time_range': 12
+                    },
+                    'matching_weights': {
+                        'price_shape': 0.5,
+                        'volume_shape': 0.3,
+                        'timing': 0.2
+                    },
+                    'min_similarity_score': 0.75,
+                    'min_detection_interval_days': 25
+                },
+                'nodes': {
+                    'block1': {
+                        'block_id': 'block1',
+                        'block_type': 1,
+                        'name': 'Redetection Block1',
+                        'entry_conditions': ['true']
+                    }
+                }
+            }
+        }
+
+        loader = BlockGraphLoader()
+        graph = loader.load_from_dict(data)
+
+        assert graph.pattern_type == 'redetection'
+        assert graph.redetection_config is not None
+        assert graph.redetection_config.seed_pattern_reference == 'seed_v1'
+        assert graph.redetection_config.tolerance.price_range == 0.08
+        assert graph.redetection_config.matching_weights.price_shape == 0.5
+        assert graph.redetection_config.min_similarity_score == 0.75
+
+    def test_load_redetection_without_config(self):
+        """pattern_type이 "redetection"이지만 redetection_config가 없는 경우"""
+        data = {
+            'block_graph': {
+                'pattern_type': 'redetection',
+                'root_node': 'block1',
+                'nodes': {
+                    'block1': {
+                        'block_id': 'block1',
+                        'block_type': 1,
+                        'name': 'Redetection Block1',
+                        'entry_conditions': ['true']
+                    }
+                }
+            }
+        }
+
+        loader = BlockGraphLoader()
+        graph = loader.load_from_dict(data)
+
+        # pattern_type은 redetection이지만 config는 None
+        assert graph.pattern_type == 'redetection'
+        assert graph.redetection_config is None
+
+    def test_invalid_pattern_type(self):
+        """잘못된 pattern_type"""
+        data = {
+            'block_graph': {
+                'pattern_type': 'invalid_type',
+                'root_node': 'block1',
+                'nodes': {
+                    'block1': {
+                        'block_id': 'block1',
+                        'block_type': 1,
+                        'name': 'Block1',
+                        'entry_conditions': ['true']
+                    }
+                }
+            }
+        }
+
+        loader = BlockGraphLoader()
+
+        with pytest.raises(ValueError, match="Invalid pattern_type"):
+            loader.load_from_dict(data)
+
+    def test_save_seed_pattern_to_dict(self):
+        """Seed pattern을 딕셔너리로 저장"""
+        from src.domain.entities.block_graph import BlockGraph, BlockNode
+
+        graph = BlockGraph()
+        graph.pattern_type = 'seed'
+        graph.root_node_id = 'block1'
+
+        node = BlockNode(
+            block_id='block1',
+            block_type=1,
+            name='Seed Block1',
+            entry_conditions=['true'],
+            exit_conditions=[]
+        )
+        graph.add_node(node)
+
+        loader = BlockGraphLoader()
+        data = loader.save_to_dict(graph)
+
+        assert data['block_graph']['pattern_type'] == 'seed'
+        assert 'redetection_config' not in data['block_graph']
+
+    def test_save_redetection_pattern_to_dict(self):
+        """Redetection pattern을 딕셔너리로 저장"""
+        from src.domain.entities.block_graph import BlockGraph, BlockNode
+        from src.domain.entities.patterns import RedetectionConfig, ToleranceConfig
+
+        graph = BlockGraph()
+        graph.pattern_type = 'redetection'
+        graph.root_node_id = 'block1'
+        graph.redetection_config = RedetectionConfig(
+            seed_pattern_reference='seed_v1',
+            tolerance=ToleranceConfig(price_range=0.10),
+            min_similarity_score=0.80
+        )
+
+        node = BlockNode(
+            block_id='block1',
+            block_type=1,
+            name='Redetection Block1',
+            entry_conditions=['true'],
+            exit_conditions=[]
+        )
+        graph.add_node(node)
+
+        loader = BlockGraphLoader()
+        data = loader.save_to_dict(graph)
+
+        assert data['block_graph']['pattern_type'] == 'redetection'
+        assert 'redetection_config' in data['block_graph']
+        assert data['block_graph']['redetection_config']['seed_pattern_reference'] == 'seed_v1'
+        assert data['block_graph']['redetection_config']['tolerance']['price_range'] == 0.10
+        assert data['block_graph']['redetection_config']['min_similarity_score'] == 0.80
+
+    def test_roundtrip_redetection_pattern(self):
+        """Redetection pattern roundtrip: save_to_dict → load_from_dict"""
+        from src.domain.entities.block_graph import BlockGraph, BlockNode
+        from src.domain.entities.patterns import RedetectionConfig
+
+        # Original graph
+        original_graph = BlockGraph()
+        original_graph.pattern_type = 'redetection'
+        original_graph.root_node_id = 'block1'
+        original_graph.redetection_config = RedetectionConfig(
+            seed_pattern_reference='seed_test',
+            min_similarity_score=0.75,
+            min_detection_interval_days=15
+        )
+
+        node = BlockNode(
+            block_id='block1',
+            block_type=1,
+            name='Test Block',
+            entry_conditions=['current.close >= 10000'],
+            exit_conditions=['current.close < 9000']
+        )
+        original_graph.add_node(node)
+
+        # Save to dict
+        loader = BlockGraphLoader()
+        data = loader.save_to_dict(original_graph)
+
+        # Load from dict
+        restored_graph = loader.load_from_dict(data)
+
+        # Compare
+        assert restored_graph.pattern_type == original_graph.pattern_type
+        assert restored_graph.root_node_id == original_graph.root_node_id
+        assert restored_graph.redetection_config is not None
+        assert restored_graph.redetection_config.seed_pattern_reference == 'seed_test'
+        assert restored_graph.redetection_config.min_similarity_score == 0.75
+        assert restored_graph.redetection_config.min_detection_interval_days == 15

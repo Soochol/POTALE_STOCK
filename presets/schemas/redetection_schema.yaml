@@ -1,0 +1,279 @@
+# Redetection Pattern Schema
+#
+# Seed pattern을 기반으로 유사 패턴을 재탐지하기 위한 YAML 스키마
+#
+# Version: 1.0
+# Last Updated: 2024-10-24
+
+# ============================================================
+# Redetection Configuration Schema
+# ============================================================
+
+redetection_config:
+  # Seed pattern 참조 (필수)
+  # - Seed pattern의 이름 또는 ID
+  # - 런타임에 seed pattern 데이터와 연결됨
+  seed_pattern_reference: "seed_pattern_name"  # string, required
+
+  # 허용 오차 설정
+  tolerance:
+    # 가격 허용 오차 (0~1, 백분율)
+    # - Seed pattern의 가격 ±X% 범위 내 패턴만 매칭
+    # - 예: 0.05 = ±5%
+    price_range: 0.05  # float, default: 0.05, range: [0, 1]
+
+    # 거래량 허용 오차 (0~1, 백분율)
+    # - Seed pattern의 거래량 ±X% 범위 내 패턴만 매칭
+    # - 예: 0.30 = ±30%
+    volume_range: 0.30  # float, default: 0.30, range: [0, 1]
+
+    # 시간 허용 오차 (캔들 개수)
+    # - Seed pattern의 duration ±X candles 범위 내 패턴만 매칭
+    # - 예: 10 = ±10 candles
+    time_range: 10  # int, default: 10, min: 0
+
+  # Pattern matching 가중치 (합이 1.0이어야 함)
+  matching_weights:
+    # 가격 형태 유사도 가중치
+    # - 정규화된 가격 sequence의 DTW (Dynamic Time Warping) 유사도
+    price_shape: 0.4  # float, default: 0.4, range: [0, 1]
+
+    # 거래량 형태 유사도 가중치
+    # - 정규화된 거래량 sequence의 DTW 유사도
+    volume_shape: 0.3  # float, default: 0.3, range: [0, 1]
+
+    # 타이밍 유사도 가중치
+    # - Block 시작/종료 시점의 유사도
+    timing: 0.3  # float, default: 0.3, range: [0, 1]
+
+  # 유사도 임계값 (0~1)
+  # - 이 값 이상의 유사도를 가진 패턴만 redetection으로 간주
+  # - 예: 0.70 = 70% 이상 유사해야 매칭
+  min_similarity_score: 0.70  # float, default: 0.70, range: [0, 1]
+
+  # 재탐지 간 최소 간격 (일)
+  # - 같은 종목에서 연속된 redetection 간 최소 간격
+  # - Cooldown period to avoid overlapping detections
+  min_detection_interval_days: 20  # int, default: 20, min: 0
+
+  # 추가 메타데이터 (선택)
+  metadata:
+    description: "Redetection configuration metadata"
+    target_period: "5 years"
+    custom_field: "any value"
+
+# ============================================================
+# Complete Example: Redetection Pattern YAML
+# ============================================================
+
+example:
+  block_graph:
+    # Pattern type: "redetection" (required)
+    pattern_type: "redetection"
+
+    # Root node (required)
+    root_node: "block1"
+
+    # Redetection configuration (required for redetection pattern)
+    redetection_config:
+      seed_pattern_reference: "my_seed_pattern"
+
+      tolerance:
+        price_range: 0.05
+        volume_range: 0.30
+        time_range: 10
+
+      matching_weights:
+        price_shape: 0.4
+        volume_shape: 0.3
+        timing: 0.3
+
+      min_similarity_score: 0.70
+      min_detection_interval_days: 20
+
+      metadata:
+        description: "Redetection for my_seed_pattern"
+
+    # Nodes (same structure as seed pattern, but relaxed conditions)
+    nodes:
+      block1:
+        block_id: "block1"
+        block_type: 1
+        name: "Block1 Redetection"
+
+        # Relaxed entry conditions
+        entry_conditions:
+          # Standard condition (relaxed thresholds)
+          - "current.close >= ma(all_stocks, 120) * 1.04"  # seed: 1.08
+
+          # Seed-based price filter (injected at runtime)
+          - "in_range(current.close, seed.block1.low * 0.95, seed.block1.high * 1.05)"
+
+        exit_conditions:
+          - "current.close < ma(all_stocks, 120) * 0.97"
+
+        parameters:
+          min_duration: 1
+          max_duration: 150
+
+    edges:
+      - from_block: "block1"
+        to_block: "block2"
+
+# ============================================================
+# Seed-Based Filters in Redetection Pattern
+# ============================================================
+
+# Redetection pattern의 조건식에서 사용 가능한 seed 변수:
+#
+# seed.blockN.low          # Seed pattern BlockN의 최저가
+# seed.blockN.high         # Seed pattern BlockN의 최고가
+# seed.blockN.peak_price   # Seed pattern BlockN의 고점 가격
+# seed.blockN.peak_volume  # Seed pattern BlockN의 고점 거래량
+# seed.blockN.started_at   # Seed pattern BlockN 시작일
+# seed.blockN.ended_at     # Seed pattern BlockN 종료일
+# seed.blockN.duration     # Seed pattern BlockN 기간 (캔들 개수)
+#
+# 예제:
+seed_based_filter_examples:
+  # 가격 범위 필터 (Seed Block1 가격 ±5% 내)
+  price_filter_1: "in_range(current.close, seed.block1.low * 0.95, seed.block1.high * 1.05)"
+
+  # Seed 고점 대비 비율
+  price_filter_2: "current.close >= seed.block1.peak_price * 0.90"
+
+  # Seed 거래량 대비 비율
+  volume_filter_1: "current.volume >= seed.block1.peak_volume * 0.70"
+
+  # Seed duration 기반 시간 필터
+  timing_filter_1: "count(all_stocks) <= seed.block1.duration * 1.2"
+
+# ============================================================
+# Pattern Matching Algorithm (Implementation Reference)
+# ============================================================
+
+# Pattern matching은 다음 3가지 요소의 가중 합으로 계산:
+#
+# 1. Price Shape Similarity (가격 형태 유사도)
+#    - Seed pattern의 정규화된 가격 sequence: [0, 0.2, 0.5, 0.8, 1.0, 0.9, 0.7]
+#    - Candidate pattern의 정규화된 가격 sequence: [0, 0.25, 0.6, 0.85, 1.0, 0.85, 0.65]
+#    - DTW (Dynamic Time Warping) distance 계산
+#    - Similarity = 1 - (DTW_distance / max_distance)
+#
+# 2. Volume Shape Similarity (거래량 형태 유사도)
+#    - 가격과 동일한 방식으로 거래량 sequence 정규화 및 DTW 계산
+#
+# 3. Timing Similarity (타이밍 유사도)
+#    - Block 시작/종료 시점의 정규화된 위치 비교
+#    - |seed_start - candidate_start| / total_period
+#
+# Final Similarity Score:
+#   score = (price_shape * 0.4) + (volume_shape * 0.3) + (timing * 0.3)
+#
+# If score >= min_similarity_score:
+#   Accept as redetection
+
+# ============================================================
+# Validation Rules
+# ============================================================
+
+validation:
+  # pattern_type이 "redetection"인 경우 redetection_config 필수
+  rule_1: "pattern_type == 'redetection' => redetection_config is required"
+
+  # tolerance 값은 0~1 범위
+  rule_2: "0 <= tolerance.price_range <= 1"
+  rule_3: "0 <= tolerance.volume_range <= 1"
+  rule_4: "tolerance.time_range >= 0"
+
+  # matching_weights의 합은 1.0
+  rule_5: "matching_weights.price_shape + matching_weights.volume_shape + matching_weights.timing == 1.0"
+
+  # 각 weight는 0~1 범위
+  rule_6: "0 <= matching_weights.* <= 1"
+
+  # min_similarity_score는 0~1 범위
+  rule_7: "0 <= min_similarity_score <= 1"
+
+  # min_detection_interval_days는 0 이상
+  rule_8: "min_detection_interval_days >= 0"
+
+# ============================================================
+# Usage Workflow
+# ============================================================
+
+workflow:
+  step_1: "Detect seed pattern using seed_pattern.yaml"
+  step_2: "Analyze seed detection results"
+  step_3: "Extract seed pattern features (price/volume shape, timing, etc.)"
+  step_4: "Create seed pattern record in database"
+  step_5: "Load redetection_pattern.yaml with redetection_config"
+  step_6: "Inject seed pattern data into redetection context"
+  step_7: "Detect similar patterns in historical data (5 years)"
+  step_8: "Calculate similarity scores for each candidate"
+  step_9: "Filter candidates by min_similarity_score"
+  step_10: "Save redetections with similarity scores and seed_pattern_id link"
+
+# ============================================================
+# Database Schema (Reference)
+# ============================================================
+
+database:
+  # Seed pattern 테이블
+  seed_pattern:
+    columns:
+      - id: "INTEGER PRIMARY KEY"
+      - pattern_name: "VARCHAR(100)"
+      - ticker: "VARCHAR(20)"
+      - yaml_config: "TEXT"  # YAML file path or content
+      - detection_date: "DATE"
+      - block1_peak_price: "FLOAT"
+      - block1_peak_volume: "INTEGER"
+      - price_shape: "JSON"  # Normalized price sequence
+      - volume_shape: "JSON"  # Normalized volume sequence
+      - metadata: "JSON"
+
+  # Redetection 결과 (기존 dynamic_block_detection 활용)
+  dynamic_block_detection:
+    columns:
+      - id: "INTEGER PRIMARY KEY"
+      - block_id: "VARCHAR(50)"
+      - ticker: "VARCHAR(20)"
+      - condition_name: "VARCHAR(50)"  # "redetection"
+      - seed_pattern_id: "INTEGER"  # NEW - Link to seed_pattern
+      - similarity_score: "FLOAT"  # NEW - Pattern matching score
+      - started_at: "DATE"
+      - ended_at: "DATE"
+      - peak_price: "FLOAT"
+      - peak_volume: "INTEGER"
+      - metadata: "JSON"
+
+# ============================================================
+# Best Practices
+# ============================================================
+
+best_practices:
+  seed_conditions:
+    - "Use strict conditions for seed pattern (high quality)"
+    - "Aim for 10-20 seed detections per ticker (not too many)"
+    - "Seed detection should capture 'ideal' pattern instances"
+
+  redetection_conditions:
+    - "Relax thresholds by 30-50% compared to seed"
+    - "Always include seed-based price/volume filters"
+    - "Adjust tolerance based on volatility"
+
+  tolerance_tuning:
+    - "Start with default values (price: 0.05, volume: 0.30)"
+    - "Increase tolerance for high-volatility stocks"
+    - "Decrease tolerance for stable, predictable patterns"
+
+  similarity_threshold:
+    - "Start with 0.70 (70% similarity)"
+    - "Increase threshold if too many false positives"
+    - "Decrease threshold if too few redetections"
+
+  performance:
+    - "Use price_range filter early in conditions (fast filter)"
+    - "Limit redetection period to 5 years max"
+    - "Apply min_detection_interval_days to reduce overlaps"

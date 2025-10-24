@@ -4,11 +4,14 @@ BlockGraph - 블록 그래프 관리
 블록 노드와 엣지로 구성된 DAG(Directed Acyclic Graph)를 관리.
 """
 
-from typing import List, Dict, Set, Optional, Tuple
+from typing import List, Dict, Set, Optional, Tuple, Literal
 from dataclasses import dataclass, field
 
 from .block_node import BlockNode
 from .block_edge import BlockEdge, EdgeType
+
+
+PatternType = Literal["seed", "redetection"]
 
 
 @dataclass
@@ -28,11 +31,15 @@ class BlockGraph:
         nodes: 블록 노드 딕셔너리 (block_id → BlockNode)
         edges: 엣지 리스트
         root_node_id: 시작 블록 ID (일반적으로 "block1")
+        pattern_type: 패턴 타입 ("seed" 또는 "redetection")
+        redetection_config: 재탐지 설정 (pattern_type이 "redetection"인 경우)
     """
 
     nodes: Dict[str, BlockNode] = field(default_factory=dict)
     edges: List[BlockEdge] = field(default_factory=list)
     root_node_id: Optional[str] = None
+    pattern_type: PatternType = "seed"
+    redetection_config: Optional['RedetectionConfig'] = None
 
     def add_node(self, node: BlockNode) -> None:
         """

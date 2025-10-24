@@ -83,7 +83,8 @@
       "Bash(cd:*)",
       "Bash(findstr:*)",
       "Bash(git push:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []

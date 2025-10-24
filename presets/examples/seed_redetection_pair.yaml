@@ -1,0 +1,279 @@
+# Seed-Redetection Pattern Pair Example
+#
+# 이 파일은 seed pattern과 redetection pattern 쌍의 예제입니다.
+#
+# 사용 방법:
+# 1. seed_pattern으로 엄격한 조건의 고품질 패턴 발견
+# 2. 발견된 seed pattern의 특징 분석
+# 3. redetection_pattern으로 유사한 historical patterns 탐색
+#
+# Pattern Flow:
+#   Seed Detection → Seed Analysis → Redetection (5 years historical data)
+
+---
+# ============================================================
+# SEED PATTERN: 엄격한 조건으로 고품질 패턴 발견
+# ============================================================
+seed_pattern:
+  block_graph:
+    pattern_type: "seed"
+    root_node: "block1"
+
+    nodes:
+      block1:
+        block_id: "block1"
+        block_type: 1
+        name: "Initial Surge (Seed)"
+        description: "8% 이상 급등 + 거래량 3배 이상"
+
+        entry_conditions:
+          - name: "strong_price_surge"
+            expression: "current.close >= ma(all_stocks, 120) * 1.08"
+            description: "종가가 120일 이동평균 대비 8% 이상"
+
+          - name: "high_volume_spike"
+            expression: "current.volume >= avg(all_stocks[-20:], 'volume') * 3"
+            description: "거래량이 20일 평균 대비 3배 이상"
+
+          - name: "price_threshold"
+            expression: "current.close >= 10000"
+            description: "종가 10,000원 이상"
+
+        exit_conditions:
+          - name: "major_drop"
+            expression: "current.close < ma(all_stocks, 120) * 0.95"
+            description: "120일 이동평균 대비 5% 이상 하락"
+
+        parameters:
+          min_duration: 1
+          max_duration: 150
+
+        metadata:
+          color: "#FF6B6B"
+          priority: 1
+          detection_quality: "high"
+
+      block2:
+        block_id: "block2"
+        block_type: 2
+        name: "Continuation (Seed)"
+        description: "지속적 상승 + 거래량 유지"
+
+        entry_conditions:
+          - name: "price_advance"
+            expression: "current.close >= block1.peak_price * 1.05"
+            description: "Block1 고점 대비 5% 이상 상승"
+
+          - name: "volume_maintained"
+            expression: "current.volume >= avg(all_stocks[-20:], 'volume') * 2"
+            description: "거래량 20일 평균 2배 이상 유지"
+
+        exit_conditions:
+          - name: "volume_drop"
+            expression: "current.volume < avg(all_stocks[-20:], 'volume') * 0.8"
+            description: "거래량이 20일 평균 80% 미만으로 감소"
+
+        parameters:
+          min_duration: 1
+          max_duration: 100
+
+        metadata:
+          color: "#4ECDC4"
+          priority: 2
+
+      block3:
+        block_id: "block3"
+        block_type: 3
+        name: "Peak Formation (Seed)"
+        description: "고점 형성 구간"
+
+        entry_conditions:
+          - name: "final_peak"
+            expression: "current.close >= block2.peak_price * 1.03"
+            description: "Block2 고점 대비 3% 이상 상승"
+
+        exit_conditions:
+          - name: "price_drop"
+            expression: "current.close < block2.peak_price * 0.95"
+            description: "Block2 고점 대비 5% 이상 하락"
+
+          - name: "volume_exhaustion"
+            expression: "current.volume < avg(all_stocks[-20:], 'volume')"
+            description: "거래량이 20일 평균 미만"
+
+        parameters:
+          min_duration: 1
+          max_duration: 80
+
+        metadata:
+          color: "#95E1D3"
+          priority: 3
+
+    edges:
+      - from_block: "block1"
+        to_block: "block2"
+        edge_type: "sequential"
+        priority: 1
+        description: "Block1 다음 Block2 진입"
+
+      - from_block: "block2"
+        to_block: "block3"
+        edge_type: "sequential"
+        priority: 1
+        description: "Block2 다음 Block3 진입"
+
+---
+# ============================================================
+# REDETECTION PATTERN: 완화된 조건으로 유사 패턴 탐색
+# ============================================================
+redetection_pattern:
+  block_graph:
+    pattern_type: "redetection"
+    root_node: "block1"
+
+    # 재탐지 설정
+    redetection_config:
+      # Seed pattern 참조
+      seed_pattern_reference: "seed_pattern"
+
+      # 허용 오차
+      tolerance:
+        price_range: 0.05      # 가격 ±5% 허용
+        volume_range: 0.30     # 거래량 ±30% 허용
+        time_range: 10         # 캔들 개수 ±10 허용
+
+      # Pattern matching 가중치
+      matching_weights:
+        price_shape: 0.4       # 가격 형태 유사도 40%
+        volume_shape: 0.3      # 거래량 형태 유사도 30%
+        timing: 0.3            # 타이밍 유사도 30%
+
+      # 유사도 임계값
+      min_similarity_score: 0.70  # 70% 이상 유사해야 매칭
+
+      # Cooldown period
+      min_detection_interval_days: 20  # 재탐지 간 최소 20일 간격
+
+      metadata:
+        description: "Seed pattern과 유사한 historical patterns 탐지"
+        target_period: "5 years"
+
+    nodes:
+      block1:
+        block_id: "block1"
+        block_type: 1
+        name: "Initial Surge (Redetection)"
+        description: "4% 이상 급등 + 거래량 2배 이상 (완화된 조건)"
+
+        entry_conditions:
+          # 완화된 조건
+          - name: "moderate_price_surge"
+            expression: "current.close >= ma(all_stocks, 120) * 1.04"
+            description: "종가가 120일 이동평균 대비 4% 이상 (seed: 8%)"
+
+          - name: "moderate_volume_spike"
+            expression: "current.volume >= avg(all_stocks[-20:], 'volume') * 2"
+            description: "거래량이 20일 평균 대비 2배 이상 (seed: 3배)"
+
+          # Seed pattern 기반 가격 필터 (런타임에 seed 값 주입)
+          - name: "price_range_filter"
+            expression: "in_range(current.close, seed.block1.low * 0.95, seed.block1.high * 1.05)"
+            description: "Seed Block1 가격 범위 내 (±5%)"
+
+        exit_conditions:
+          - name: "moderate_drop"
+            expression: "current.close < ma(all_stocks, 120) * 0.97"
+            description: "120일 이동평균 대비 3% 이상 하락 (seed: 5%)"
+
+        parameters:
+          min_duration: 1
+          max_duration: 150
+
+        metadata:
+          color: "#FFB6B6"
+          priority: 1
+          detection_quality: "medium"
+          relaxed_from: "seed_block1"
+
+      block2:
+        block_id: "block2"
+        block_type: 2
+        name: "Continuation (Redetection)"
+        description: "지속적 상승 (완화된 조건)"
+
+        entry_conditions:
+          # 완화된 조건
+          - name: "moderate_price_advance"
+            expression: "current.close >= block1.peak_price * 1.03"
+            description: "Block1 고점 대비 3% 이상 상승 (seed: 5%)"
+
+          - name: "moderate_volume"
+            expression: "current.volume >= avg(all_stocks[-20:], 'volume') * 1.5"
+            description: "거래량 20일 평균 1.5배 이상 (seed: 2배)"
+
+          # Seed pattern 기반 가격 필터
+          - name: "price_range_filter"
+            expression: "in_range(current.close, seed.block2.low * 0.95, seed.block2.high * 1.05)"
+            description: "Seed Block2 가격 범위 내"
+
+        exit_conditions:
+          - name: "volume_decline"
+            expression: "current.volume < avg(all_stocks[-20:], 'volume') * 0.9"
+            description: "거래량 평균 90% 미만 (seed: 80%)"
+
+        parameters:
+          min_duration: 1
+          max_duration: 100
+
+        metadata:
+          color: "#8FE7D7"
+          priority: 2
+          relaxed_from: "seed_block2"
+
+      block3:
+        block_id: "block3"
+        block_type: 3
+        name: "Peak Formation (Redetection)"
+        description: "고점 형성 (완화된 조건)"
+
+        entry_conditions:
+          # 완화된 조건
+          - name: "moderate_final_peak"
+            expression: "current.close >= block2.peak_price * 1.02"
+            description: "Block2 고점 대비 2% 이상 상승 (seed: 3%)"
+
+          # Seed pattern 기반 가격 필터
+          - name: "price_range_filter"
+            expression: "in_range(current.close, seed.block3.low * 0.95, seed.block3.high * 1.05)"
+            description: "Seed Block3 가격 범위 내"
+
+        exit_conditions:
+          - name: "moderate_price_drop"
+            expression: "current.close < block2.peak_price * 0.97"
+            description: "Block2 고점 대비 3% 이상 하락 (seed: 5%)"
+
+          - name: "volume_weak"
+            expression: "current.volume < avg(all_stocks[-20:], 'volume') * 1.2"
+            description: "거래량 평균 120% 미만"
+
+        parameters:
+          min_duration: 1
+          max_duration: 80
+
+        metadata:
+          color: "#C5F1E7"
+          priority: 3
+          relaxed_from: "seed_block3"
+
+    edges:
+      - from_block: "block1"
+        to_block: "block2"
+        edge_type: "sequential"
+        priority: 1
+        description: "Block1 다음 Block2 진입"
+
+      - from_block: "block2"
+        to_block: "block3"
+        edge_type: "sequential"
+        priority: 1
+        description: "Block2 다음 Block3 진입"

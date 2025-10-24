@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 from src.domain.entities.block_graph import BlockGraph, BlockNode, BlockEdge, EdgeType
+from src.domain.entities.patterns import RedetectionConfig
 
 
 class BlockGraphLoader:
@@ -75,6 +76,16 @@ class BlockGraphLoader:
 
         # BlockGraph 생성
         graph = BlockGraph()
+
+        # 패턴 타입 설정 (기본값: "seed")
+        pattern_type = graph_data.get('pattern_type', 'seed')
+        if pattern_type not in ['seed', 'redetection']:
+            raise ValueError(f"Invalid pattern_type: {pattern_type}. Must be 'seed' or 'redetection'")
+        graph.pattern_type = pattern_type
+
+        # 재탐지 설정 로드 (pattern_type이 "redetection"인 경우)
+        if pattern_type == 'redetection' and 'redetection_config' in graph_data:
+            graph.redetection_config = RedetectionConfig.from_dict(graph_data['redetection_config'])
 
         # 루트 노드 설정
         root_node_id = graph_data.get('root_node')
@@ -298,10 +309,17 @@ class BlockGraphLoader:
 
             edges_data.append(edge_dict)
 
-        return {
+        result = {
             'block_graph': {
+                'pattern_type': graph.pattern_type,
                 'root_node': graph.root_node_id,
                 'nodes': nodes_data,
                 'edges': edges_data
             }
         }
+
+        # Redetection 설정 추가 (pattern_type이 "redetection"이고 설정이 있는 경우)
+        if graph.pattern_type == 'redetection' and graph.redetection_config:
+            result['block_graph']['redetection_config'] = graph.redetection_config.to_dict()
+
+        return result
