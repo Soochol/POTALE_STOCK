@@ -25,6 +25,14 @@ from .conditions import (
     ExpressionEngine,
 )
 
+# Block Graph (Dynamic Block Relationships)
+from .block_graph import (
+    BlockNode,
+    BlockEdge,
+    EdgeType,
+    BlockGraph,
+)
+
 # Old conditions (backed up to backup/old_system)
 # BaseEntryCondition, Block1Condition, etc. are no longer used
 
@@ -50,6 +58,12 @@ __all__ = [
 
     # Conditions (Dynamic System)
     'ExpressionEngine',
+
+    # Block Graph (Dynamic Block Relationships)
+    'BlockNode',
+    'BlockEdge',
+    'EdgeType',
+    'BlockGraph',
 
     # Patterns
     'BlockPattern',
