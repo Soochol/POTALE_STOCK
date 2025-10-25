@@ -72,12 +72,17 @@ sys.path.insert(0, str(project_root))
 
 from src.application.services.block_graph_loader import BlockGraphLoader
 from src.application.use_cases.dynamic_block_detector import DynamicBlockDetector
+from src.application.use_cases.seed_pattern_detection_orchestrator import SeedPatternDetectionOrchestrator
 from src.application.services.indicators.block1_indicator_calculator import Block1IndicatorCalculator
 from src.domain.entities.conditions import ExpressionEngine, function_registry
 from src.domain.entities.detections import DynamicBlockDetection
+from src.domain.entities.patterns import SeedPatternTree
 from src.infrastructure.database.connection import get_db_connection
 from src.infrastructure.repositories.dynamic_block_repository_impl import (
     DynamicBlockRepositoryImpl,
+)
+from src.infrastructure.repositories.seed_pattern_repository_impl import (
+    SeedPatternRepositoryImpl,
 )
 from src.infrastructure.repositories.stock.sqlite_stock_repository import (
     SqliteStockRepository,
@@ -215,6 +220,8 @@ def detect_patterns_for_ticker(
         List[DynamicBlockDetection]: 탐지된 블록 리스트
     """
     start_time = datetime.now()
+    patterns = []  # Initialize for later use
+    detections = []  # Initialize for later use
 
     console.print(f"\n[bold cyan]{'='*SEPARATOR_WIDTH}[/bold cyan]")
     console.print(f"[bold cyan]Dynamic Block Detection - {ticker}[/bold cyan]")
@@ -286,36 +293,74 @@ def detect_patterns_for_ticker(
 
         try:
             expression_engine = ExpressionEngine(function_registry)
-            detector = DynamicBlockDetector(block_graph, expression_engine)
 
-            detections = detector.detect_blocks(
+            # Use Orchestrator for pattern-based detection
+            seed_pattern_repo = SeedPatternRepositoryImpl(session) if not dry_run else None
+            orchestrator = SeedPatternDetectionOrchestrator(
+                block_graph=block_graph,
+                expression_engine=expression_engine,
+                seed_pattern_repository=seed_pattern_repo
+            )
+            orchestrator.set_yaml_config_path(config_path)
+
+            patterns = orchestrator.detect_patterns(
                 ticker=ticker,
                 stocks=stocks,
-                condition_name="seed"
+                condition_name="seed",
+                save_to_db=(not dry_run)
             )
 
             progress.update(task, completed=True)
-            console.print(f"   [green]OK[/green] Detected {len(detections)} blocks\n")
+
+            # Extract all blocks from patterns for compatibility
+            detections = []
+            for pattern in patterns:
+                detections.extend(pattern.blocks.values())
+
+            # Show detection stats
+            block1_count = sum(1 for d in detections if d.block_id == 'block1')
+            console.print(f"   [green]OK[/green] Detected {len(patterns)} patterns ({block1_count} Block1s, {len(detections)} total blocks)\n")
+
         except Exception as e:
             console.print(f"   [red]ERROR[/red] Detection failed: {e}\n")
             raise
 
     # 5. 데이터베이스 저장 (dry-run이 아닌 경우)
-    if not dry_run and detections:
-        console.print("[cyan]5. Saving to database...[/cyan]")
-        try:
-            repo = DynamicBlockRepositoryImpl(session)
-            saved_detections = repo.save_all(detections)
-            console.print(f"   [green]OK[/green] Saved {len(saved_detections)} blocks to dynamic_block_detection\n")
-        except Exception as e:
-            console.print(f"   [red]ERROR[/red] Save failed: {e}\n")
-            raise
-    elif dry_run:
+    if not dry_run:
+        console.print("[cyan]5. Database operations...[/cyan]")
+        console.print(f"   [green]OK[/green] Patterns auto-saved by Orchestrator")
+
+        # Also save individual blocks for compatibility
+        if detections:
+            try:
+                repo = DynamicBlockRepositoryImpl(session)
+                saved_detections = repo.save_all(detections)
+                console.print(f"   [green]OK[/green] Saved {len(saved_detections)} blocks to dynamic_block_detection\n")
+            except Exception as e:
+                console.print(f"   [red]WARNING[/red] Block save failed: {e}\n")
+    else:
         console.print("[yellow]5. Skipping save (dry-run mode)[/yellow]\n")
 
     # 6. 결과 출력
     end_time = datetime.now()
     elapsed = (end_time - start_time).total_seconds()
+
+    # Pattern statistics
+    if patterns:
+        console.print(f"\n[bold green]Pattern Detection Summary:[/bold green]")
+        console.print(f"   Total Patterns: {len(patterns)}")
+        active_count = sum(1 for p in patterns if p.status.value == 'active')
+        completed_count = sum(1 for p in patterns if p.status.value == 'completed')
+        console.print(f"   Active: {active_count}, Completed: {completed_count}\n")
+
+        # Show pattern details
+        console.print(f"[bold cyan]Pattern Details:[/bold cyan]")
+        for i, pattern in enumerate(patterns, 1):
+            console.print(f"   Pattern {i}: {pattern.pattern_id}")
+            console.print(f"      Status: {pattern.status.value}")
+            console.print(f"      Blocks: {', '.join(pattern.blocks.keys())}")
+            console.print(f"      Root Block1 Date: {pattern.root_block.started_at}")
+            console.print()
 
     if detections:
         # 타입별 집계

@@ -4,6 +4,9 @@ Pattern Entities
 """
 from .redetection_config import RedetectionConfig, ToleranceConfig, MatchingWeights
 from .seed_pattern import SeedPattern, SeedPatternStatus, BlockFeatures
+from .pattern_id import PatternId
+from .pattern_status import PatternStatus
+from .seed_pattern_tree import SeedPatternTree
 
 __all__ = [
     'RedetectionConfig',
@@ -12,4 +15,7 @@ __all__ = [
     'SeedPattern',
     'SeedPatternStatus',
     'BlockFeatures',
+    'PatternId',
+    'PatternStatus',
+    'SeedPatternTree',
 ]

@@ -196,6 +196,86 @@ class DynamicBlockDetection:
         """
         return self.metadata.get(key, default)
 
+    def add_spot(
+        self,
+        spot_date: date,
+        open_price: float,
+        close_price: float,
+        high_price: float,
+        low_price: float,
+        volume: int
+    ) -> bool:
+        """
+        거래량 spot 추가
+
+        Block 발생 후 D+1, D+2일에 상위 Block 조건이 만족되었지만
+        새 Block으로 승격되지 못한 경우, 기존 Block에 spot 데이터 추가.
+
+        Args:
+            spot_date: spot 날짜
+            open_price: 시가
+            close_price: 종가
+            high_price: 고가
+            low_price: 저가
+            volume: 거래량
+
+        Returns:
+            추가 성공 여부 (최대 spot 개수 초과 시 False)
+        """
+        # spots 리스트 초기화
+        if 'spots' not in self.metadata:
+            self.metadata['spots'] = []
+
+        spots = self.metadata['spots']
+
+        # 최대 spot 개수 체크 (현재는 2개로 제한, 나중에 확장 가능)
+        MAX_SPOTS = 2
+        if len(spots) >= MAX_SPOTS:
+            return False
+
+        # 새 spot 추가
+        spot_number = len(spots) + 1
+        new_spot = {
+            'spot_number': spot_number,
+            'date': spot_date.isoformat(),
+            'open': open_price,
+            'close': close_price,
+            'high': high_price,
+            'low': low_price,
+            'volume': volume
+        }
+        spots.append(new_spot)
+
+        return True
+
+    def get_spots(self) -> List[Dict[str, Any]]:
+        """
+        거래량 spot 리스트 조회
+
+        Returns:
+            spot 딕셔너리 리스트 (비어있을 수 있음)
+        """
+        return self.metadata.get('spots', [])
+
+    def has_spot2(self) -> bool:
+        """
+        spot2 존재 여부 확인
+
+        Returns:
+            spot2가 있으면 True
+        """
+        spots = self.get_spots()
+        return len(spots) >= 2
+
+    def get_spot_count(self) -> int:
+        """
+        spot 개수 조회
+
+        Returns:
+            spot 개수 (0, 1, 2, ...)
+        """
+        return len(self.get_spots())
+
     def to_dict(self) -> Dict[str, Any]:
         """딕셔너리로 변환 (DB 저장용)"""
         return {

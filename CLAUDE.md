@@ -98,7 +98,7 @@ cp data/database/stock_data.db data/database/stock_data_backup.db
   - `conditions/`: ExpressionEngine, FunctionRegistry, builtin_functions
   - `block_graph/`: BlockGraph, BlockNode, BlockEdge
   - `detections/`: DynamicBlockDetection, BlockStatus
-  - `patterns/`: SeedPattern, RedetectionConfig
+  - `patterns/`: **NEW** PatternId, PatternStatus, SeedPatternTree (multi-pattern tree management)
   - `core/`: Stock, Condition, DetectionResult
 - **repositories/**: Repository interfaces (abstract base classes)
   - `dynamic_block_repository.py`: Interface for dynamic block storage
@@ -108,9 +108,11 @@ cp data/database/stock_data.db data/database/stock_data_backup.db
 **Application Layer** (`src/application/`)
 - **use_cases/**: Business logic orchestration
   - `dynamic_block_detector.py`: Core detection engine (YAML → BlockGraph → Detection)
+  - `seed_pattern_detection_orchestrator.py`: **NEW** Pattern-based detection orchestrator
   - `data_collection/`: Data collection workflows
 - **services/**: Application services
   - `block_graph_loader.py`: YAML → BlockGraph converter
+  - `seed_pattern_tree_manager.py`: **NEW** Multi-pattern lifecycle manager
   - `indicators/`: Technical indicator calculators
 - Depends only on domain layer
 
@@ -206,6 +208,65 @@ Blocks support:
 - **Independent detection**: Block2 can start without Block1
 - **Conditional edges**: Transitions with custom conditions
 - **Parent tracking**: Blocks store references to parent blocks (JSON array)
+
+#### Multi-Pattern Tree Management (NEW - 2025-10-25)
+
+**Problem Solved**: The original system used `active_blocks_map: Dict[str, DynamicBlockDetection]` which could only maintain ONE block per `block_id`. When a new Block1 was detected, it overwrote the previous Block1, causing data loss.
+
+**Solution**: Implemented a **Multi-Pattern Tree Manager** that manages unlimited independent seed patterns simultaneously.
+
+**Key Components**:
+1. **PatternId** (Value Object): Auto-generated unique identifier
+   - Format: `SEED_{TICKER}_{YYYYMMDD}_{SEQUENCE}`
+   - Example: `SEED_025980_20180307_001`
+
+2. **PatternStatus** (FSM): Pattern lifecycle management
+   - States: `ACTIVE` → `COMPLETED` → `ARCHIVED`
+   - Validated state transitions prevent invalid operations
+
+3. **SeedPatternTree** (Aggregate Root): Independent pattern tree
+   - Each pattern has its own Block1 → Block2 → ... → BlockN hierarchy
+   - Invariant: Must always have Block1 as root
+   - Automatic completion detection when all blocks completed
+
+4. **SeedPatternTreeManager** (Service): Multi-pattern lifecycle manager
+   - Maintains `List[SeedPatternTree]` instead of flat dictionary
+   - Auto-generates pattern_ids with sequence numbering
+   - Supports unlimited simultaneous patterns
+   - Memory-based for processing speed
+
+5. **SeedPatternDetectionOrchestrator** (Use Case): Top-level coordinator
+   - Orchestrates `DynamicBlockDetector` + `SeedPatternTreeManager`
+   - Organizes detected blocks into independent patterns
+   - Auto-saves completed patterns to database
+
+**Architecture**:
+```
+User Request
+    ↓
+SeedPatternDetectionOrchestrator
+    ├→ DynamicBlockDetector (block detection)
+    ├→ SeedPatternTreeManager (pattern management)
+    └→ SeedPatternRepository (DB persistence)
+```
+
+**Benefits**:
+- ✅ Multiple independent seed patterns can coexist
+- ✅ No data loss when new Block1 detected
+- ✅ Auto-generated pattern_id for easy tracking
+- ✅ Clear pattern lifecycle (ACTIVE → COMPLETED → ARCHIVED)
+- ✅ Breaking change: completely new approach
+
+**Example**:
+```python
+# OLD: Only 1 Block1 at a time
+active_blocks_map = {'block1': Block1_A}  # Block1_B overwrites Block1_A ❌
+
+# NEW: Unlimited independent patterns
+Pattern #1: Block1_A → Block2_A → COMPLETED
+Pattern #2: Block1_B → Block2_B → ACTIVE
+Pattern #3: Block1_C → ACTIVE
+```
 
 ### Database Schema
 
@@ -353,20 +414,25 @@ Data collection is async for performance:
 
 **Core Detection System**:
 - `src/application/use_cases/dynamic_block_detector.py`: Main detection engine
+- `src/application/use_cases/seed_pattern_detection_orchestrator.py`: **NEW** Pattern-based detection orchestrator
 - `src/application/services/block_graph_loader.py`: YAML → BlockGraph converter
+- `src/application/services/seed_pattern_tree_manager.py`: **NEW** Multi-pattern lifecycle manager
 - `src/domain/entities/conditions/expression_engine.py`: Expression evaluator
 - `src/domain/entities/conditions/builtin_functions.py`: Built-in functions
 - `src/domain/entities/block_graph/`: BlockGraph, BlockNode, BlockEdge entities
+- `src/domain/entities/patterns/`: **NEW** PatternId, PatternStatus, SeedPatternTree entities
 - `src/infrastructure/repositories/dynamic_block_repository_impl.py`: Database persistence
+- `src/infrastructure/repositories/seed_pattern_repository_impl.py`: Pattern persistence
 
 **YAML Examples**:
 - `presets/examples/simple_pattern_example.yaml`: Block1~3 example
 - `presets/examples/extended_pattern_example.yaml`: Block1~6 example
+- `presets/examples/test1_alt.yaml`: Block1→2→3 transition example
 - `presets/schemas/function_library.yaml`: Available functions reference
 - `presets/schemas/data_schema.yaml`: Available data fields reference
 
 **Scripts**:
-- `scripts/rule_based_detection/detect_patterns.py`: Main detection script (YAML-based)
+- `scripts/rule_based_detection/detect_patterns.py`: Main detection script (now uses pattern orchestrator)
 
 **Legacy Files** (Archived 2025-10-24):
 - `docs/archive/legacy_scripts/`: Old block1~4 detection scripts (no longer work)
@@ -444,7 +510,37 @@ Total: **50 features**
 9. **Timezone**: All dates are naive datetimes (KST assumed)
 10. **Legacy scripts don't work**: Old scripts in `docs/archive/legacy_scripts/` are for reference only
 
-## System Migration (2025-10-24)
+## System Migration
+
+### 2025-10-25: Multi-Pattern Tree Management
+
+**Major Enhancement**: Implemented multi-pattern tree management to support unlimited independent seed patterns.
+
+**Problem Solved**:
+- ❌ OLD: `active_blocks_map` could only hold ONE block per `block_id`
+- ❌ OLD: New Block1 detection overwrote previous Block1 (data loss)
+- ✅ NEW: Unlimited independent patterns with unique `pattern_id`
+- ✅ NEW: Each pattern maintains its own Block1→Block2→...→BlockN hierarchy
+
+**What Changed**:
+- ✅ New domain entities: `PatternId`, `PatternStatus`, `SeedPatternTree`
+- ✅ New services: `SeedPatternTreeManager` (multi-pattern lifecycle manager)
+- ✅ New orchestrator: `SeedPatternDetectionOrchestrator` (replaces direct `DynamicBlockDetector` usage)
+- ✅ Auto-generated `pattern_id` with format: `SEED_{TICKER}_{YYYYMMDD}_{SEQUENCE}`
+- ✅ FSM-based pattern lifecycle: `ACTIVE` → `COMPLETED` → `ARCHIVED`
+- ✅ Updated CLI script: `detect_patterns.py` now uses orchestrator
+
+**What Stayed**:
+- ✅ `DynamicBlockDetector` (unchanged, used internally by orchestrator)
+- ✅ YAML configuration system (unchanged)
+- ✅ Database schema (unchanged)
+- ✅ Expression engine (unchanged)
+
+**Breaking Changes**:
+- Scripts using `DynamicBlockDetector` directly should migrate to `SeedPatternDetectionOrchestrator`
+- Pattern detection now returns `List[SeedPatternTree]` instead of `List[DynamicBlockDetection]`
+
+### 2025-10-24: Dynamic YAML-based System
 
 **Major Update**: The system was migrated from fixed block1~6_detection tables to a dynamic YAML-based system.
 

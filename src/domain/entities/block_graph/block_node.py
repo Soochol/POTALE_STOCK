@@ -22,6 +22,7 @@ class BlockNode:
         description: 블록 설명
         entry_conditions: 진입 조건 표현식 리스트
         exit_conditions: 종료 조건 표현식 리스트
+        spot_condition: spot 추가 조건 표현식 (선택적)
         parameters: 블록별 파라미터 (예: min_candles, max_candles, ...)
         metadata: 추가 메타데이터 (선택적)
     """
@@ -32,6 +33,7 @@ class BlockNode:
     description: str = ""
     entry_conditions: List[str] = field(default_factory=list)
     exit_conditions: List[str] = field(default_factory=list)
+    spot_condition: Optional[str] = None
     parameters: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
