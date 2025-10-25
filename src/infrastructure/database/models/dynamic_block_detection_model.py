@@ -42,6 +42,7 @@ class DynamicBlockDetectionModel(Base):
     peak_price = Column(Float, nullable=True)
     peak_volume = Column(Integer, nullable=True)
     peak_date = Column(Date, nullable=True)
+    prev_close = Column(Float, nullable=True)  # 블록 시작 전일 종가
 
     # 관계 정보 (JSON)
     parent_blocks = Column(JSON, nullable=False, default=list)

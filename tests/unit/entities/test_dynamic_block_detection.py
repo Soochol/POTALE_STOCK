@@ -335,3 +335,249 @@ class TestDynamicBlockDetection:
         # Block10 (확장 가능)
         b10 = DynamicBlockDetection("block10", 10, "025980", "seed")
         assert b10.block_type == 10
+
+
+# ============================================================================
+# Redetection Tests (NEW - 2025-10-25)
+# ============================================================================
+
+class TestDynamicBlockDetectionRedetection:
+    """DynamicBlockDetection 재탐지 메서드 테스트"""
+
+    def test_add_redetection(self):
+        """재탐지 추가"""
+        from src.domain.entities.detections import RedetectionEvent
+
+        detection = DynamicBlockDetection(
+            block_id="block1",
+            block_type=1,
+            ticker="025980",
+            condition_name="seed",
+            started_at=date(2024, 1, 1),
+            ended_at=date(2024, 1, 10),
+            status=BlockStatus.COMPLETED
+        )
+
+        redet = RedetectionEvent(
+            sequence=1,
+            parent_block_id="block1",
+            started_at=date(2024, 1, 20),
+            peak_price=10000.0,
+            peak_volume=1000000
+        )
+
+        detection.add_redetection(redet)
+        assert detection.get_redetection_count() == 1
+        assert detection.redetections[0] == redet
+
+    def test_get_active_redetection(self):
+        """활성 재탐지 조회"""
+        from src.domain.entities.detections import RedetectionEvent
+
+        detection = DynamicBlockDetection(
+            block_id="block1",
+            block_type=1,
+            ticker="025980",
+            condition_name="seed",
+            started_at=date(2024, 1, 1),
+            ended_at=date(2024, 1, 10),
+            status=BlockStatus.COMPLETED
+        )
+
+        # 활성 재탐지 없음
+        assert detection.get_active_redetection() is None
+
+        # 활성 재탐지 추가
+        redet1 = RedetectionEvent(
+            sequence=1,
+            parent_block_id="block1",
+            started_at=date(2024, 1, 20),
+            peak_price=10000.0,
+            peak_volume=1000000,
+            status=BlockStatus.ACTIVE
+        )
+        detection.add_redetection(redet1)
+
+        assert detection.get_active_redetection() == redet1
+
+        # 완료된 재탐지 추가 (활성 아님)
+        redet2 = RedetectionEvent(
+            sequence=2,
+            parent_block_id="block1",
+            started_at=date(2024, 2, 1),
+            ended_at=date(2024, 2, 10),
+            peak_price=10500.0,
+            peak_volume=1100000,
+            status=BlockStatus.COMPLETED
+        )
+        detection.add_redetection(redet2)
+
+        # 여전히 redet1이 활성
+        assert detection.get_active_redetection() == redet1
+
+    def test_only_one_active_redetection(self):
+        """한 번에 1개의 활성 재탐지만 가능"""
+        from src.domain.entities.detections import RedetectionEvent
+
+        detection = DynamicBlockDetection(
+            block_id="block1",
+            block_type=1,
+            ticker="025980",
+            condition_name="seed",
+            started_at=date(2024, 1, 1),
+            ended_at=date(2024, 1, 10),
+            status=BlockStatus.COMPLETED
+        )
+
+        redet1 = RedetectionEvent(
+            sequence=1,
+            parent_block_id="block1",
+            started_at=date(2024, 1, 20),
+            peak_price=10000.0,
+            peak_volume=1000000,
+            status=BlockStatus.ACTIVE
+        )
+        detection.add_redetection(redet1)
+
+        # 첫 번째 재탐지가 활성인 상태에서 두 번째 활성 재탐지 시도
+        redet2 = RedetectionEvent(
+            sequence=2,
+            parent_block_id="block1",
+            started_at=date(2024, 1, 25),
+            peak_price=10200.0,
+            peak_volume=1050000,
+            status=BlockStatus.ACTIVE
+        )
+
+        # 추가는 가능하지만 can_start_redetection은 False
+        detection.add_redetection(redet2)
+        assert not detection.can_start_redetection()
+
+    def test_can_start_redetection(self):
+        """재탐지 시작 가능 여부"""
+        from src.domain.entities.detections import RedetectionEvent
+
+        detection = DynamicBlockDetection(
+            block_id="block1",
+            block_type=1,
+            ticker="025980",
+            condition_name="seed",
+            started_at=date(2024, 1, 1)
+        )
+
+        # 완료되지 않은 블록 - 재탐지 불가
+        assert not detection.can_start_redetection()
+
+        # 완료
+        detection.complete(date(2024, 1, 10))
+        assert detection.can_start_redetection()
+
+        # 활성 재탐지 추가
+        redet = RedetectionEvent(
+            sequence=1,
+            parent_block_id="block1",
+            started_at=date(2024, 1, 20),
+            peak_price=10000.0,
+            peak_volume=1000000,
+            status=BlockStatus.ACTIVE
+        )
+        detection.add_redetection(redet)
+
+        # 활성 재탐지 있음 - 새 재탐지 불가
+        assert not detection.can_start_redetection()
+
+        # 재탐지 완료
+        redet.complete(date(2024, 1, 30))
+
+        # 다시 재탐지 가능
+        assert detection.can_start_redetection()
+
+    def test_get_redetection_count(self):
+        """총 재탐지 개수 조회"""
+        from src.domain.entities.detections import RedetectionEvent
+
+        detection = DynamicBlockDetection(
+            block_id="block1",
+            block_type=1,
+            ticker="025980",
+            condition_name="seed",
+            started_at=date(2024, 1, 1),
+            ended_at=date(2024, 1, 10),
+            status=BlockStatus.COMPLETED
+        )
+
+        assert detection.get_redetection_count() == 0
+
+        # 재탐지 3개 추가
+        redet_dates = [date(2024, 1, 20), date(2024, 2, 1), date(2024, 2, 15)]
+        for i in range(3):
+            redet = RedetectionEvent(
+                sequence=i+1,
+                parent_block_id="block1",
+                started_at=redet_dates[i],
+                peak_price=10000.0 + i*500,
+                peak_volume=1000000 + i*100000,
+                status=BlockStatus.COMPLETED if i < 2 else BlockStatus.ACTIVE
+            )
+            detection.add_redetection(redet)
+
+        assert detection.get_redetection_count() == 3
+
+    def test_get_completed_redetection_count(self):
+        """완료된 재탐지 개수 조회"""
+        from src.domain.entities.detections import RedetectionEvent
+
+        detection = DynamicBlockDetection(
+            block_id="block1",
+            block_type=1,
+            ticker="025980",
+            condition_name="seed",
+            started_at=date(2024, 1, 1),
+            ended_at=date(2024, 1, 10),
+            status=BlockStatus.COMPLETED
+        )
+
+        assert detection.get_completed_redetection_count() == 0
+
+        # 완료된 재탐지 2개
+        completed_dates = [
+            (date(2024, 1, 20), date(2024, 1, 25)),
+            (date(2024, 2, 1), date(2024, 2, 10))
+        ]
+        for i in range(2):
+            redet = RedetectionEvent(
+                sequence=i+1,
+                parent_block_id="block1",
+                started_at=completed_dates[i][0],
+                ended_at=completed_dates[i][1],
+                peak_price=10000.0 + i*500,
+                peak_volume=1000000 + i*100000,
+                status=BlockStatus.COMPLETED
+            )
+            detection.add_redetection(redet)
+
+        # 활성 재탐지 1개
+        redet_active = RedetectionEvent(
+            sequence=3,
+            parent_block_id="block1",
+            started_at=date(2024, 2, 1),
+            peak_price=11000.0,
+            peak_volume=1200000,
+            status=BlockStatus.ACTIVE
+        )
+        detection.add_redetection(redet_active)
+
+        assert detection.get_redetection_count() == 3
+        assert detection.get_completed_redetection_count() == 2
+
+    def test_redetections_empty_by_default(self):
+        """기본적으로 재탐지 리스트는 빈 리스트"""
+        detection = DynamicBlockDetection(
+            block_id="block1",
+            block_type=1,
+            ticker="025980",
+            condition_name="seed"
+        )
+
+        assert detection.redetections == []
+        assert detection.get_redetection_count() == 0

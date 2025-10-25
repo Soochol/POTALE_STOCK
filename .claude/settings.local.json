@@ -112,7 +112,11 @@
       "Bash(if [ -f test_pattern_detection.py ])",
       "Bash(then rm test_pattern_detection.py)",
       "Bash(else echo \"File not found\")",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(c:\\myCode\\potale_stock\\.venv\\Scripts\\python.exe -m pytest tests/unit/entities/conditions/test_builtin_functions_redetection.py -v --no-cov)",
+      "Bash(/c/myCode/potale_stock/.venv/Scripts/python.exe -m pytest:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(del:*)"
     ],
     "deny": [],
     "ask": []

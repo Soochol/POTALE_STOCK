@@ -1,11 +1,13 @@
-# test1_alt.yaml - 블록 전이 패턴 (Block1 → Block2)
+# test1_alt.yaml - 블록 전이 패턴 + 재탐지 (Block1 → Block2 → Block3)
 #
 # Block1: 거래대금 300억 + 거래량 급등 패턴
-# Block2: 거래대금 500억 + 거래량 더 강한 급등 패턴
+# Block2: 거래대금 1000억 + 거래량 더 강한 급등 패턴
+# Block3: 거래대금 300억 + 지속적 거래량 급등
 #
 # 주요 특징:
 # - Block2가 시작되면 Block1은 자동 종료 (EXISTS 함수 사용)
-# - 순차적 패턴 감지 (Block1 → Block2)
+# - 순차적 패턴 감지 (Block1 → Block2 → Block3)
+# - 재탐지 시스템: 각 블록 완료 후 가격 조정 시 재진입 추적 ⭐ NEW
 #
 # Block1 진입 조건:
 # - 거래대금 300억원 이상
@@ -15,12 +17,35 @@
 # - 저가가 60일 이동평균 아래로 터치
 # - Block2가 시작되면 자동 종료 ⭐
 #
+# Block1 재탐지 조건 (완료 후):
+# - 가격이 peak 대비 90% 이하로 하락
+# - 거래량 활동성 유지 (20일 평균 1.5배 이상)
+# - 30일 경과 또는 MA60 이탈 시 종료
+#
 # Block2 진입 조건:
-# - 거래대금 500억원 이상 (Block1보다 높음)
+# - 거래대금 1000억원 이상 (Block1보다 높음)
 # - 거래량이 120일 평균 대비 3.0배 이상 (Block1보다 강함)
 #
 # Block2 종료 조건:
 # - 저가가 60일 이동평균 아래로 터치
+# - Block3가 시작되면 자동 종료
+#
+# Block2 재탐지 조건 (완료 후):
+# - 가격이 peak 대비 85% 이하로 하락 (더 깊은 조정)
+# - 거래량 20일 평균 2.0배 이상 + 거래대금 200억 이상
+# - 20일 경과 또는 MA120 이탈 시 종료
+#
+# Block3 진입 조건:
+# - 거래대금 300억원 이상
+# - 200일 신고가 + 지속적 거래량 급등
+#
+# Block3 종료 조건:
+# - 저가가 60일 이동평균 아래로 터치
+#
+# Block3 재탐지 조건 (완료 후):
+# - 가격이 peak 대비 80% 이하로 하락 (최종 조정)
+# - 거래량 20일 평균 2.5배 이상 + MA120 위 유지
+# - 15일 경과 또는 관심 소멸 시 종료
 
 version: "1.0"
 
@@ -84,6 +109,32 @@ block_graph:
           expression: "exists('block2')"
           description: "Block2가 시작되면 Block1 자동 종료"
 
+      # 재탐지 조건 (Block1 완료 후)
+      redetection:
+        # 재탐지 진입 조건 (AND 조건)
+        entry_conditions:
+          - name: "price_regression"
+            expression: "current.close < parent_block.peak_price * 0.90"
+            description: "가격이 Block1 peak 대비 90% 이하로 하락"
+
+          - name: "volume_activity"
+            expression: "current.volume >= volume_ma(20) * 1.5"
+            description: "거래량이 20일 평균 대비 1.5배 이상 (재진입 신호)"
+
+        # 재탐지 종료 조건 (OR 조건)
+        exit_conditions:
+          - name: "redetection_duration_limit"
+            expression: "candles_between(active_redetection.started_at, current.date) >= 30"
+            description: "재탐지 시작 후 30일 경과"
+
+          - name: "low_below_ma60"
+            expression: "current.low < ma(60)"
+            description: "저가가 60일 이동평균 아래로 터치"
+
+          - name: "block2_started_during_redetection"
+            expression: "exists('block2')"
+            description: "재탐지 중 Block2 시작 시 종료"
+
       # 블록 파라미터
       parameters:
         min_duration: 1
@@ -128,9 +179,45 @@ block_graph:
           expression: "is_price_breakout('block1', 3.0)"
           description: "Block1 고점 대비 -3% 이상에서 시작 (레벨업 패턴)"
 
-      # Spot 조건 (선택적)
-      # Block1 시작 후 D+1 또는 D+2일에 Block2 조건 만족 시 spot 추가
-      spot_condition: "is_spot_candidate('block1', 1, 2)"
+        - name: "price_doubling_surge_from_block1"
+          expression: "is_price_doubling_surge('block1')"
+          description: "Block1 상승폭 반복 (2배 상승 달성)"
+
+      # Spot 조건 (선택적) - 회고적 spot 패턴 (NEW - 2025-10-25)
+      # Block2 조건이 D일에 만족될 때, D-1, D-2일을 회고적으로 검사하여
+      # spot_entry_conditions를 만족하는지 확인 (is_price_doubling_surge 제외)
+      spot_condition: "is_continuation_spot('block1', 1, 2)"
+
+      # Spot 진입 조건 (회고적 검사용, NEW - 2025-10-25)
+      # D-1, D-2일에 평가할 조건 (is_price_doubling_surge 제외)
+      spot_entry_conditions:
+        - name: "ultra_high_trading_value"
+          expression: "(current.close * current.volume) >= 100000000000"
+          description: "거래대금 N억원 이상"
+
+        - name: "volume_surge_vs_prev"
+          expression: "prev and current.volume >= prev.volume * 3.0"
+          description: "직전 정상 거래일 대비 거래량 N배 이상 (N * 100% 증가)"
+
+        - name: "price_yearly_high"
+          expression: "is_new_high(200)"
+          description: "가격 N일 신고가"
+
+        - name: "high_surge_rate"
+          expression: "prev and ((current.high - prev.close) / prev.close * 100) >= 10.0"
+          description: "고가 등락률 (전일 종가 대비) N% 이상"
+
+        - name: "volume_exceeds_block1_peak"
+          expression: "exists('block1') and block1.peak_volume and current.volume > block1.peak_volume"
+          description: "Block1 최고 거래량보다 큼"
+
+        - name: "normalized_volume_surge"
+          expression: "normalized_volume(20) >= 300.0"
+          description: "정규화 거래량 300% 이상 (20일 평균 대비 3배)"
+
+        - name: "price_breakout_from_block1"
+          expression: "is_price_breakout('block1', 3.0)"
+          description: "Block1 고점 대비 -3% 이상에서 시작 (레벨업 패턴)"
 
       # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
       exit_conditions:
@@ -141,6 +228,36 @@ block_graph:
         - name: "block3_started"
           expression: "exists('block3')"
           description: "Block3가 시작되면 Block2 자동 종료"
+
+      # 재탐지 조건 (Block2 완료 후)
+      redetection:
+        # 재탐지 진입 조건 (AND 조건)
+        entry_conditions:
+          - name: "price_regression"
+            expression: "current.close < parent_block.peak_price * 0.85"
+            description: "가격이 Block2 peak 대비 85% 이하로 하락 (더 깊은 조정)"
+
+          - name: "volume_activity"
+            expression: "current.volume >= volume_ma(20) * 2.0"
+            description: "거래량이 20일 평균 대비 2.0배 이상 (강한 재진입 신호)"
+
+          - name: "trading_value_threshold"
+            expression: "(current.close * current.volume) >= 20000000000"
+            description: "거래대금 200억원 이상 (최소 활동성 유지)"
+
+        # 재탐지 종료 조건 (OR 조건)
+        exit_conditions:
+          - name: "redetection_duration_limit"
+            expression: "candles_between(active_redetection.started_at, current.date) >= 20"
+            description: "재탐지 시작 후 20일 경과"
+
+          - name: "low_below_ma120"
+            expression: "current.low < ma(120)"
+            description: "저가가 120일 이동평균 아래로 터치 (장기 추세 이탈)"
+
+          - name: "block3_started_during_redetection"
+            expression: "exists('block3')"
+            description: "재탐지 중 Block3 시작 시 종료"
 
       # 블록 파라미터
       parameters:
@@ -183,15 +300,77 @@ block_graph:
           expression: "is_price_breakout('block2', 3.0)"
           description: "Block2 고점 대비 -3% 이상에서 시작 (레벨업 패턴)"
 
-      # Spot 조건 (선택적)
-      # Block2 시작 후 D+1 또는 D+2일에 Block3 조건 만족 시 spot 추가
-      spot_condition: "is_spot_candidate('block2', 1, 2)"
+      # Spot 조건 (선택적) - 회고적 spot 패턴 (NEW - 2025-10-25)
+      # Block3 조건이 D일에 만족될 때, D-1, D-2일을 회고적으로 검사하여
+      # spot_entry_conditions를 만족하는지 확인
+      spot_condition: "is_continuation_spot('block2', 1, 2)"
+
+      # Spot 진입 조건 (회고적 검사용, NEW - 2025-10-25)
+      # D-1, D-2일에 평가할 조건 (모든 entry_conditions 포함)
+      spot_entry_conditions:
+        - name: "ultra_high_trading_value"
+          expression: "(current.close * current.volume) >= 30000000000"
+          description: "거래대금 N억원 이상"
+
+        - name: "volume_surge_vs_prev"
+          expression: "prev and current.volume >= prev.volume * 1.2"
+          description: "직전 정상 거래일 대비 거래량 N배 이상 (N * 100% 증가)"
+
+        - name: "price_yearly_high"
+          expression: "is_new_high(200)"
+          description: "가격 N일 신고가"
+
+        - name: "high_surge_rate"
+          expression: "prev and ((current.high - prev.close) / prev.close * 100) >= 10.0"
+          description: "고가 등락률 (전일 종가 대비) N% 이상"
+
+        - name: "normalized_volume_surge"
+          expression: "normalized_volume(20) >= 300.0"
+          description: "정규화 거래량 300% 이상 (20일 평균 대비 3배)"
+
+        - name: "price_breakout_from_block2"
+          expression: "is_price_breakout('block2', 3.0)"
+          description: "Block2 고점 대비 -3% 이상에서 시작 (레벨업 패턴)"
 
       # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
       exit_conditions:
         - name: "low_below_ma60"
           expression: "current.low < ma(60)"
           description: "저가가 60일 이동평균 아래로 터치"
+
+      # 재탐지 조건 (Block3 완료 후)
+      redetection:
+        # 재탐지 진입 조건 (AND 조건)
+        entry_conditions:
+          - name: "price_regression"
+            expression: "current.close < parent_block.peak_price * 0.80"
+            description: "가격이 Block3 peak 대비 80% 이하로 하락 (최종 조정)"
+
+          - name: "volume_activity"
+            expression: "current.volume >= volume_ma(20) * 2.5"
+            description: "거래량이 20일 평균 대비 2.5배 이상 (매우 강한 재진입)"
+
+          - name: "trading_value_threshold"
+            expression: "(current.close * current.volume) >= 15000000000"
+            description: "거래대금 150억원 이상 (최소 활동성 유지)"
+
+          - name: "price_above_ma120"
+            expression: "current.close > ma(120)"
+            description: "종가가 120일 이동평균 위 (장기 상승 추세 유지)"
+
+        # 재탐지 종료 조건 (OR 조건)
+        exit_conditions:
+          - name: "redetection_duration_limit"
+            expression: "candles_between(active_redetection.started_at, current.date) >= 15"
+            description: "재탐지 시작 후 15일 경과"
+
+          - name: "low_below_ma120"
+            expression: "current.low < ma(120)"
+            description: "저가가 120일 이동평균 아래로 터치 (장기 추세 이탈)"
+
+          - name: "volume_drying_up"
+            expression: "current.volume < volume_ma(20) * 0.5"
+            description: "거래량이 20일 평균의 50% 미만 (관심 소멸)"
 
       # 블록 파라미터
       parameters:

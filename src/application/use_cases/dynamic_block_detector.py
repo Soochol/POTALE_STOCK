@@ -12,6 +12,7 @@ from src.domain.entities.detections import DynamicBlockDetection, BlockStatus
 from src.domain.entities.block_graph import BlockGraph, BlockNode
 from src.domain.entities.conditions import ExpressionEngine
 from src.domain.exceptions import ExpressionEvaluationError
+from src.application.services.spot_strategies import SpotStrategy, CompositeSpotStrategy
 from src.infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
@@ -31,15 +32,18 @@ class DynamicBlockDetector:
     def __init__(
         self,
         block_graph: BlockGraph,
-        expression_engine: ExpressionEngine
+        expression_engine: ExpressionEngine,
+        spot_strategy: Optional[SpotStrategy] = None
     ):
         """
         Args:
             block_graph: 블록 그래프 정의
             expression_engine: 표현식 평가 엔진
+            spot_strategy: Spot 판정 전략 (None이면 CompositeSpotStrategy 사용)
         """
         self.block_graph = block_graph
         self.expression_engine = expression_engine
+        self.spot_strategy = spot_strategy or CompositeSpotStrategy(expression_engine)
 
     def detect_blocks(
         self,
@@ -358,139 +362,16 @@ class DynamicBlockDetector:
             # 진입 조건 확인 (AND 조건)
             if self._check_entry_conditions(node, context):
                 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                # Spot 체크: spot_condition 평가 또는 fallback 로직
+                # Spot 체크: SpotStrategy 패턴 사용
                 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                should_add_spot = False
-                target_prev_block = None
-
-                # 1) spot_condition이 정의되어 있으면 expression 평가
-                if node.spot_condition:
-                    logger.debug(
-                        f"Evaluating spot_condition for {node.block_id}",
-                        context={
-                            'block_id': node.block_id,
-                            'block_type': node.block_type,
-                            'ticker': ticker,
-                            'date': str(current_date),
-                            'spot_condition': node.spot_condition[:100] if len(node.spot_condition) > 100 else node.spot_condition
-                        }
-                    )
-
-                    try:
-                        is_spot = self.expression_engine.evaluate(node.spot_condition, context)
-
-                        logger.debug(
-                            f"spot_condition evaluated: is_spot={is_spot}",
-                            context={
-                                'block_id': node.block_id,
-                                'block_type': node.block_type,
-                                'ticker': ticker,
-                                'date': str(current_date),
-                                'is_spot': is_spot,
-                                'spot_condition': node.spot_condition[:100] if len(node.spot_condition) > 100 else node.spot_condition
-                            }
-                        )
-
-                        if is_spot:
-                            # spot 후보임 → 이전 블록 찾기
-                            logger.debug(
-                                f"is_spot=True, searching for previous block",
-                                context={
-                                    'block_id': node.block_id,
-                                    'block_type': node.block_type,
-                                    'ticker': ticker,
-                                    'date': str(current_date)
-                                }
-                            )
-
-                            target_prev_block = self._get_previous_block_from_context(
-                                node, context, active_blocks_map
-                            )
-                            should_add_spot = (target_prev_block is not None)
-
-                            logger.debug(
-                                f"Previous block search result: found={target_prev_block is not None}",
-                                context={
-                                    'block_id': node.block_id,
-                                    'block_type': node.block_type,
-                                    'ticker': ticker,
-                                    'date': str(current_date),
-                                    'prev_block_found': target_prev_block is not None,
-                                    'prev_block_id': target_prev_block.block_id if target_prev_block else None,
-                                    'should_add_spot': should_add_spot
-                                }
-                            )
-
-                            if not should_add_spot:
-                                logger.warning(
-                                    "spot_condition is True but previous block not found",
-                                    context={
-                                        'node_id': node.block_id,
-                                        'spot_condition': node.spot_condition,
-                                        'ticker': ticker,
-                                        'date': current_date
-                                    }
-                                )
-                        else:
-                            # is_spot=False인 경우
-                            logger.debug(
-                                f"is_spot=False, will create new block",
-                                context={
-                                    'block_id': node.block_id,
-                                    'block_type': node.block_type,
-                                    'ticker': ticker,
-                                    'date': str(current_date),
-                                    'spot_condition': node.spot_condition[:100] if len(node.spot_condition) > 100 else node.spot_condition
-                                }
-                            )
-
-                    except Exception as e:
-                        logger.error(
-                            "spot_condition evaluation failed",
-                            context={
-                                'node_id': node.block_id,
-                                'spot_condition': node.spot_condition,
-                                'ticker': ticker,
-                                'date': current_date
-                            },
-                            exc=e
-                        )
-
-                # 2) spot_condition이 없으면 fallback 로직 (기존 하드코딩 로직)
-                else:
-                    logger.debug(
-                        f"No spot_condition defined, using fallback logic",
-                        context={
-                            'block_id': node.block_id,
-                            'block_type': node.block_type,
-                            'ticker': ticker,
-                            'date': str(current_date)
-                        }
-                    )
-
-                    target_prev_block = self._find_previous_block_for_spot(
-                        node.block_type,
-                        current_date,
-                        active_blocks_map,
-                        context
-                    )
-                    should_add_spot = (target_prev_block is not None)
-
-                    logger.debug(
-                        f"Fallback spot search result: found={target_prev_block is not None}",
-                        context={
-                            'block_id': node.block_id,
-                            'block_type': node.block_type,
-                            'ticker': ticker,
-                            'date': str(current_date),
-                            'prev_block_found': target_prev_block is not None,
-                            'prev_block_id': target_prev_block.block_id if target_prev_block else None,
-                            'should_add_spot': should_add_spot
-                        }
-                    )
+                target_prev_block = self.spot_strategy.should_add_spot(
+                    current_node=node,
+                    context=context,
+                    active_blocks=active_blocks_map
+                )
 
                 # spot 추가 시도
-                if should_add_spot and target_prev_block:
+                if target_prev_block:
                     success = target_prev_block.add_spot(
                         spot_date=current_date,
                         open_price=current.open,
@@ -508,8 +389,7 @@ class DynamicBlockDetector:
                                 'block_type': target_prev_block.block_type,
                                 'ticker': ticker,
                                 'spot_date': current_date,
-                                'spot_count': target_prev_block.get_spot_count(),
-                                'via_condition': node.spot_condition is not None
+                                'spot_count': target_prev_block.get_spot_count()
                             }
                         )
                         # spot 추가 성공 → 새 블록 생성하지 않음
@@ -538,7 +418,7 @@ class DynamicBlockDetector:
                         'block_type': node.block_type,
                         'ticker': ticker,
                         'date': str(current_date),
-                        'should_add_spot': should_add_spot,
+                        'spot_added': target_prev_block is not None,
                         'has_spot_condition': node.spot_condition is not None
                     }
                 )
@@ -552,6 +432,11 @@ class DynamicBlockDetector:
 
                 new_block.start(current_date)
                 new_block.update_peak(current_date, current_price, current_volume)
+
+                # 전일 종가 저장 (상승폭 계산용)
+                prev_stock = context.get('prev')
+                if prev_stock and hasattr(prev_stock, 'close') and prev_stock.close:
+                    new_block.prev_close = prev_stock.close
 
                 # 부모 블록 연결 (엣지 기반)
                 parent_nodes = self.block_graph.get_parents(node_id)
@@ -591,27 +476,19 @@ class DynamicBlockDetector:
         current_date = context.get('current').date if context.get('current') else None
 
         try:
-            for i, condition_dict in enumerate(node.entry_conditions):
-                # condition_dict에서 expression과 name 추출
-                if isinstance(condition_dict, dict):
-                    expression = condition_dict.get('expression', '')
-                    condition_name = condition_dict.get('name', f'condition_{i}')
-                else:
-                    # 문자열로 직접 전달된 경우 (하위 호환성)
-                    expression = condition_dict
-                    condition_name = f'condition_{i}'
-
-                result = self.expression_engine.evaluate(expression, context)
+            for condition in node.entry_conditions:
+                # Condition 객체의 evaluate() 메서드 사용
+                result = condition.evaluate(self.expression_engine, context)
 
                 # 각 조건의 평가 결과를 DEBUG 레벨로 로깅
                 logger.debug(
-                    f"Entry condition evaluated: {condition_name}",
+                    f"Entry condition evaluated: {condition.name}",
                     context={
                         'block_id': node.block_id,
                         'block_type': node.block_type,
                         'date': str(current_date) if current_date else 'unknown',
-                        'condition_name': condition_name,
-                        'expression': expression[:100] if len(expression) > 100 else expression,  # 긴 표현식 축약
+                        'condition_name': condition.name,
+                        'expression': condition.expression[:100] if len(condition.expression) > 100 else condition.expression,
                         'result': result
                     }
                 )
@@ -619,13 +496,13 @@ class DynamicBlockDetector:
                 # 결과가 False이면 즉시 False 반환
                 if not result:
                     logger.debug(
-                        f"Entry condition FAILED: {condition_name}",
+                        f"Entry condition FAILED: {condition.name}",
                         context={
                             'block_id': node.block_id,
                             'block_type': node.block_type,
                             'date': str(current_date) if current_date else 'unknown',
-                            'condition_name': condition_name,
-                            'expression': expression[:100] if len(expression) > 100 else expression
+                            'condition_name': condition.name,
+                            'expression': condition.expression[:100] if len(condition.expression) > 100 else condition.expression
                         }
                     )
                     return False
@@ -725,27 +602,19 @@ class DynamicBlockDetector:
         current_date = context.get('current').date if context.get('current') else None
 
         try:
-            for i, condition_dict in enumerate(node.exit_conditions):
-                # condition_dict에서 expression과 name 추출
-                if isinstance(condition_dict, dict):
-                    condition_expr = condition_dict.get('expression', '')
-                    condition_name = condition_dict.get('name', f'exit_condition_{i}')
-                else:
-                    # 문자열로 직접 전달된 경우 (하위 호환성)
-                    condition_expr = condition_dict
-                    condition_name = f'exit_condition_{i}'
-
-                result = self.expression_engine.evaluate(condition_expr, context)
+            for condition in node.exit_conditions:
+                # Condition 객체의 evaluate() 메서드 사용
+                result = condition.evaluate(self.expression_engine, context)
 
                 # 각 종료 조건의 평가 결과를 DEBUG 레벨로 로깅
                 logger.debug(
-                    f"Exit condition evaluated: {condition_name}",
+                    f"Exit condition evaluated: {condition.name}",
                     context={
                         'block_id': node.block_id,
                         'block_type': node.block_type,
                         'date': str(current_date) if current_date else 'unknown',
-                        'condition_name': condition_name,
-                        'expression': condition_expr[:100] if len(condition_expr) > 100 else condition_expr,
+                        'condition_name': condition.name,
+                        'expression': condition.expression[:100] if len(condition.expression) > 100 else condition.expression,
                         'result': result
                     }
                 )
@@ -753,16 +622,16 @@ class DynamicBlockDetector:
                 # 결과가 True이면 해당 조건 expression 반환
                 if result:
                     logger.debug(
-                        f"Exit condition SATISFIED: {condition_name} - Block will terminate",
+                        f"Exit condition SATISFIED: {condition.name} - Block will terminate",
                         context={
                             'block_id': node.block_id,
                             'block_type': node.block_type,
                             'date': str(current_date) if current_date else 'unknown',
-                            'condition_name': condition_name,
-                            'expression': condition_expr[:100] if len(condition_expr) > 100 else condition_expr
+                            'condition_name': condition.name,
+                            'expression': condition.expression[:100] if len(condition.expression) > 100 else condition.expression
                         }
                     )
-                    return condition_expr
+                    return condition.expression
 
             # 모든 조건이 False
             logger.debug(
@@ -970,17 +839,19 @@ class DynamicBlockDetector:
         if not node.spot_condition:
             return None
 
-        # spot_condition에서 block_id 추출
+        # spot_condition expression에서 block_id 추출
         # 예: "is_spot_candidate('block1', 1, 2)" → 'block1'
+        # 예: "is_continuation_spot('block1', 1, 2)" → 'block1'
         import re
-        match = re.search(r"is_spot_candidate\(['\"](\w+)['\"]", node.spot_condition)
+        # 일반화된 패턴 (함수명 관계없이 첫 번째 문자열 인자 추출)
+        match = re.search(r"\(['\"](\w+)['\"]", node.spot_condition.expression)
 
         if not match:
             logger.warning(
                 "Failed to extract prev_block_id from spot_condition",
                 context={
                     'node_id': node.block_id,
-                    'spot_condition': node.spot_condition
+                    'spot_condition': node.spot_condition.expression
                 }
             )
             return None

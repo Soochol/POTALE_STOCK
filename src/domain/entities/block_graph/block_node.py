@@ -5,7 +5,10 @@ BlockNode - 블록 그래프의 노드
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.domain.entities.conditions import Condition
 
 
 @dataclass
@@ -31,13 +34,17 @@ class BlockNode:
     block_type: int
     name: str
     description: str = ""
-    entry_conditions: List[str] = field(default_factory=list)
-    exit_conditions: List[str] = field(default_factory=list)
-    spot_condition: Optional[str] = None
+    entry_conditions: List['Condition'] = field(default_factory=list)
+    exit_conditions: List['Condition'] = field(default_factory=list)
+    spot_condition: Optional['Condition'] = None
+
+    # Spot 진입 조건 (선택적, NEW - 2025-10-25)
+    # is_continuation_spot용: D-1, D-2일에 평가할 조건
+    spot_entry_conditions: Optional[List['Condition']] = None
 
     # 재탐지 조건 (선택적, NEW - 2025-10-25)
-    redetection_entry_conditions: Optional[List[str]] = None
-    redetection_exit_conditions: Optional[List[str]] = None
+    redetection_entry_conditions: Optional[List['Condition']] = None
+    redetection_exit_conditions: Optional[List['Condition']] = None
 
     parameters: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -50,25 +57,25 @@ class BlockNode:
         if self.block_type < 1:
             raise ValueError(f"block_type은 1 이상이어야 합니다: {self.block_type}")
 
-    def add_entry_condition(self, condition_expression: str) -> None:
+    def add_entry_condition(self, condition: 'Condition') -> None:
         """
         진입 조건 추가
 
         Args:
-            condition_expression: 조건 표현식 (예: "current.close >= ma(120)")
+            condition: Condition 객체
         """
-        if condition_expression not in self.entry_conditions:
-            self.entry_conditions.append(condition_expression)
+        if condition not in self.entry_conditions:
+            self.entry_conditions.append(condition)
 
-    def add_exit_condition(self, condition_expression: str) -> None:
+    def add_exit_condition(self, condition: 'Condition') -> None:
         """
         종료 조건 추가
 
         Args:
-            condition_expression: 조건 표현식
+            condition: Condition 객체
         """
-        if condition_expression not in self.exit_conditions:
-            self.exit_conditions.append(condition_expression)
+        if condition not in self.exit_conditions:
+            self.exit_conditions.append(condition)
 
     def set_parameter(self, key: str, value: Any) -> None:
         """

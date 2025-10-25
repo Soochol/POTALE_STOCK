@@ -699,6 +699,154 @@ def is_price_breakout(
     return current_open >= threshold
 
 
+@function_registry.register(
+    name='is_price_doubling_surge',
+    category='detection',
+    description='현재 고가가 이전 블록의 상승폭을 반복했는지 체크 (2배 상승)',
+    params_schema={
+        'prev_block_id': {'type': 'str', 'required': True}
+    }
+)
+def is_price_doubling_surge(
+    prev_block_id: str,
+    context: dict
+) -> bool:
+    """
+    현재 고가가 이전 블록의 상승폭을 반복했는지 체크
+
+    계산 로직:
+    1. 전일 종가 = prev_block.prev_close (블록 시작 전일 종가)
+    2. 상승폭 = prev_block.peak_price - prev_block.prev_close
+    3. 목표가격 = prev_block.peak_price + 상승폭
+                = 2 * prev_block.peak_price - prev_block.prev_close
+    4. 조건: current.high >= 목표가격
+
+    예시:
+        Block1: prev_close=10000, peak_price=15000
+        상승폭 = 15000 - 10000 = 5000
+        목표가격 = 15000 + 5000 = 20000
+        Block2 진입: current.high >= 20000
+
+    Args:
+        prev_block_id: 이전 블록 ID (예: 'block1')
+        context: 평가 컨텍스트
+
+    Returns:
+        True: 상승폭 반복 성공 (current.high >= 목표가격)
+        False: 조건 불만족 또는 데이터 없음
+
+    Example:
+        is_price_doubling_surge('block1')
+        # Block1 상승폭을 반복했는지 체크 (2배 상승 달성)
+    """
+    # 1. 이전 블록 조회
+    prev_block = context.get(prev_block_id)
+    if prev_block is None:
+        return False
+
+    # 2. 필수 데이터 검증
+    if not hasattr(prev_block, 'peak_price') or prev_block.peak_price is None:
+        return False
+
+    if not hasattr(prev_block, 'prev_close') or prev_block.prev_close is None:
+        return False
+
+    if prev_block.peak_price <= 0 or prev_block.prev_close <= 0:
+        return False
+
+    # 3. 현재 고가 조회
+    current = context.get('current')
+    if not current or not hasattr(current, 'high'):
+        return False
+
+    current_high = current.high
+    if current_high is None or current_high <= 0:
+        return False
+
+    # 4. 목표가격 계산
+    # 목표가격 = 2 * peak_price - prev_close
+    target_price = 2 * prev_block.peak_price - prev_block.prev_close
+
+    # 5. 조건 평가
+    return current_high >= target_price
+
+
+@function_registry.register(
+    name='is_continuation_spot',
+    category='detection',
+    description='회고적 spot 패턴 체크 (D-1, D-2일 조건 확인)',
+    params_schema={
+        'prev_block_id': {'type': 'str', 'required': True},
+        'min_days': {'type': 'int', 'required': True, 'min': 0},
+        'max_days': {'type': 'int', 'required': True, 'min': 0}
+    }
+)
+def is_continuation_spot(
+    prev_block_id: str,
+    min_days: int,
+    max_days: int,
+    context: dict
+) -> bool:
+    """
+    회고적 spot 패턴 체크 (Continuation Spot)
+
+    Block2 조건이 D일에 만족될 때, D-1, D-2일을 회고적으로 검사하여
+    spot_entry_conditions를 만족하는지 확인합니다.
+    실제 회고 로직은 ContinuationSpotStrategy에서 수행되며,
+    이 함수는 기본 검증(블록 존재, active 상태, spot2 여부)만 수행합니다.
+
+    Args:
+        prev_block_id: 이전 블록 ID (예: 'block1')
+        min_days: 최소 일수 (1 = D+1)
+        max_days: 최대 일수 (2 = D+2)
+        context: 평가 컨텍스트
+            - {prev_block_id}: 이전 블록 객체
+            - current: 현재 주가 데이터
+            - all_stocks: 전체 주가 데이터
+
+    Returns:
+        True: 이전 블록이 존재하고 active이며 spot2가 없음
+        False: 조건 불만족 (새 블록 생성)
+
+    Logic:
+        1. prev_block이 context에 존재하는가?
+        2. prev_block이 active 상태인가?
+        3. prev_block이 spot2를 아직 안 가졌나?
+        4. 조건 만족 시 ContinuationSpotStrategy가 D-1, D-2일 검사 수행
+
+    Examples:
+        >>> is_continuation_spot('block1', 1, 2)
+        # Block1이 active이고 spot2 없으면, D-1/D-2일 회고 검사 트리거
+
+        >>> # YAML에서 사용 예시
+        >>> spot_condition:
+        >>>   name: "continuation_spot_check"
+        >>>   expression: "is_continuation_spot('block1', 1, 2)"
+
+    Note:
+        - 실제 D-1, D-2 조건 평가는 ContinuationSpotStrategy에서 수행
+        - spot_entry_conditions가 BlockNode에 정의되어 있어야 함
+        - D-1 우선, D-2 대안 (둘 다 만족 시 D-1 선택)
+    """
+    # 1. 이전 블록 조회
+    prev_block = context.get(prev_block_id)
+
+    if prev_block is None:
+        # 이전 블록이 context에 없음
+        return False
+
+    # 2. 이전 블록이 active 상태인지 확인
+    if not prev_block.is_active():
+        return False
+
+    # 3. spot2가 이미 있으면 제외
+    if prev_block.has_spot2():
+        return False
+
+    # 4. 기본 검증 통과 → ContinuationSpotStrategy가 회고 로직 수행
+    return True
+
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 재탐지 (Redetection) 관련 함수 (NEW - 2025-10-25)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

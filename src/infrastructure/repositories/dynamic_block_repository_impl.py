@@ -172,6 +172,7 @@ class DynamicBlockRepositoryImpl(DynamicBlockRepository):
             peak_price=entity.peak_price,
             peak_volume=entity.peak_volume,
             peak_date=entity.peak_date,
+            prev_close=entity.prev_close,
             parent_blocks=entity.parent_blocks,
             custom_metadata=metadata
         )
@@ -194,6 +195,7 @@ class DynamicBlockRepositoryImpl(DynamicBlockRepository):
         model.peak_price = entity.peak_price
         model.peak_volume = entity.peak_volume
         model.peak_date = entity.peak_date
+        model.prev_close = entity.prev_close
         model.parent_blocks = entity.parent_blocks
         model.custom_metadata = metadata
 
@@ -223,6 +225,7 @@ class DynamicBlockRepositoryImpl(DynamicBlockRepository):
             peak_price=model.peak_price,
             peak_volume=model.peak_volume,
             peak_date=model.peak_date,
+            prev_close=model.prev_close,
             parent_blocks=model.parent_blocks or [],
             redetections=redetections,
             metadata=metadata

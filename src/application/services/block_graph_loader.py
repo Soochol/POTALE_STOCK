@@ -6,9 +6,10 @@ YAML 파일로부터 블록 정의를 읽어 BlockGraph 객체로 변환.
 
 import yaml
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from src.domain.entities.block_graph import BlockGraph, BlockNode, BlockEdge, EdgeType
+from src.domain.entities.conditions import Condition
 from src.domain.entities.patterns import RedetectionConfig
 from src.domain.exceptions import YAMLConfigError, ValidationError
 from src.domain.error_context import create_file_operation_context
@@ -210,16 +211,25 @@ class BlockGraphLoader:
                 logger.error(error_msg, context={'node_id': node_id})
                 raise ValidationError(error_msg, context={'node_id': node_id})
 
-            # 조건 변환: 리스트[객체] → 리스트[문자열]
-            entry_conditions = self._extract_condition_expressions(
+            # 조건 변환: 리스트[dict/str] → 리스트[Condition]
+            entry_conditions = self._parse_conditions(
                 node_data.get('entry_conditions', [])
             )
-            exit_conditions = self._extract_condition_expressions(
+            exit_conditions = self._parse_conditions(
                 node_data.get('exit_conditions', [])
             )
 
-            # spot_condition 추출 (문자열 또는 None)
-            spot_condition = node_data.get('spot_condition')
+            # spot_condition 추출 (Condition 객체 또는 None)
+            spot_condition = self._parse_single_condition(
+                node_data.get('spot_condition')
+            )
+
+            # spot_entry_conditions 추출 (NEW - 2025-10-25)
+            spot_entry_conditions = None
+            if 'spot_entry_conditions' in node_data:
+                spot_entry_conditions = self._parse_conditions(
+                    node_data['spot_entry_conditions']
+                )
 
             # 재탐지 조건 추출 (NEW - 2025-10-25)
             redetection_entry_conditions = None
@@ -228,11 +238,11 @@ class BlockGraphLoader:
             if 'redetection' in node_data:
                 redetection_data = node_data['redetection']
                 if 'entry_conditions' in redetection_data:
-                    redetection_entry_conditions = self._extract_condition_expressions(
+                    redetection_entry_conditions = self._parse_conditions(
                         redetection_data['entry_conditions']
                     )
                 if 'exit_conditions' in redetection_data:
-                    redetection_exit_conditions = self._extract_condition_expressions(
+                    redetection_exit_conditions = self._parse_conditions(
                         redetection_data['exit_conditions']
                     )
 
@@ -245,6 +255,7 @@ class BlockGraphLoader:
                 entry_conditions=entry_conditions,
                 exit_conditions=exit_conditions,
                 spot_condition=spot_condition,
+                spot_entry_conditions=spot_entry_conditions,
                 redetection_entry_conditions=redetection_entry_conditions,
                 redetection_exit_conditions=redetection_exit_conditions,
                 parameters=node_data.get('parameters', {}),
@@ -255,39 +266,88 @@ class BlockGraphLoader:
 
         return nodes
 
-    def _extract_condition_expressions(self, conditions: List) -> List[str]:
+    def _parse_conditions(self, conditions: List) -> List[Condition]:
         """
-        조건 데이터에서 표현식 추출
+        조건 데이터를 Condition 객체 리스트로 변환
 
-        조건은 두 가지 형식 지원:
+        조건은 두 가지 형식 지원 (하위 호환):
         1. 문자열: "current.close >= 10000"
-        2. 객체: {"name": "price_check", "expression": "current.close >= 10000"}
+        2. 객체: {"name": "price_check", "expression": "current.close >= 10000", "description": "..."}
 
         Args:
             conditions: 조건 리스트
 
         Returns:
-            표현식 문자열 리스트
+            Condition 객체 리스트
         """
-        expressions = []
+        condition_objects = []
 
-        for cond in conditions:
+        for i, cond in enumerate(conditions):
             if isinstance(cond, str):
-                # 문자열 형식
-                expressions.append(cond)
+                # 하위 호환: 문자열 형식
+                condition = Condition(
+                    name=f"condition_{i}",
+                    expression=cond,
+                    description=""
+                )
             elif isinstance(cond, dict):
-                # 객체 형식
+                # 표준 형식: dict
                 if 'expression' not in cond:
                     error_msg = f"조건 객체에 'expression' 키가 없습니다: {cond}"
                     logger.error(error_msg, context={'condition': cond})
                     raise ValidationError(error_msg, context={'condition': cond})
-                expressions.append(cond['expression'])
+
+                condition = Condition(
+                    name=cond.get('name', f"condition_{i}"),
+                    expression=cond['expression'],
+                    description=cond.get('description', '')
+                )
             else:
                 error_msg = f"잘못된 조건 형식: {cond}"
                 logger.error(error_msg, context={'condition': cond, 'type': type(cond).__name__})
                 raise ValidationError(error_msg, context={'condition': cond})
 
-        return expressions
+            condition_objects.append(condition)
+
+        return condition_objects
+
+    def _parse_single_condition(self, condition_data: Any) -> Optional[Condition]:
+        """
+        단일 조건 데이터를 Condition 객체로 변환
+
+        Args:
+            condition_data: 조건 데이터 (str, dict, 또는 None)
+
+        Returns:
+            Condition 객체 또는 None
+        """
+        if condition_data is None:
+            return None
+
+        if isinstance(condition_data, str):
+            # 하위 호환: 문자열 형식
+            return Condition(
+                name="spot_condition",
+                expression=condition_data,
+                description=""
+            )
+        elif isinstance(condition_data, dict):
+            # 표준 형식: dict
+            if 'expression' not in condition_data:
+                error_msg = f"조건 객체에 'expression' 키가 없습니다: {condition_data}"
+                logger.error(error_msg, context={'condition': condition_data})
+                raise ValidationError(error_msg, context={'condition': condition_data})
+
+            return Condition(
+                name=condition_data.get('name', 'spot_condition'),
+                expression=condition_data['expression'],
+                description=condition_data.get('description', '')
+            )
+        else:
+            error_msg = f"잘못된 조건 형식: {condition_data}"
+            logger.error(error_msg, context={'condition': condition_data, 'type': type(condition_data).__name__})
+            raise ValidationError(error_msg, context={'condition': condition_data})
+
 
     def _load_edges(self, edges_data: List[Dict[str, Any]]) -> List[BlockEdge]:
         """
@@ -379,20 +439,38 @@ class BlockGraphLoader:
         nodes_data = {}
 
         for node_id, node in graph.nodes.items():
-            nodes_data[node_id] = {
+            node_dict = {
                 'block_id': node.block_id,
                 'block_type': node.block_type,
                 'name': node.name,
                 'description': node.description,
                 'entry_conditions': [
-                    {'expression': expr} for expr in node.entry_conditions
+                    {
+                        'name': cond.name,
+                        'expression': cond.expression,
+                        'description': cond.description
+                    } for cond in node.entry_conditions
                 ],
                 'exit_conditions': [
-                    {'expression': expr} for expr in node.exit_conditions
+                    {
+                        'name': cond.name,
+                        'expression': cond.expression,
+                        'description': cond.description
+                    } for cond in node.exit_conditions
                 ],
                 'parameters': node.parameters,
                 'metadata': node.metadata
             }
+
+            # spot_condition 추가 (있는 경우)
+            if node.spot_condition:
+                node_dict['spot_condition'] = {
+                    'name': node.spot_condition.name,
+                    'expression': node.spot_condition.expression,
+                    'description': node.spot_condition.description
+                }
+
+            nodes_data[node_id] = node_dict
 
         edges_data = []
         for edge in graph.edges:

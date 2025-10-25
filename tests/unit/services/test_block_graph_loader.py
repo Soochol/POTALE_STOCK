@@ -7,6 +7,7 @@ from pathlib import Path
 
 from src.application.services.block_graph_loader import BlockGraphLoader
 from src.domain.entities.block_graph import BlockGraph, BlockNode, BlockEdge, EdgeType
+from src.domain.entities.conditions import Condition
 
 
 class TestBlockGraphLoader:
@@ -93,8 +94,9 @@ class TestBlockGraphLoader:
         assert node.name == 'Initial Surge'
         assert node.description == 'First block'
         assert len(node.entry_conditions) == 2
-        assert 'current.close >= 10000' in node.entry_conditions
-        assert 'current.volume >= 1000000' in node.entry_conditions
+        # Condition 객체로 변경됨
+        assert any(c.expression == 'current.close >= 10000' for c in node.entry_conditions)
+        assert any(c.expression == 'current.volume >= 1000000' for c in node.entry_conditions)
         assert len(node.exit_conditions) == 1
         assert node.parameters['min_duration'] == 1
         assert node.metadata['note'] == 'test'
@@ -292,8 +294,12 @@ class TestBlockGraphLoader:
             block_type=1,
             name='Block 1',
             description='Test block',
-            entry_conditions=['current.close >= 10000'],
-            exit_conditions=['current.close < ma(120)'],
+            entry_conditions=[
+                Condition(name='price_check', expression='current.close >= 10000')
+            ],
+            exit_conditions=[
+                Condition(name='ma_check', expression='current.close < ma(120)')
+            ],
             parameters={'min_duration': 1}
         )
 
@@ -301,7 +307,9 @@ class TestBlockGraphLoader:
             block_id='block2',
             block_type=2,
             name='Block 2',
-            entry_conditions=['EXISTS("block1")']
+            entry_conditions=[
+                Condition(name='exists_check', expression='EXISTS("block1")')
+            ]
         )
 
         original_graph.add_node(node1)
@@ -325,7 +333,9 @@ class TestBlockGraphLoader:
         assert loaded_node1.block_id == node1.block_id
         assert loaded_node1.block_type == node1.block_type
         assert loaded_node1.name == node1.name
-        assert loaded_node1.entry_conditions == node1.entry_conditions
+        # Condition 객체 비교: expression으로 비교
+        assert len(loaded_node1.entry_conditions) == len(node1.entry_conditions)
+        assert loaded_node1.entry_conditions[0].expression == node1.entry_conditions[0].expression
         assert loaded_node1.parameters == node1.parameters
 
     def test_load_from_file_not_found(self):
@@ -551,7 +561,7 @@ class TestBlockGraphLoader:
             block_id='block1',
             block_type=1,
             name='Seed Block1',
-            entry_conditions=['true'],
+            entry_conditions=[Condition(name='always_true', expression='true')],
             exit_conditions=[]
         )
         graph.add_node(node)
@@ -580,7 +590,7 @@ class TestBlockGraphLoader:
             block_id='block1',
             block_type=1,
             name='Redetection Block1',
-            entry_conditions=['true'],
+            entry_conditions=[Condition(name='always_true', expression='true')],
             exit_conditions=[]
         )
         graph.add_node(node)
@@ -613,8 +623,12 @@ class TestBlockGraphLoader:
             block_id='block1',
             block_type=1,
             name='Test Block',
-            entry_conditions=['current.close >= 10000'],
-            exit_conditions=['current.close < 9000']
+            entry_conditions=[
+                Condition(name='price_threshold', expression='current.close >= 10000')
+            ],
+            exit_conditions=[
+                Condition(name='price_exit', expression='current.close < 9000')
+            ]
         )
         original_graph.add_node(node)
 

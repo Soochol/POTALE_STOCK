@@ -61,6 +61,7 @@ class DynamicBlockDetection:
     peak_price: Optional[float] = None
     peak_volume: Optional[int] = None
     peak_date: Optional[date] = None
+    prev_close: Optional[float] = None  # 블록 시작 전일 종가 (상승폭 계산용)
 
     # 관계 정보
     parent_blocks: List[int] = field(default_factory=list)  # 부모 블록 DB ID 리스트
