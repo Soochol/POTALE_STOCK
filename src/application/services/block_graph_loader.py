@@ -221,6 +221,21 @@ class BlockGraphLoader:
             # spot_condition 추출 (문자열 또는 None)
             spot_condition = node_data.get('spot_condition')
 
+            # 재탐지 조건 추출 (NEW - 2025-10-25)
+            redetection_entry_conditions = None
+            redetection_exit_conditions = None
+
+            if 'redetection' in node_data:
+                redetection_data = node_data['redetection']
+                if 'entry_conditions' in redetection_data:
+                    redetection_entry_conditions = self._extract_condition_expressions(
+                        redetection_data['entry_conditions']
+                    )
+                if 'exit_conditions' in redetection_data:
+                    redetection_exit_conditions = self._extract_condition_expressions(
+                        redetection_data['exit_conditions']
+                    )
+
             # BlockNode 생성
             node = BlockNode(
                 block_id=node_data['block_id'],
@@ -230,6 +245,8 @@ class BlockGraphLoader:
                 entry_conditions=entry_conditions,
                 exit_conditions=exit_conditions,
                 spot_condition=spot_condition,
+                redetection_entry_conditions=redetection_entry_conditions,
+                redetection_exit_conditions=redetection_exit_conditions,
                 parameters=node_data.get('parameters', {}),
                 metadata=node_data.get('metadata', {})
             )

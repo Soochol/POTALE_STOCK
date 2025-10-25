@@ -4,9 +4,11 @@ Detection Result Entities
 """
 from .base_detection import BaseBlockDetection
 from .dynamic_block_detection import DynamicBlockDetection, BlockStatus
+from .redetection_event import RedetectionEvent
 
 __all__ = [
     'BaseBlockDetection',
     'DynamicBlockDetection',
     'BlockStatus',
+    'RedetectionEvent',
 ]

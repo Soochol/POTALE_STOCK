@@ -1,0 +1,156 @@
+# with_redetection_example.yaml - 재탐지 시스템 예제
+#
+# Block1 →  Block2 패턴에 재탐지 기능 추가
+#
+# 재탐지 개념:
+# - Seed Block이 완료된 후, 가격이 해당 블록의 peak ±% 이내로 재진입하면 "재탐지"
+# - 각 Seed Block마다 여러 재탐지 발생 가능
+# - 한 블록당 한 번에 1개 재탐지만 active 가능
+# - 재탐지는 패턴 완료 조건에 영향 없음 (부가 정보)
+
+version: "1.0"
+
+block_graph:
+  pattern_type: "seed"
+  root_node: "block1"
+
+  nodes:
+    # ═══════════════════════════════════════════════════════
+    # Block 1 - 거래대금 300억 + 거래량 급등
+    # ═══════════════════════════════════════════════════════
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "High Trading Value Surge"
+      description: "거래대금 300억 + 거래량 급등 패턴"
+
+      # Seed Block 진입 조건
+      entry_conditions:
+        - name: "trading_value_threshold"
+          expression: "(current.close * current.volume) >= 30000000000"
+          description: "거래대금 300억원 이상"
+
+        - name: "volume_surge"
+          expression: "is_volume_high(200)"
+          description: "200일 신고 거래량"
+
+        - name: "price_3month_high"
+          expression: "is_new_high(60)"
+          description: "60일 신고가"
+
+      # Seed Block 종료 조건
+      exit_conditions:
+        - name: "low_below_ma60"
+          expression: "current.low < ma(60)"
+          description: "저가가 60일 이동평균 아래로 터치"
+
+        - name: "block2_started"
+          expression: "exists('block2')"
+          description: "Block2 시작 시 Block1 자동 종료"
+
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 재탐지 설정 (NEW - 2025-10-25)
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      redetection:
+        # 재탐지 진입 조건 (완전 동적 expression)
+        entry_conditions:
+          - name: "block_completed"
+            expression: "parent_block.status == 'completed'"
+            description: "원래 블록이 완료된 상태"
+
+          - name: "time_window"
+            expression: "candles_between(parent_block.ended_at, current.date) >= 2 and candles_between(parent_block.ended_at, current.date) <= 60"
+            description: "블록 종료 후 2~60일 이내"
+
+          - name: "price_within_range"
+            expression: "within_range(current.high, parent_block.peak_price, 5.0)"
+            description: "원래 블록 고점 ±5% 이내 재진입"
+
+          - name: "volume_sufficient"
+            expression: "current.volume >= parent_block.peak_volume * 0.3"
+            description: "원래 블록 최고 거래량의 30% 이상"
+
+          - name: "trading_value_minimum"
+            expression: "(current.close * current.volume) >= 10000000000"
+            description: "거래대금 최소 100억원"
+
+        # 재탐지 종료 조건
+        exit_conditions:
+          - name: "low_below_ma60"
+            expression: "current.low < ma(60)"
+            description: "저가가 60일 이동평균 아래로 터치"
+
+          - name: "time_expired"
+            expression: "candles_between(active_redetection.started_at, current.date) >= 20"
+            description: "재탐지 시작 후 20일 경과"
+
+          - name: "volume_dried_up"
+            expression: "current.volume < volume_ma(20) * 0.5"
+            description: "거래량이 20일 평균의 50% 이하로 감소"
+
+      parameters:
+        min_duration: 1
+        max_duration: 100
+
+    # ═══════════════════════════════════════════════════════
+    # Block 2 - 더 강한 거래대금 + 거래량 폭발
+    # ═══════════════════════════════════════════════════════
+    block2:
+      block_id: "block2"
+      block_type: 2
+      name: "Super Surge"
+      description: "거래대금 1000억 + 거래량 폭발 패턴"
+
+      entry_conditions:
+        - name: "ultra_high_trading_value"
+          expression: "(current.close * current.volume) >= 100000000000"
+          description: "거래대금 1000억원 이상"
+
+        - name: "volume_exceeds_block1"
+          expression: "exists('block1') and current.volume > block1.peak_volume"
+          description: "Block1 최고 거래량 초과"
+
+        - name: "price_yearly_high"
+          expression: "is_new_high(200)"
+          description: "200일 신고가"
+
+      exit_conditions:
+        - name: "low_below_ma60"
+          expression: "current.low < ma(60)"
+          description: "저가가 60일 이동평균 아래로 터치"
+
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # Block2도 재탐지 지원
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      redetection:
+        entry_conditions:
+          - expression: "parent_block.status == 'completed'"
+
+          - expression: "candles_between(parent_block.ended_at, current.date) >= 2 and candles_between(parent_block.ended_at, current.date) <= 40"
+            description: "블록 종료 후 2~40일 이내 (더 짧은 윈도우)"
+
+          - expression: "within_range(current.high, parent_block.peak_price, 3.0)"
+            description: "원래 블록 고점 ±3% 이내 (더 엄격)"
+
+          - expression: "current.volume >= parent_block.peak_volume * 0.5"
+            description: "원래 블록 최고 거래량의 50% 이상 (더 엄격)"
+
+        exit_conditions:
+          - expression: "current.low < ma(60)"
+
+          - expression: "candles_between(active_redetection.started_at, current.date) >= 15"
+            description: "재탐지 시작 후 15일 경과"
+
+      parameters:
+        min_duration: 1
+        max_duration: 100
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # 블록 간 관계 (엣지)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  edges:
+    - from_block: "block1"
+      to_block: "block2"
+      edge_type: "sequential"
+      priority: 1
+      description: "Block1 → Block2 전이"

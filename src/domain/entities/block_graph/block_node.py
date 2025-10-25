@@ -34,6 +34,11 @@ class BlockNode:
     entry_conditions: List[str] = field(default_factory=list)
     exit_conditions: List[str] = field(default_factory=list)
     spot_condition: Optional[str] = None
+
+    # 재탐지 조건 (선택적, NEW - 2025-10-25)
+    redetection_entry_conditions: Optional[List[str]] = None
+    redetection_exit_conditions: Optional[List[str]] = None
+
     parameters: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -87,6 +92,23 @@ class BlockNode:
             파라미터 값 또는 기본값
         """
         return self.parameters.get(key, default)
+
+    def has_redetection(self) -> bool:
+        """
+        이 블록이 재탐지를 지원하는지 확인
+
+        Returns:
+            재탐지 진입 조건이 정의되어 있으면 True
+
+        Example:
+            >>> if block_node.has_redetection():
+            ...     # Process redetection logic
+            ...     pass
+        """
+        return (
+            self.redetection_entry_conditions is not None
+            and len(self.redetection_entry_conditions) > 0
+        )
 
     def validate(self) -> List[str]:
         """

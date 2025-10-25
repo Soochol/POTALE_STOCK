@@ -7,7 +7,7 @@ from datetime import date
 from sqlalchemy.orm import Session
 
 from src.domain.repositories.dynamic_block_repository import DynamicBlockRepository
-from src.domain.entities.detections import DynamicBlockDetection, BlockStatus
+from src.domain.entities.detections import DynamicBlockDetection, BlockStatus, RedetectionEvent
 from src.infrastructure.database.models.dynamic_block_detection_model import DynamicBlockDetectionModel
 
 
@@ -154,6 +154,11 @@ class DynamicBlockRepositoryImpl(DynamicBlockRepository):
 
     def _to_model(self, entity: DynamicBlockDetection) -> DynamicBlockDetectionModel:
         """Entity → ORM Model 변환"""
+        # Metadata에 redetections 추가 (NEW - 2025-10-25)
+        metadata = entity.metadata.copy()
+        if entity.redetections:
+            metadata['redetections'] = [redet.to_dict() for redet in entity.redetections]
+
         return DynamicBlockDetectionModel(
             id=entity.id,
             block_id=entity.block_id,
@@ -168,11 +173,16 @@ class DynamicBlockRepositoryImpl(DynamicBlockRepository):
             peak_volume=entity.peak_volume,
             peak_date=entity.peak_date,
             parent_blocks=entity.parent_blocks,
-            custom_metadata=entity.metadata
+            custom_metadata=metadata
         )
 
     def _update_model(self, model: DynamicBlockDetectionModel, entity: DynamicBlockDetection) -> None:
         """기존 모델 업데이트"""
+        # Metadata에 redetections 추가 (NEW - 2025-10-25)
+        metadata = entity.metadata.copy()
+        if entity.redetections:
+            metadata['redetections'] = [redet.to_dict() for redet in entity.redetections]
+
         model.block_id = entity.block_id
         model.block_type = entity.block_type
         model.ticker = entity.ticker
@@ -185,10 +195,21 @@ class DynamicBlockRepositoryImpl(DynamicBlockRepository):
         model.peak_volume = entity.peak_volume
         model.peak_date = entity.peak_date
         model.parent_blocks = entity.parent_blocks
-        model.custom_metadata = entity.metadata
+        model.custom_metadata = metadata
 
     def _to_entity(self, model: DynamicBlockDetectionModel) -> DynamicBlockDetection:
         """ORM Model → Entity 변환"""
+        # Metadata에서 redetections 추출 (NEW - 2025-10-25)
+        metadata = model.custom_metadata or {}
+        redetections = []
+
+        if 'redetections' in metadata:
+            redetections_data = metadata.pop('redetections')  # metadata에서 제거
+            redetections = [
+                RedetectionEvent.from_dict(redet_dict)
+                for redet_dict in redetections_data
+            ]
+
         return DynamicBlockDetection(
             id=model.id,
             block_id=model.block_id,
@@ -203,5 +224,6 @@ class DynamicBlockRepositoryImpl(DynamicBlockRepository):
             peak_volume=model.peak_volume,
             peak_date=model.peak_date,
             parent_blocks=model.parent_blocks or [],
-            metadata=model.custom_metadata or {}
+            redetections=redetections,
+            metadata=metadata
         )

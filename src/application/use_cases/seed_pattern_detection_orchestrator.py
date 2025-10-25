@@ -9,10 +9,12 @@ from typing import List, Optional
 from loguru import logger
 
 from src.application.services.seed_pattern_tree_manager import SeedPatternTreeManager
+from src.application.services.redetection_detector import RedetectionDetector
 from src.application.use_cases.dynamic_block_detector import DynamicBlockDetector
 from src.domain.entities.block_graph import BlockGraph
 from src.domain.entities.conditions import ExpressionEngine
 from src.domain.entities.core import Stock
+from src.domain.entities.detections import DynamicBlockDetection
 from src.domain.entities.patterns import SeedPatternTree
 from src.domain.repositories.seed_pattern_repository import SeedPatternRepository
 
@@ -62,6 +64,7 @@ class SeedPatternDetectionOrchestrator:
         """
         self.block_detector = DynamicBlockDetector(block_graph, expression_engine)
         self.pattern_manager = SeedPatternTreeManager()
+        self.redetection_detector = RedetectionDetector(expression_engine)  # NEW
         self.seed_pattern_repository = seed_pattern_repository
         self.yaml_config_path = ""  # 외부에서 설정
 
@@ -131,6 +134,9 @@ class SeedPatternDetectionOrchestrator:
 
         # 탐지된 블록들을 패턴으로 그룹화
         self._organize_blocks_into_patterns(ticker, detected_blocks)
+
+        # 재탐지 탐지 (NEW - 2025-10-25)
+        self._detect_redetections_for_patterns(ticker, stocks)
 
         # 완료된 패턴 처리
         completed_patterns = self.pattern_manager.check_and_complete_patterns()
@@ -233,6 +239,118 @@ class SeedPatternDetectionOrchestrator:
                                 'date': str(block.started_at) if block.started_at else None
                             }
                         )
+
+    def _detect_redetections_for_patterns(
+        self,
+        ticker: str,
+        stocks: List[Stock]
+    ) -> None:
+        """
+        모든 패턴의 모든 블록에 대해 재탐지 탐지 (NEW - 2025-10-25)
+
+        프로세스:
+        1. 모든 패턴 순회
+        2. 각 패턴의 각 블록 순회
+        3. 재탐지 지원 블록만 처리
+        4. 해당 블록 종료 이후 캔들들에 대해 재탐지 탐지
+
+        Args:
+            ticker: 종목 코드
+            stocks: 전체 주가 데이터
+
+        Note:
+            재탐지는 Seed Block이 completed 상태여야 시작 가능.
+            한 블록당 한 번에 1개 재탐지만 active 가능.
+        """
+        all_patterns = self.pattern_manager.get_all_patterns()
+
+        for pattern in all_patterns:
+            for block_id, block in pattern.blocks.items():
+                # 재탐지 가능 여부 확인
+                block_node = self.block_detector.block_graph.get_node(block_id)
+                if not block_node or not block_node.has_redetection():
+                    continue  # 재탐지 설정 없음
+
+                if not block.is_completed():
+                    continue  # 아직 완료 안된 블록은 재탐지 불가
+
+                # 해당 블록 종료 이후 캔들들 순회
+                for stock in stocks:
+                    if not block.ended_at or stock.date <= block.ended_at:
+                        continue  # 블록 종료 전 캔들은 스킵
+
+                    # 평가 컨텍스트 구성
+                    context = self._build_redetection_context(
+                        ticker=ticker,
+                        current=stock,
+                        all_stocks=stocks,
+                        pattern=pattern
+                    )
+
+                    # 재탐지 탐지
+                    self.redetection_detector.detect_redetections(
+                        block=block,
+                        block_node=block_node,
+                        current=stock,
+                        context=context
+                    )
+
+        # 재탐지 통계 로깅
+        total_redetections = sum(
+            block.get_redetection_count()
+            for pattern in all_patterns
+            for block in pattern.blocks.values()
+        )
+
+        if total_redetections > 0:
+            logger.info(
+                f"Redetection summary",
+                extra={
+                    'ticker': ticker,
+                    'total_redetections': total_redetections,
+                    'patterns_count': len(all_patterns)
+                }
+            )
+
+    def _build_redetection_context(
+        self,
+        ticker: str,
+        current: Stock,
+        all_stocks: List[Stock],
+        pattern: SeedPatternTree
+    ) -> dict:
+        """
+        재탐지 평가를 위한 컨텍스트 구성
+
+        Args:
+            ticker: 종목 코드
+            current: 현재 캔들
+            all_stocks: 전체 주가 데이터
+            pattern: 현재 패턴
+
+        Returns:
+            평가 컨텍스트 딕셔너리
+        """
+        # 이전 캔들 찾기
+        current_idx = next(
+            (i for i, s in enumerate(all_stocks) if s.date == current.date),
+            None
+        )
+        prev = all_stocks[current_idx - 1] if current_idx and current_idx > 0 else None
+
+        # 기본 컨텍스트
+        context = {
+            'ticker': ticker,
+            'current': current,
+            'prev': prev,
+            'all_stocks': all_stocks,
+        }
+
+        # 패턴의 각 블록을 컨텍스트에 추가 (block1, block2, ...)
+        for block_id, block in pattern.blocks.items():
+            context[block_id] = block
+
+        return context
 
     def _save_pattern_to_db(
         self,

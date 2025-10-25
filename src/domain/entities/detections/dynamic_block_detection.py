@@ -7,8 +7,11 @@ YAML 정의를 기반으로 동적으로 블록을 감지하고 관리하는 범
 
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, TYPE_CHECKING
 from enum import Enum
+
+if TYPE_CHECKING:
+    from .redetection_event import RedetectionEvent
 
 
 class BlockStatus(Enum):
@@ -67,6 +70,9 @@ class DynamicBlockDetection:
 
     # 관계 정보
     parent_blocks: List[int] = field(default_factory=list)  # 부모 블록 DB ID 리스트
+
+    # 재탐지 이벤트 (NEW - 2025-10-25)
+    redetections: List['RedetectionEvent'] = field(default_factory=list)
 
     # 메타데이터
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -275,6 +281,84 @@ class DynamicBlockDetection:
             spot 개수 (0, 1, 2, ...)
         """
         return len(self.get_spots())
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 재탐지 관련 메서드 (NEW - 2025-10-25)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def add_redetection(self, redetection: 'RedetectionEvent') -> None:
+        """
+        재탐지 이벤트 추가
+
+        Args:
+            redetection: 재탐지 이벤트
+
+        Example:
+            >>> redet = RedetectionEvent(sequence=1, parent_block_id='block1', ...)
+            >>> block.add_redetection(redet)
+        """
+        self.redetections.append(redetection)
+
+    def get_active_redetection(self) -> Optional['RedetectionEvent']:
+        """
+        현재 active인 재탐지 반환
+
+        한 블록당 한 번에 1개의 재탐지만 active 가능.
+
+        Returns:
+            Active 재탐지 이벤트, 없으면 None
+
+        Example:
+            >>> active_redet = block.get_active_redetection()
+            >>> if active_redet:
+            ...     print(f"Active redetection #{active_redet.sequence}")
+        """
+        for redet in self.redetections:
+            if redet.is_active():
+                return redet
+        return None
+
+    def can_start_redetection(self) -> bool:
+        """
+        재탐지 시작 가능 여부
+
+        조건:
+        1. Seed Block이 completed 상태
+        2. 현재 active인 재탐지 없음
+
+        Returns:
+            재탐지 시작 가능하면 True
+
+        Example:
+            >>> if block.can_start_redetection():
+            ...     # Start new redetection
+            ...     pass
+        """
+        return (
+            self.is_completed() and
+            self.get_active_redetection() is None
+        )
+
+    def get_redetection_count(self) -> int:
+        """
+        총 재탐지 개수 (active + completed)
+
+        Returns:
+            재탐지 개수
+
+        Example:
+            >>> count = block.get_redetection_count()
+        """
+        return len(self.redetections)
+
+    def get_completed_redetection_count(self) -> int:
+        """
+        완료된 재탐지 개수
+
+        Returns:
+            완료된 재탐지 개수
+        """
+        return sum(1 for redet in self.redetections if redet.is_completed())
 
     def to_dict(self) -> Dict[str, Any]:
         """딕셔너리로 변환 (DB 저장용)"""

@@ -700,6 +700,107 @@ def is_price_breakout(
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 재탐지 (Redetection) 관련 함수 (NEW - 2025-10-25)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+@function_registry.register(
+    name='has_active_redetection',
+    category='redetection',
+    description='Check if a block has an active redetection event',
+    params_schema={
+        'block_id': {
+            'type': 'str',
+            'description': 'Block ID to check (e.g., "block1", "block2")'
+        }
+    }
+)
+def has_active_redetection(block_id: str, context: dict) -> bool:
+    """
+    해당 블록에 active 재탐지가 있는지 확인
+
+    Args:
+        block_id: 블록 ID (예: 'block1', 'block2')
+        context: 평가 컨텍스트
+
+    Returns:
+        Active 재탐지가 있으면 True
+
+    Example:
+        >>> # YAML에서 사용
+        >>> "has_active_redetection('block1')"  # Block1에 active 재탐지 있는지
+    """
+    block = context.get(block_id)
+    if not block:
+        return False
+
+    return block.get_active_redetection() is not None
+
+
+@function_registry.register(
+    name='redetection_count',
+    category='redetection',
+    description='Get total number of redetections for a block',
+    params_schema={
+        'block_id': {
+            'type': 'str',
+            'description': 'Block ID to check'
+        }
+    }
+)
+def redetection_count(block_id: str, context: dict) -> int:
+    """
+    해당 블록의 총 재탐지 개수 (active + completed)
+
+    Args:
+        block_id: 블록 ID
+        context: 평가 컨텍스트
+
+    Returns:
+        재탐지 개수
+
+    Example:
+        >>> "redetection_count('block1') >= 2"  # Block1 재탐지가 2회 이상
+    """
+    block = context.get(block_id)
+    if not block:
+        return 0
+
+    return block.get_redetection_count()
+
+
+@function_registry.register(
+    name='completed_redetection_count',
+    category='redetection',
+    description='Get number of completed redetections for a block',
+    params_schema={
+        'block_id': {
+            'type': 'str',
+            'description': 'Block ID to check'
+        }
+    }
+)
+def completed_redetection_count(block_id: str, context: dict) -> int:
+    """
+    해당 블록의 완료된 재탐지 개수
+
+    Args:
+        block_id: 블록 ID
+        context: 평가 컨텍스트
+
+    Returns:
+        완료된 재탐지 개수
+
+    Example:
+        >>> "completed_redetection_count('block1') >= 1"
+    """
+    block = context.get(block_id)
+    if not block:
+        return 0
+
+    return block.get_completed_redetection_count()
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 모듈 로드 시 자동 실행
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 이 파일이 import되면 모든 함수가 function_registry에 자동 등록됨

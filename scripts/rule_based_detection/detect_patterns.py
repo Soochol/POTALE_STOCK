@@ -360,6 +360,15 @@ def detect_patterns_for_ticker(
             console.print(f"      Status: {pattern.status.value}")
             console.print(f"      Blocks: {', '.join(pattern.blocks.keys())}")
             console.print(f"      Root Block1 Date: {pattern.root_block.started_at}")
+
+            # Show redetections (NEW - 2025-10-25)
+            total_redetections = sum(
+                block.get_redetection_count()
+                for block in pattern.blocks.values()
+            )
+            if total_redetections > 0:
+                console.print(f"      Total Redetections: {total_redetections}")
+
             console.print()
 
     if detections:
