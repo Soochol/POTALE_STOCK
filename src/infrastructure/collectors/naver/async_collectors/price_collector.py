@@ -11,6 +11,9 @@ from io import StringIO
 
 from .base import AsyncCollectorBase
 from src.infrastructure.utils import round_to_tick_size
+from src.infrastructure.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class AsyncPriceCollector(AsyncCollectorBase):
@@ -316,7 +319,17 @@ class AsyncPriceCollector(AsyncCollectorBase):
 
                 records.append(record)
 
-            except Exception:
+            except Exception as e:
+                # 행 파싱 실패 시 로그 남기고 계속 진행
+                logger.warning(
+                    "Row parsing failed in price data collection",
+                    context={
+                        'ticker': ticker,
+                        'date_str': date_str if 'date_str' in locals() else 'unknown',
+                        'row_data': str(row.to_dict()) if hasattr(row, 'to_dict') else str(row)
+                    },
+                    exc=e
+                )
                 continue
 
         return records

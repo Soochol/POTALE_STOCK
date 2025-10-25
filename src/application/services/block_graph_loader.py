@@ -10,6 +10,11 @@ from typing import Dict, Any, List
 
 from src.domain.entities.block_graph import BlockGraph, BlockNode, BlockEdge, EdgeType
 from src.domain.entities.patterns import RedetectionConfig
+from src.domain.exceptions import YAMLConfigError, ValidationError
+from src.domain.error_context import create_file_operation_context
+from src.infrastructure.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class BlockGraphLoader:
@@ -44,17 +49,53 @@ class BlockGraphLoader:
             BlockGraph 객체
 
         Raises:
-            FileNotFoundError: 파일이 없는 경우
-            ValueError: YAML 구조가 잘못된 경우
+            YAMLConfigError: YAML 파일 읽기/파싱 실패
+            ValidationError: YAML 구조가 잘못된 경우
         """
         path = Path(yaml_path)
+        context = create_file_operation_context(
+            file_path=str(path),
+            operation='parse'
+        )
+
+        # 파일 존재 확인
         if not path.exists():
-            raise FileNotFoundError(f"YAML 파일을 찾을 수 없습니다: {yaml_path}")
+            logger.error("YAML file not found", context=context)
+            raise YAMLConfigError(
+                f"YAML 파일을 찾을 수 없습니다: {yaml_path}",
+                context=context
+            )
 
-        with open(path, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
+        # YAML 파일 읽기
+        try:
+            logger.debug("Loading YAML file", context=context)
+            with open(path, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            logger.error("YAML parsing failed", context=context, exc=e)
+            raise YAMLConfigError(
+                f"YAML 파싱 실패: {yaml_path}",
+                context={**context, 'yaml_error': str(e)}
+            ) from e
+        except IOError as e:
+            logger.error("File read failed", context=context, exc=e)
+            raise YAMLConfigError(
+                f"파일 읽기 실패: {yaml_path}",
+                context={**context, 'io_error': str(e)}
+            ) from e
+        except Exception as e:
+            logger.error("Unexpected error during YAML loading", context=context, exc=e)
+            raise YAMLConfigError(
+                f"YAML 로드 중 예상치 못한 오류: {yaml_path}",
+                context=context
+            ) from e
 
-        return self.load_from_dict(data)
+        # 딕셔너리로 변환
+        try:
+            return self.load_from_dict(data)
+        except Exception as e:
+            logger.error("BlockGraph construction failed", context=context, exc=e)
+            raise
 
     def load_from_dict(self, data: Dict[str, Any]) -> BlockGraph:
         """
@@ -67,10 +108,15 @@ class BlockGraphLoader:
             BlockGraph 객체
 
         Raises:
-            ValueError: 데이터 구조가 잘못된 경우
+            ValidationError: 데이터 구조가 잘못된 경우
         """
+        logger.debug("Loading BlockGraph from dictionary")
+
+        # 'block_graph' 키 확인
         if 'block_graph' not in data:
-            raise ValueError("YAML 파일에 'block_graph' 키가 없습니다")
+            error_msg = "YAML 파일에 'block_graph' 키가 없습니다"
+            logger.error(error_msg)
+            raise ValidationError(error_msg)
 
         graph_data = data['block_graph']
 
@@ -80,34 +126,52 @@ class BlockGraphLoader:
         # 패턴 타입 설정 (기본값: "seed")
         pattern_type = graph_data.get('pattern_type', 'seed')
         if pattern_type not in ['seed', 'redetection']:
-            raise ValueError(f"Invalid pattern_type: {pattern_type}. Must be 'seed' or 'redetection'")
+            error_msg = f"Invalid pattern_type: {pattern_type}. Must be 'seed' or 'redetection'"
+            logger.error(error_msg, context={'pattern_type': pattern_type})
+            raise ValidationError(error_msg, context={'pattern_type': pattern_type})
         graph.pattern_type = pattern_type
+        logger.debug(f"Pattern type set to: {pattern_type}")
 
         # 재탐지 설정 로드 (pattern_type이 "redetection"인 경우)
         if pattern_type == 'redetection' and 'redetection_config' in graph_data:
             graph.redetection_config = RedetectionConfig.from_dict(graph_data['redetection_config'])
+            logger.debug("Redetection config loaded")
 
         # 루트 노드 설정
         root_node_id = graph_data.get('root_node')
         if root_node_id:
             graph.root_node_id = root_node_id
+            logger.debug(f"Root node set to: {root_node_id}")
 
         # 노드 로드
         if 'nodes' in graph_data:
             nodes = self._load_nodes(graph_data['nodes'])
             for node in nodes:
                 graph.add_node(node)
+            logger.debug(f"Loaded {len(nodes)} nodes")
 
         # 엣지 로드
         if 'edges' in graph_data:
             edges = self._load_edges(graph_data['edges'])
             for edge in edges:
                 graph.add_edge(edge)
+            logger.debug(f"Loaded {len(edges)} edges")
 
         # 검증
         errors = graph.validate()
         if errors:
-            raise ValueError(f"BlockGraph 검증 실패:\n" + "\n".join(errors))
+            error_msg = f"BlockGraph 검증 실패:\n" + "\n".join(errors)
+            logger.error("BlockGraph validation failed", context={'errors': errors})
+            raise ValidationError(
+                error_msg,
+                context={'validation_errors': errors}
+            )
+
+        logger.info("BlockGraph loaded successfully", context={
+            'pattern_type': pattern_type,
+            'num_nodes': len(graph.nodes),
+            'num_edges': len(graph.edges)
+        })
 
         return graph
 
@@ -137,10 +201,14 @@ class BlockGraphLoader:
                 node_data['block_id'] = node_id  # block_id가 없으면 키 사용
 
             if 'block_type' not in node_data:
-                raise ValueError(f"노드 '{node_id}'에 block_type이 없습니다")
+                error_msg = f"노드 '{node_id}'에 block_type이 없습니다"
+                logger.error(error_msg, context={'node_id': node_id})
+                raise ValidationError(error_msg, context={'node_id': node_id})
 
             if 'name' not in node_data:
-                raise ValueError(f"노드 '{node_id}'에 name이 없습니다")
+                error_msg = f"노드 '{node_id}'에 name이 없습니다"
+                logger.error(error_msg, context={'node_id': node_id})
+                raise ValidationError(error_msg, context={'node_id': node_id})
 
             # 조건 변환: 리스트[객체] → 리스트[문자열]
             entry_conditions = self._extract_condition_expressions(
@@ -150,6 +218,9 @@ class BlockGraphLoader:
                 node_data.get('exit_conditions', [])
             )
 
+            # spot_condition 추출 (문자열 또는 None)
+            spot_condition = node_data.get('spot_condition')
+
             # BlockNode 생성
             node = BlockNode(
                 block_id=node_data['block_id'],
@@ -158,6 +229,7 @@ class BlockGraphLoader:
                 description=node_data.get('description', ''),
                 entry_conditions=entry_conditions,
                 exit_conditions=exit_conditions,
+                spot_condition=spot_condition,
                 parameters=node_data.get('parameters', {}),
                 metadata=node_data.get('metadata', {})
             )
@@ -189,10 +261,14 @@ class BlockGraphLoader:
             elif isinstance(cond, dict):
                 # 객체 형식
                 if 'expression' not in cond:
-                    raise ValueError(f"조건 객체에 'expression' 키가 없습니다: {cond}")
+                    error_msg = f"조건 객체에 'expression' 키가 없습니다: {cond}"
+                    logger.error(error_msg, context={'condition': cond})
+                    raise ValidationError(error_msg, context={'condition': cond})
                 expressions.append(cond['expression'])
             else:
-                raise ValueError(f"잘못된 조건 형식: {cond}")
+                error_msg = f"잘못된 조건 형식: {cond}"
+                logger.error(error_msg, context={'condition': cond, 'type': type(cond).__name__})
+                raise ValidationError(error_msg, context={'condition': cond})
 
         return expressions
 
@@ -219,20 +295,29 @@ class BlockGraphLoader:
         for edge_data in edges_data:
             # 필수 필드 확인
             if 'from_block' not in edge_data:
-                raise ValueError(f"엣지에 'from_block'이 없습니다: {edge_data}")
+                error_msg = f"엣지에 'from_block'이 없습니다: {edge_data}"
+                logger.error(error_msg, context={'edge_data': edge_data})
+                raise ValidationError(error_msg, context={'edge_data': edge_data})
 
             if 'to_block' not in edge_data:
-                raise ValueError(f"엣지에 'to_block'이 없습니다: {edge_data}")
+                error_msg = f"엣지에 'to_block'이 없습니다: {edge_data}"
+                logger.error(error_msg, context={'edge_data': edge_data})
+                raise ValidationError(error_msg, context={'edge_data': edge_data})
 
             # EdgeType 변환
             edge_type_str = edge_data.get('edge_type', 'sequential')
             try:
                 edge_type = EdgeType(edge_type_str)
-            except ValueError:
-                raise ValueError(
+            except ValueError as e:
+                error_msg = (
                     f"알 수 없는 edge_type: {edge_type_str}. "
                     f"가능한 값: sequential, conditional, optional, branching"
                 )
+                logger.error(error_msg, context={'edge_type': edge_type_str, 'edge_data': edge_data})
+                raise ValidationError(
+                    error_msg,
+                    context={'edge_type': edge_type_str, 'edge_data': edge_data}
+                ) from e
 
             # BlockEdge 생성
             edge = BlockEdge(

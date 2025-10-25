@@ -41,6 +41,26 @@ moving_average:
       - "volume_ma(20)  # 20일 거래량 평균"
       - "volume_ma(60)  # 60일 거래량 평균"
 
+  normalized_volume:
+    description: "정규화된 거래량 (N일 평균 대비 비율, %)"
+    parameters:
+      - name: period
+        type: int
+        description: "평균 거래량 계산 기간"
+        required: true
+    returns:
+      type: float
+      description: "현재 거래량 / N일 평균 거래량 * 100 (%)"
+    usage: "normalized_volume(20) >= 150.0"
+    examples:
+      - "normalized_volume(20)  # 20일 평균 대비 비율 (예: 150.0 = 평균의 150%)"
+      - "normalized_volume(60) >= 200.0  # 60일 평균의 2배 이상"
+      - "normalized_volume(120) < 50.0  # 120일 평균의 50% 미만 (거래량 감소)"
+    notes:
+      - "100%는 평균과 동일, 200%는 평균의 2배를 의미"
+      - "거래량이 평균보다 많으면 100% 초과, 적으면 100% 미만"
+      - "Normalized Volume = (Current Volume / MA Volume) * 100"
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Time Functions - 시간 관련 함수
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -217,6 +237,67 @@ block:
     examples:
       - "EXISTS('block1')  # Block1이 context에 존재하는지 확인"
       - "EXISTS('block2')  # Block2가 context에 존재하는지 확인"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Detection Functions - 블록 감지 관련 함수
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+detection:
+  is_spot_candidate:
+    description: "이전 블록의 spot 추가 후보인지 체크"
+    parameters:
+      - name: prev_block_id
+        type: str
+        description: "이전 블록 ID (예: 'block1')"
+        required: true
+      - name: min_days
+        type: int
+        description: "최소 일수 (1 = D+1)"
+        required: true
+      - name: max_days
+        type: int
+        description: "최대 일수 (2 = D+2)"
+        required: true
+    returns:
+      type: bool
+      description: "True면 spot 후보 (새 블록 생성하지 않고 spot 추가), False면 새 블록 생성"
+    usage: "is_spot_candidate('block1', 1, 2)"
+    examples:
+      - "is_spot_candidate('block1', 1, 2)  # Block1의 D+1~D+2일에 spot 추가"
+      - "is_spot_candidate('block2', 1, 3)  # Block2의 D+1~D+3일에 spot 추가"
+      - "is_spot_candidate('block1', 0, 1)  # Block1의 D+0~D+1일에 spot 추가"
+    notes:
+      - "이전 블록이 active 상태이고, spot2가 아직 없어야 함"
+      - "candles_between 기반으로 거래일 수 계산"
+      - "D+1: min_days=1, D+2: max_days=2"
+      - "spot_condition에서 사용: 'spot_condition: is_spot_candidate(...)'"
+
+  is_price_breakout:
+    description: "현재 시가가 이전 블록의 고점 대비 -N% 이상인지 체크 (레벨업 판단)"
+    parameters:
+      - name: prev_block_id
+        type: str
+        description: "이전 블록 ID (예: 'block1')"
+        required: true
+      - name: tolerance_pct
+        type: float
+        description: "허용 하락 퍼센트 (예: 10.0 = -10%까지 허용)"
+        required: true
+    returns:
+      type: bool
+      description: "True면 현재 시가가 baseline 대비 -N% 이상, False면 조건 불만족"
+    usage: "is_price_breakout('block1', 10.0)"
+    examples:
+      - "is_price_breakout('block1', 10.0)  # Block1 고점 대비 -10% 이상에서 시작"
+      - "is_price_breakout('block1', 5.0)   # Block1 고점 대비 -5% 이상에서 시작"
+      - "is_price_breakout('block2', 15.0)  # Block2 고점 대비 -15% 이상에서 시작"
+    notes:
+      - "기준점(baseline) 결정: 아래 값 중 가장 **작은** 값 사용 (보수적 접근)"
+      - "  1) 이전 블록의 peak_price (전체 범위 중 최고가)"
+      - "  2) spot2의 high (spot2가 있으면)"
+      - "  3) spot1의 high (spot2가 없고 spot1이 있으면)"
+      - "계산: current.open >= baseline * (1 - tolerance_pct/100)"
+      - "Block2의 entry_conditions에서 사용 권장 (Block1 대비 레벨업 체크)"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Function Extension Guide - 새 함수 추가 방법

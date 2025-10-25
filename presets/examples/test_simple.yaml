@@ -1,32 +1,60 @@
-# test_simple.yaml - 매우 간단한 테스트용
+# test_simple.yaml - Debug 2018-03-07 detection issue
 #
-# Block1: 가장 기본적인 조건만
-# - 거래대금 10억 이상 (거의 모든 날 만족)
+# Block1: 조건을 하나씩 추가하면서 테스트
 
-version: "1.0"
+metadata:
+  name: "Debug Test Pattern"
+  version: "1.0.0"
+  description: "Debug 2018-03-07 detection"
+  author: "Debug Test"
+  created_at: "2025-10-25"
 
 block_graph:
+  pattern_type: "seed"
   root_node: "block1"
 
   nodes:
     block1:
       block_id: "block1"
       block_type: 1
-      name: "Simple Test Block"
-      description: "간단한 테스트 블록"
+      name: "Debug Test Block"
+      description: "거래대금 300억 이상"
 
       entry_conditions:
-        - name: "basic_trading_value"
-          expression: "(current.close * current.volume) >= 1000000000"
-          description: "거래대금 10억원 이상"
+        - name: "trading_value_threshold"
+          expression: "(current.close * current.volume) >= 30000000000"
+          description: "거래대금 300억원 이상"
+
+        - name: "volume_surge"
+          expression: "is_volume_high(200)"
+          description: "200일 신고 거래량"
+
+        - name: "high_surge_rate"
+          expression: "prev and ((current.high - prev.close) / prev.close * 100) >= 10.0"
+          description: "고가 등락률 (전일 종가 대비) 10% 이상"
+
+        - name: "volume_surge_vs_prev"
+          expression: "prev and current.volume >= prev.volume * 3.0"
+          description: "전일 대비 거래량 3배 이상"
+
+        - name: "price_3month_high"
+          expression: "is_new_high(60)"
+          description: "60일 신고가"
+
+        - name: "normalized_volume_surge"
+          expression: "normalized_volume(20) >= 300.0"
+          description: "정규화 거래량 300% 이상"
+
+      # Spot 조건 추가 (test1_alt.yaml과 동일)
+      spot_condition: "is_spot_candidate('block1', 1, 2)"
 
       exit_conditions:
-        - name: "price_drop"
-          expression: "current.close < (current.close * 0.5)"
-          description: "종가가 반토막 (거의 안 일어남)"
+        - name: "low_below_ma60"
+          expression: "current.low < ma(60)"
+          description: "저가가 60일 이동평균 아래로 터치"
 
       parameters:
-        min_duration_candles: 1
-        max_duration_candles: 10
+        min_duration: 1
+        max_duration: 100
 
   edges: []

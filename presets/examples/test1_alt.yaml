@@ -56,12 +56,28 @@ block_graph:
 
         - name: "high_surge_rate"
           expression: "prev and ((current.high - prev.close) / prev.close * 100) >= 10.0"
-          description: "고가 등락률 (전일 종가 대비) 10% 이상"
+          description: "고가 등락률 (전일 종가 대비) N% 이상"
+
+        - name: "volume_surge_vs_prev"
+          expression: "prev and current.volume >= prev.volume * 3.0"
+          description: "직전 정상 거래일 대비 거래량 3배 이상 (300% 증가)"
+
+        - name: "price_3month_high"
+          expression: "is_new_high(60)"
+          description: "3개월(60일) 신고가"
+
+        - name: "normalized_volume_surge"
+          expression: "normalized_volume(20) >= 300.0"
+          description: "정규화 거래량 300% 이상 (20일 평균 대비 3배)"
+
+      # Spot 조건 (선택적)
+      # Block1 시작 후 D+1 또는 D+2일에 Block1 조건 재만족 시 spot 추가
+      spot_condition: "is_spot_candidate('block1', 1, 2)"
 
       # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
       exit_conditions:
         - name: "low_below_ma60"
-          expression: "current.low < ma(all_stocks, 60)"
+          expression: "current.low < ma(60)"
           description: "저가가 60일 이동평균 아래로 터치"
 
         - name: "block2_started"
@@ -89,25 +105,37 @@ block_graph:
           description: "거래대금 N억원 이상"
 
         - name: "volume_surge_vs_prev"
-          expression: "current.volume >= last_valid_volume() * 3.0"
+          expression: "prev and current.volume >= prev.volume * 3.0"
           description: "직전 정상 거래일 대비 거래량 N배 이상 (N * 100% 증가)"
 
         - name: "price_yearly_high"
-          expression: "is_new_high(365)"
-          description: "가격 365일 신고가"
-          
+          expression: "is_new_high(200)"
+          description: "가격 N일 신고가"
+
         - name: "high_surge_rate"
           expression: "prev and ((current.high - prev.close) / prev.close * 100) >= 10.0"
-          description: "고가 등락률 (전일 종가 대비) 10% 이상"
+          description: "고가 등락률 (전일 종가 대비) N% 이상"
 
         - name: "volume_exceeds_block1_peak"
           expression: "exists('block1') and block1.peak_volume and current.volume > block1.peak_volume"
           description: "Block1 최고 거래량보다 큼"
 
+        - name: "normalized_volume_surge"
+          expression: "normalized_volume(20) >= 300.0"
+          description: "정규화 거래량 300% 이상 (20일 평균 대비 3배)"
+
+        - name: "price_breakout_from_block1"
+          expression: "is_price_breakout('block1', 3.0)"
+          description: "Block1 고점 대비 -3% 이상에서 시작 (레벨업 패턴)"
+
+      # Spot 조건 (선택적)
+      # Block1 시작 후 D+1 또는 D+2일에 Block2 조건 만족 시 spot 추가
+      spot_condition: "is_spot_candidate('block1', 1, 2)"
+
       # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
       exit_conditions:
         - name: "low_below_ma60"
-          expression: "current.low < ma(all_stocks, 60)"
+          expression: "current.low < ma(60)"
           description: "저가가 60일 이동평균 아래로 터치"
 
         - name: "block3_started"
@@ -118,6 +146,58 @@ block_graph:
       parameters:
         min_duration: 1
         max_duration: 100
+
+
+    # ═══════════════════════════════════════════════════════
+    # Block 3 - 더 강한 거래대금 + 거래량 폭발
+    # ═══════════════════════════════════════════════════════
+    block3:
+      block_id: "block3"
+      block_type: 3
+      name: "Super Surge with Ultra High Trading Value"
+      description: "거래대금 300억 이상 + 전일 대비 1.2배 + 200일 신고가 + 정규화 거래량 300% (지속 패턴)"
+
+      # 진입 조건 (AND 조건: 모두 만족해야 함)
+      entry_conditions:
+        - name: "ultra_high_trading_value"
+          expression: "(current.close * current.volume) >= 30000000000"
+          description: "거래대금 N억원 이상"
+
+        - name: "volume_surge_vs_prev"
+          expression: "prev and current.volume >= prev.volume * 1.2"
+          description: "직전 정상 거래일 대비 거래량 N배 이상 (N * 100% 증가)"
+
+        - name: "price_yearly_high"
+          expression: "is_new_high(200)"
+          description: "가격 N일 신고가"
+
+        - name: "high_surge_rate"
+          expression: "prev and ((current.high - prev.close) / prev.close * 100) >= 10.0"
+          description: "고가 등락률 (전일 종가 대비) N% 이상"
+
+        - name: "normalized_volume_surge"
+          expression: "normalized_volume(20) >= 300.0"
+          description: "정규화 거래량 300% 이상 (20일 평균 대비 3배)"
+
+        - name: "price_breakout_from_block2"
+          expression: "is_price_breakout('block2', 3.0)"
+          description: "Block2 고점 대비 -3% 이상에서 시작 (레벨업 패턴)"
+
+      # Spot 조건 (선택적)
+      # Block2 시작 후 D+1 또는 D+2일에 Block3 조건 만족 시 spot 추가
+      spot_condition: "is_spot_candidate('block2', 1, 2)"
+
+      # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
+      exit_conditions:
+        - name: "low_below_ma60"
+          expression: "current.low < ma(60)"
+          description: "저가가 60일 이동평균 아래로 터치"
+
+      # 블록 파라미터
+      parameters:
+        min_duration: 1
+        max_duration: 100
+
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 블록 간 관계 (엣지)
