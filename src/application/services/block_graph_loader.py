@@ -224,6 +224,16 @@ class BlockGraphLoader:
                 node_data.get('spot_condition')
             )
 
+            # exclude_conditions 추출 (Option C Hybrid - NEW - 2025-10-25)
+            exclude_conditions = None
+            spot_condition_data = node_data.get('spot_condition')
+            if isinstance(spot_condition_data, dict) and 'exclude_conditions' in spot_condition_data:
+                exclude_conditions = spot_condition_data['exclude_conditions']
+                if not isinstance(exclude_conditions, list):
+                    error_msg = f"exclude_conditions는 리스트여야 합니다: {exclude_conditions}"
+                    logger.error(error_msg, context={'node_id': node_id})
+                    raise ValidationError(error_msg, context={'node_id': node_id})
+
             # spot_entry_conditions 추출 (NEW - 2025-10-25)
             spot_entry_conditions = None
             if 'spot_entry_conditions' in node_data:
@@ -232,18 +242,20 @@ class BlockGraphLoader:
                 )
 
             # 재탐지 조건 추출 (NEW - 2025-10-25)
-            redetection_entry_conditions = None
-            redetection_exit_conditions = None
+            # 재진입 조건 파싱 (reentry 또는 redetection 키워드 지원)
+            reentry_entry_conditions = None
+            reentry_exit_conditions = None
 
-            if 'redetection' in node_data:
-                redetection_data = node_data['redetection']
-                if 'entry_conditions' in redetection_data:
-                    redetection_entry_conditions = self._parse_conditions(
-                        redetection_data['entry_conditions']
+            # reentry를 우선으로 하되, redetection도 하위 호환성 유지
+            reentry_data = node_data.get('reentry') or node_data.get('redetection')
+            if reentry_data:
+                if 'entry_conditions' in reentry_data:
+                    reentry_entry_conditions = self._parse_conditions(
+                        reentry_data['entry_conditions']
                     )
-                if 'exit_conditions' in redetection_data:
-                    redetection_exit_conditions = self._parse_conditions(
-                        redetection_data['exit_conditions']
+                if 'exit_conditions' in reentry_data:
+                    reentry_exit_conditions = self._parse_conditions(
+                        reentry_data['exit_conditions']
                     )
 
             # BlockNode 생성
@@ -256,8 +268,9 @@ class BlockGraphLoader:
                 exit_conditions=exit_conditions,
                 spot_condition=spot_condition,
                 spot_entry_conditions=spot_entry_conditions,
-                redetection_entry_conditions=redetection_entry_conditions,
-                redetection_exit_conditions=redetection_exit_conditions,
+                exclude_conditions=exclude_conditions,
+                reentry_entry_conditions=reentry_entry_conditions,
+                reentry_exit_conditions=reentry_exit_conditions,
                 parameters=node_data.get('parameters', {}),
                 metadata=node_data.get('metadata', {})
             )
@@ -315,6 +328,11 @@ class BlockGraphLoader:
         """
         단일 조건 데이터를 Condition 객체로 변환
 
+        지원 형식:
+        1. 문자열: "current.close >= 10000"
+        2. dict (expression): {"expression": "current.close >= 10000", "name": "..."}
+        3. dict (function + args): {"function": "is_early_start_spot", "args": {...}}
+
         Args:
             condition_data: 조건 데이터 (str, dict, 또는 None)
 
@@ -332,21 +350,75 @@ class BlockGraphLoader:
                 description=""
             )
         elif isinstance(condition_data, dict):
-            # 표준 형식: dict
-            if 'expression' not in condition_data:
-                error_msg = f"조건 객체에 'expression' 키가 없습니다: {condition_data}"
-                logger.error(error_msg, context={'condition': condition_data})
-                raise ValidationError(error_msg, context={'condition': condition_data})
+            # Option C (Hybrid): function + args 형식
+            if 'function' in condition_data and 'args' in condition_data:
+                function_name = condition_data['function']
+                args = condition_data['args']
 
-            return Condition(
-                name=condition_data.get('name', 'spot_condition'),
-                expression=condition_data['expression'],
-                description=condition_data.get('description', '')
-            )
+                # args로부터 expression 생성
+                expression = self._build_expression_from_function(function_name, args)
+
+                return Condition(
+                    name=condition_data.get('name', f"{function_name}_condition"),
+                    expression=expression,
+                    description=condition_data.get('description', f"Generated from {function_name}")
+                )
+
+            # 표준 형식: expression 직접 제공
+            if 'expression' in condition_data:
+                return Condition(
+                    name=condition_data.get('name', 'spot_condition'),
+                    expression=condition_data['expression'],
+                    description=condition_data.get('description', '')
+                )
+
+            # expression도 function도 없음
+            error_msg = f"조건 객체에 'expression' 또는 'function' 키가 없습니다: {condition_data}"
+            logger.error(error_msg, context={'condition': condition_data})
+            raise ValidationError(error_msg, context={'condition': condition_data})
         else:
             error_msg = f"잘못된 조건 형식: {condition_data}"
             logger.error(error_msg, context={'condition': condition_data, 'type': type(condition_data).__name__})
             raise ValidationError(error_msg, context={'condition': condition_data})
+
+    def _build_expression_from_function(self, function_name: str, args: dict) -> str:
+        """
+        function + args로부터 expression 문자열 생성
+
+        Example:
+            >>> _build_expression_from_function('is_early_start_spot', {
+            ...     'prev_block_id': 'block1',
+            ...     'min_days': 1,
+            ...     'max_days': 2
+            ... })
+            "is_early_start_spot('block1', 1, 2)"
+
+        Args:
+            function_name: 함수 이름
+            args: 함수 인자들 (dict)
+
+        Returns:
+            Expression 문자열
+        """
+        # Args를 순서대로 정렬 (일반적으로 YAML 순서 유지)
+        arg_strings = []
+        for key, value in args.items():
+            if isinstance(value, str):
+                # 문자열은 따옴표로 감싸기
+                arg_strings.append(f"'{value}'")
+            elif isinstance(value, bool):
+                # bool은 Python 형식 (True/False → true/false로 변환 안 함)
+                arg_strings.append(str(value))
+            elif isinstance(value, (int, float)):
+                # 숫자는 그대로
+                arg_strings.append(str(value))
+            else:
+                # 기타는 repr 사용
+                arg_strings.append(repr(value))
+
+        # Expression 조립
+        expression = f"{function_name}({', '.join(arg_strings)})"
+        return expression
 
 
     def _load_edges(self, edges_data: List[Dict[str, Any]]) -> List[BlockEdge]:

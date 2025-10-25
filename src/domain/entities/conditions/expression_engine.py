@@ -61,6 +61,10 @@ class ExpressionEngine:
             ast.And: lambda a, b: a and b,
             ast.Or: lambda a, b: a or b,
             ast.Not: operator.not_,
+
+            # 단항 연산자 (음수, 양수)
+            ast.USub: operator.neg,  # -x (음수)
+            ast.UAdd: operator.pos,  # +x (양수)
         }
 
         # 함수 레지스트리 (외부에서 주입)

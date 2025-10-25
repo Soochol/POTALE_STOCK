@@ -45,9 +45,6 @@ block_graph:
           expression: "normalized_volume(20) >= 300.0"
           description: "정규화 거래량 300% 이상"
 
-      # Spot 조건 추가 (test1_alt.yaml과 동일)
-      spot_condition: "is_spot_candidate('block1', 1, 2)"
-
       exit_conditions:
         - name: "low_below_ma60"
           expression: "current.low < ma(60)"

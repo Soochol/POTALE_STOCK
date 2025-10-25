@@ -1,7 +1,8 @@
 """
-Orchestrator Redetection Integration Tests
+Orchestrator Reentry Integration Tests
 
-오케스트레이터 재탐지 통합 테스트
+오케스트레이터 재진입 통합 테스트
+(redetection 용어는 하위 호환성을 위해 유지됨)
 """
 import pytest
 from datetime import date

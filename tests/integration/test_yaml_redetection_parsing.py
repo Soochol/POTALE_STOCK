@@ -1,7 +1,8 @@
 """
-YAML Redetection Condition Parsing Tests
+YAML Reentry Condition Parsing Tests
 
-YAML에서 재탐지 조건 파싱 통합 테스트
+YAML에서 재진입 조건 파싱 통합 테스트
+(redetection은 하위 호환성을 위해 계속 지원됨)
 """
 import pytest
 import tempfile
@@ -12,7 +13,7 @@ from src.domain.exceptions import ValidationError, YAMLConfigError
 
 
 class TestYAMLRedetectionParsing:
-    """YAML 재탐지 조건 파싱 테스트"""
+    """YAML 재진입 조건 파싱 테스트 (redetection/reentry 모두 지원)"""
 
     @pytest.fixture
     def loader(self):

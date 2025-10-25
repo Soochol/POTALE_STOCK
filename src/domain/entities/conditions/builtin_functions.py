@@ -251,6 +251,63 @@ def within_range(value: float, base: float, tolerance_pct: float, context: dict)
     return lower <= value <= upper
 
 
+@function_registry.register(
+    name='high_low_distance_ratio',
+    category='price',
+    description='기준 가격 대비 고가/저가까지의 거리 비율',
+    params_schema={
+        'base_price': {'type': 'float', 'required': True},
+        'high_price': {'type': 'float', 'required': True},
+        'low_price': {'type': 'float', 'required': True}
+    }
+)
+def high_low_distance_ratio(
+    base_price: float,
+    high_price: float,
+    low_price: float,
+    context: dict
+) -> float:
+    """
+    기준 가격 대비 고가/저가까지의 거리 비율
+
+    기준 가격에서 고가까지의 거리와 저가까지의 거리의 비율을 계산합니다.
+    값이 클수록 기준 가격이 저가에 가까움을 의미합니다.
+
+    Args:
+        base_price: 기준 가격 (예: prev.close, current.close)
+        high_price: 고가 (예: current.high, prev.high)
+        low_price: 저가 (예: current.low, prev.low)
+        context: 평가 컨텍스트
+
+    Returns:
+        (기준-고가 거리) / (기준-저가 거리) * 100
+        예: 200 = 기준이 저가에 2배 더 가까움
+
+    Examples:
+        >>> # 검사일 종가 기준, D일 고저 비율
+        >>> high_low_distance_ratio(prev.close, current.high, current.low)
+
+        >>> # 당일 종가 기준, 전일 고저 비율
+        >>> high_low_distance_ratio(current.close, prev.high, prev.low)
+
+    Note:
+        - 0으로 나누기 방지: 분모가 0이면 0.0 반환
+        - 절댓값 사용: abs()로 방향 무시
+    """
+    # 거리 계산
+    distance_to_high = abs(base_price - high_price)
+    distance_to_low = abs(base_price - low_price)
+
+    # 0으로 나누기 방지
+    if distance_to_low == 0:
+        return 0.0
+
+    # 비율 계산
+    ratio = (distance_to_high / distance_to_low) * 100
+
+    return ratio
+
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 기술 지표 함수 (Skeleton)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -511,98 +568,6 @@ def last_valid_volume(context: dict) -> int:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 @function_registry.register(
-    name='is_spot_candidate',
-    category='detection',
-    description='이전 블록의 spot 추가 후보인지 체크',
-    params_schema={
-        'prev_block_id': {'type': 'str', 'required': True},
-        'min_days': {'type': 'int', 'required': True, 'min': 0},
-        'max_days': {'type': 'int', 'required': True, 'min': 0}
-    }
-)
-def is_spot_candidate(
-    prev_block_id: str,
-    min_days: int,
-    max_days: int,
-    context: dict
-) -> bool:
-    """
-    이전 블록의 spot 추가 후보인지 확인
-
-    Block 발생 후 D+1, D+2일에 상위 Block 조건이 만족되면,
-    새 Block을 생성하지 않고 기존 Block에 spot 데이터를 추가.
-
-    Args:
-        prev_block_id: 이전 블록 ID (예: 'block1')
-        min_days: 최소 일수 (1 = D+1)
-        max_days: 최대 일수 (2 = D+2)
-        context: 평가 컨텍스트
-            - {prev_block_id}: 이전 블록 객체
-            - current: 현재 주가 데이터
-            - all_stocks: 전체 주가 데이터
-
-    Returns:
-        True: spot 후보임 (새 블록 생성하지 않고 spot 추가)
-        False: spot 후보 아님 (새 블록 생성)
-
-    Logic:
-        1. prev_block이 context에 존재하고 active인가?
-        2. prev_block이 spot2를 아직 안 가졌나?
-        3. candles_between(prev_block.started_at, current.date) in [min_days+1, max_days+1]?
-           (candles_between는 시작/종료일 포함이므로 +1)
-
-    Examples:
-        >>> is_spot_candidate('block1', 1, 2)
-        # Block1 시작일로부터 D+1 또는 D+2일이면 True
-
-        >>> is_spot_candidate('block2', 1, 3)
-        # Block2 시작일로부터 D+1~D+3일이면 True
-
-    Note:
-        - spot 최대 개수는 DynamicBlockDetection.add_spot()에서 제어
-        - 이 함수는 시간 조건만 체크
-    """
-    # 1. 이전 블록 조회
-    prev_block = context.get(prev_block_id)
-
-    if prev_block is None:
-        # 이전 블록이 context에 없음
-        return False
-
-    # 2. 이전 블록이 active 상태인지 확인
-    if not prev_block.is_active():
-        return False
-
-    # 3. spot2가 이미 있으면 제외
-    if prev_block.has_spot2():
-        return False
-
-    # 4. 날짜 간격 체크
-    current = context.get('current')
-    if not current:
-        return False
-
-    try:
-        # candles_between은 시작일과 종료일을 포함하여 계산
-        # prev_block.started_at = Day 10
-        # current.date = Day 11 → candles_between = 2 (Day 10, Day 11) → D+1
-        # current.date = Day 12 → candles_between = 3 (Day 10, Day 11, Day 12) → D+2
-        days_diff = candles_between(prev_block.started_at, current.date, context)
-
-        # min_days=1, max_days=2 → days_diff는 2 또는 3이어야 함
-        # D+1: days_diff == 2 (min_days + 1)
-        # D+2: days_diff == 3 (max_days + 1)
-        target_min = min_days + 1
-        target_max = max_days + 1
-
-        return target_min <= days_diff <= target_max
-
-    except Exception:
-        # candles_between 계산 실패 시 False
-        return False
-
-
-@function_registry.register(
     name='is_price_breakout',
     category='detection',
     description='현재 시가가 이전 블록의 고점 대비 -N% 이상인지 체크 (레벨업 판단)',
@@ -772,61 +737,72 @@ def is_price_doubling_surge(
 
 
 @function_registry.register(
-    name='is_continuation_spot',
+    name='is_stay_spot',
     category='detection',
-    description='회고적 spot 패턴 체크 (D-1, D-2일 조건 확인)',
+    description='회고적 spot 패턴 체크 (음수 오프셋 사용) - Block 유지 전략',
     params_schema={
         'prev_block_id': {'type': 'str', 'required': True},
-        'min_days': {'type': 'int', 'required': True, 'min': 0},
-        'max_days': {'type': 'int', 'required': True, 'min': 0}
+        'offset_start': {'type': 'int', 'required': True, 'max': -1},
+        'offset_end': {'type': 'int', 'required': True, 'max': -1}
     }
 )
-def is_continuation_spot(
+def is_stay_spot(
     prev_block_id: str,
-    min_days: int,
-    max_days: int,
+    offset_start: int,
+    offset_end: int,
     context: dict
 ) -> bool:
     """
-    회고적 spot 패턴 체크 (Continuation Spot)
+    회고적 spot 패턴 체크 (Stay Spot) - Block 유지 전략
 
-    Block2 조건이 D일에 만족될 때, D-1, D-2일을 회고적으로 검사하여
-    spot_entry_conditions를 만족하는지 확인합니다.
-    실제 회고 로직은 ContinuationSpotStrategy에서 수행되며,
+    다음 블록 조건이 D일에 만족될 때, 지정된 오프셋 범위의 날짜를 회고적으로 검사하여
+    spot_entry_conditions를 만족하면 현재 블록에 spot을 추가하고
+    다음 블록으로 전환하지 않습니다 (블록 유지).
+
+    실제 회고 로직은 StaySpotStrategy에서 수행되며,
     이 함수는 기본 검증(블록 존재, active 상태, spot2 여부)만 수행합니다.
 
     Args:
         prev_block_id: 이전 블록 ID (예: 'block1')
-        min_days: 최소 일수 (1 = D+1)
-        max_days: 최대 일수 (2 = D+2)
+        offset_start: 시작 오프셋 (-1 = D-1일, -2 = D-2일)
+        offset_end: 종료 오프셋 (-2 = D-2일, -5 = D-5일)
         context: 평가 컨텍스트
             - {prev_block_id}: 이전 블록 객체
             - current: 현재 주가 데이터
             - all_stocks: 전체 주가 데이터
 
     Returns:
-        True: 이전 블록이 존재하고 active이며 spot2가 없음
-        False: 조건 불만족 (새 블록 생성)
+        True: 이전 블록이 존재하고 active이며 spot2가 없음 (Stay 전략 적용 가능)
+        False: 조건 불만족 (다음 블록으로 전환)
 
     Logic:
         1. prev_block이 context에 존재하는가?
         2. prev_block이 active 상태인가?
         3. prev_block이 spot2를 아직 안 가졌나?
-        4. 조건 만족 시 ContinuationSpotStrategy가 D-1, D-2일 검사 수행
+        4. 조건 만족 시 StaySpotStrategy가 offset_start ~ offset_end일 검사 수행
 
     Examples:
-        >>> is_continuation_spot('block1', 1, 2)
-        # Block1이 active이고 spot2 없으면, D-1/D-2일 회고 검사 트리거
+        >>> is_stay_spot('block1', -1, -2)
+        # D-1, D-2일 회고 검사 (가장 일반적)
 
-        >>> # YAML에서 사용 예시
-        >>> spot_condition:
-        >>>   name: "continuation_spot_check"
-        >>>   expression: "is_continuation_spot('block1', 1, 2)"
+        >>> is_stay_spot('block1', -1, -1)
+        # D-1일만 체크
+
+        >>> is_stay_spot('block1', -1, -5)
+        # D-1~D-5일 회고 검사 (5일 범위)
+
+        >>> is_stay_spot('block1', -2, -4)
+        # D-2~D-4일 회고 검사 (D-1 건너뜀)
+
+        >>> # YAML에서 사용 예시 (Block2 spot_condition)
+        >>> spot_condition: "is_stay_spot('block1', -1, -2)"
 
     Note:
-        - 실제 D-1, D-2 조건 평가는 ContinuationSpotStrategy에서 수행
+        - 음수 오프셋 사용: -1 = "1일 전", -2 = "2일 전" (직관적)
+        - 우선순위: D-1 > D-2 > D-3 > ... (먼저 만족하는 날짜 선택)
         - spot_entry_conditions가 BlockNode에 정의되어 있어야 함
-        - D-1 우선, D-2 대안 (둘 다 만족 시 D-1 선택)
+        - Block 유지 전략: Block1 유지, Block2로 넘어가지 않음
+        - 파라미터 변경만으로 확장 가능 (코드 수정 불필요)
     """
     # 1. 이전 블록 조회
     prev_block = context.get(prev_block_id)
@@ -844,6 +820,105 @@ def is_continuation_spot(
         return False
 
     # 4. 기본 검증 통과 → ContinuationSpotStrategy가 회고 로직 수행
+    return True
+
+
+@function_registry.register(
+    name='is_levelup_spot',
+    category='detection',
+    description='회고적 spot 패턴 체크 (음수 오프셋 사용) - Block 전환 전략',
+    params_schema={
+        'prev_block_id': {'type': 'str', 'required': True},
+        'offset_start': {'type': 'int', 'required': True, 'max': -1},
+        'offset_end': {'type': 'int', 'required': True, 'max': -1}
+    }
+)
+def is_levelup_spot(
+    prev_block_id: str,
+    offset_start: int,
+    offset_end: int,
+    context: dict
+) -> bool:
+    """
+    회고적 spot 패턴 체크 (Levelup Spot) - Block 전환 전략
+
+    다음 블록 조건이 D일에 만족될 때, 지정된 오프셋 범위의 날짜를 회고적으로 검사하여
+    조건을 만족하면 다음 블록을 생성하되 시작일을 앞당깁니다.
+    (Block1 → Block2 전환, "레벨업")
+
+    실제 회고 로직은 LevelupSpotStrategy에서 수행되며,
+    이 함수는 기본 검증(블록 존재, active 상태, spot2 여부)만 수행합니다.
+
+    Args:
+        prev_block_id: 이전 블록 ID (예: 'block1')
+        offset_start: 시작 오프셋 (-1 = D-1일, -2 = D-2일)
+        offset_end: 종료 오프셋 (-2 = D-2일, -5 = D-5일)
+        context: 평가 컨텍스트
+            - {prev_block_id}: 이전 블록 객체
+            - current: 현재 주가 데이터
+            - all_stocks: 전체 주가 데이터
+
+    Returns:
+        True: 이전 블록이 존재하고 active이며 spot2가 없음 (Levelup 전략 적용 가능)
+        False: 조건 불만족 (일반 블록 생성)
+
+    Logic:
+        1. prev_block이 context에 존재하는가?
+        2. prev_block이 active 상태인가?
+        3. prev_block이 spot2를 아직 안 가졌나?
+        4. 조건 만족 시 LevelupSpotStrategy가 offset_start ~ offset_end일 검사 수행
+        5. 어느 날짜가 조건 만족 시:
+           - Block2 생성 (started_at = 만족한 날짜, "조기 시작")
+           - Block2.spots = [{spot1: 만족한 날짜}, {spot2: D}]
+           - Block1 종료 (ended_at = spot1 - 1일)
+
+    Examples:
+        >>> is_levelup_spot('block1', -1, -2)
+        # D-1, D-2일 회고 검사 (가장 일반적)
+
+        >>> is_levelup_spot('block1', -1, -1)
+        # D-1일만 체크
+
+        >>> is_levelup_spot('block1', -1, -5)
+        # D-1~D-5일 회고 검사 (5일 범위)
+
+        >>> is_levelup_spot('block1', -2, -4)
+        # D-2~D-4일 회고 검사 (D-1 제외)
+
+        >>> # YAML에서 사용 예시 (Block2 spot_condition)
+        >>> spot_condition:
+        >>>   function: "is_levelup_spot"
+        >>>   args:
+        >>>     prev_block_id: "block1"
+        >>>     min_days: 1
+        >>>     max_days: 2
+        >>>   exclude_conditions:
+        >>>     - "price_doubling_surge_from_block1"
+
+    Note:
+        - 실제 D-min_days ~ D-max_days 조건 평가는 LevelupSpotStrategy에서 수행
+        - spot_condition.exclude_conditions로 제외할 조건 지정 가능
+        - 우선순위: D-1 > D-2 > D-3 > ... (먼저 만족하는 날짜 선택)
+        - Block1은 spot1-1일에 자동 종료됨
+        - Block 전환 전략: Block1 종료, Block2로 레벨업
+        - 파라미터 변경만으로 확장 가능 (코드 수정 불필요)
+    """
+    # 1. 이전 블록 조회
+    prev_block = context.get(prev_block_id)
+
+    if prev_block is None:
+        # 이전 블록이 context에 없음
+        return False
+
+    # 2. 이전 블록이 active 상태인지 확인
+    if not prev_block.is_active():
+        return False
+
+    # 3. spot2가 이미 있으면 제외
+    if prev_block.has_spot2():
+        return False
+
+    # 4. 기본 검증 통과 → EarlyStartSpotStrategy가 회고 로직 수행
     return True
 
 

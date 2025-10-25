@@ -76,8 +76,8 @@ class RedetectionDetector:
             >>> if redet and redet.is_active():
             ...     print(f"Active redetection #{redet.sequence}")
         """
-        # 재탐지 설정 없으면 스킵
-        if not block_node.has_redetection():
+        # 재진입 설정 없으면 스킵
+        if not block_node.has_reentry():
             return None
 
         # 현재 active 재탐지 확인
@@ -158,7 +158,7 @@ class RedetectionDetector:
         Example:
             >>> satisfied = detector._evaluate_entry_conditions(...)
         """
-        if not block_node.redetection_entry_conditions:
+        if not block_node.reentry_entry_conditions:
             return False
 
         # Context에 parent_block 추가
@@ -169,7 +169,7 @@ class RedetectionDetector:
         }
 
         # 모든 진입 조건 평가
-        for condition_expr in block_node.redetection_entry_conditions:
+        for condition_expr in block_node.reentry_entry_conditions:
             try:
                 if not self.expression_engine.evaluate(condition_expr, redet_context):
                     return False
@@ -207,7 +207,7 @@ class RedetectionDetector:
         Example:
             >>> detector._check_exit_conditions(redet, node, stock, ctx)
         """
-        if not block_node.redetection_exit_conditions:
+        if not block_node.reentry_exit_conditions:
             return  # 종료 조건 없으면 스킵
 
         # Context에 active_redetection 추가
@@ -217,7 +217,7 @@ class RedetectionDetector:
         }
 
         # 종료 조건 평가 (OR 조건: 하나라도 만족하면 종료)
-        for condition_expr in block_node.redetection_exit_conditions:
+        for condition_expr in block_node.reentry_exit_conditions:
             try:
                 if self.expression_engine.evaluate(condition_expr, redet_context):
                     # 종료 조건 만족 → 재탐지 종료

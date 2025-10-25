@@ -266,10 +266,10 @@ class SeedPatternDetectionOrchestrator:
 
         for pattern in all_patterns:
             for block_id, block in pattern.blocks.items():
-                # 재탐지 가능 여부 확인
+                # 재진입 가능 여부 확인
                 block_node = self.block_detector.block_graph.get_node(block_id)
-                if not block_node or not block_node.has_redetection():
-                    continue  # 재탐지 설정 없음
+                if not block_node or not block_node.has_reentry():
+                    continue  # 재진입 설정 없음
 
                 if not block.is_completed():
                     continue  # 아직 완료 안된 블록은 재탐지 불가

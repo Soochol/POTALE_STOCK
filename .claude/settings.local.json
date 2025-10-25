@@ -116,7 +116,10 @@
       "Bash(c:\\myCode\\potale_stock\\.venv\\Scripts\\python.exe -m pytest tests/unit/entities/conditions/test_builtin_functions_redetection.py -v --no-cov)",
       "Bash(/c/myCode/potale_stock/.venv/Scripts/python.exe -m pytest:*)",
       "Bash(cmd.exe:*)",
-      "Bash(del:*)"
+      "Bash(del:*)",
+      "Bash(/c/myCode/potale_stock/.venv/Scripts/python.exe scripts/rule_based_detection/detect_patterns.py --ticker 025980 --config presets/examples/test1_alt.yaml --from-date 2020-01-01)",
+      "Bash(xargs -r kill:*)",
+      "Bash(if exist scriptsreentrydetect_reentry.py del scriptsreentrydetect_reentry.py)"
     ],
     "deny": [],
     "ask": []

@@ -78,6 +78,9 @@ class DynamicBlockDetector:
         # 블록을 block_id로 매핑 (모든 블록 포함, 완료된 블록도 추적)
         active_blocks_map = {b.block_id: b for b in active_blocks}
 
+        # 스킵된 블록 추적 (is_stay_spot으로 스킵된 블록을 다음에 재탐지)
+        next_target_blocks = []
+
         # 주가 데이터 순회
         for i, current_stock in enumerate(stocks):
             # 이전 주가: 마지막 정상 거래일
@@ -102,7 +105,8 @@ class DynamicBlockDetector:
                 current_price=current_stock.high,
                 current_volume=current_stock.volume,
                 context=context,
-                active_blocks_map=active_blocks_map
+                active_blocks_map=active_blocks_map,
+                next_target_blocks=next_target_blocks
             )
 
             # 2. 새로운 블록을 active_blocks_map에 추가
@@ -125,7 +129,8 @@ class DynamicBlockDetector:
                 active_blocks_map,
                 current_stock.date,
                 stocks[:i + 1],  # 현재까지의 주가 데이터
-                context
+                context,
+                condition_name
             )
 
             # 5. 활성 블록들의 peak 갱신 (종료된 블록 제외)
@@ -235,7 +240,8 @@ class DynamicBlockDetector:
         active_blocks_map: Dict[str, DynamicBlockDetection],
         current_date: date,
         all_stocks: List[Stock],
-        context: dict
+        context: dict,
+        condition_name: str = "seed"
     ) -> None:
         """
         진행 중인 블록의 종료 조건 확인 및 완료 처리
@@ -260,6 +266,7 @@ class DynamicBlockDetector:
             current_date: 현재 날짜
             all_stocks: 현재까지의 주가 데이터
             context: 평가 context
+            condition_name: 조건 이름 ("seed" 또는 "reentry")
         """
         blocks_to_complete = []
 
@@ -274,7 +281,7 @@ class DynamicBlockDetector:
 
             # 종료 조건 확인 (OR 조건)
             # 어떤 조건이 만족되었는지도 반환받음
-            satisfied_condition = self._check_exit_conditions_with_reason(node, context)
+            satisfied_condition = self._check_exit_conditions_with_reason(node, context, condition_name)
             if satisfied_condition:
                 blocks_to_complete.append((block_id, satisfied_condition))
 
@@ -332,7 +339,8 @@ class DynamicBlockDetector:
         current_price: float,
         current_volume: int,
         context: dict,
-        active_blocks_map: Dict[str, DynamicBlockDetection]
+        active_blocks_map: Dict[str, DynamicBlockDetection],
+        next_target_blocks: List[str]
     ) -> List[DynamicBlockDetection]:
         """
         새로운 블록 감지
@@ -345,6 +353,7 @@ class DynamicBlockDetector:
             current_volume: 현재 거래량
             context: 평가 context
             active_blocks_map: 활성 + 완료된 블록 맵 (context 참조용, 최신 블록만 유지)
+            next_target_blocks: 스킵된 블록 리스트 (is_stay_spot으로 스킵된 블록을 재탐지)
 
         Returns:
             신규 감지된 블록 리스트
@@ -352,15 +361,27 @@ class DynamicBlockDetector:
         new_blocks = []
         current = context.get('current')
 
-        # 모든 노드에 대해 진입 조건 확인
-        for node_id, node in self.block_graph.nodes.items():
+        # 스킵된 블록이 있으면 해당 블록들을 우선적으로 체크
+        nodes_to_check = []
+        if next_target_blocks:
+            # 스킵된 블록들만 체크
+            nodes_to_check = [
+                (node_id, node) for node_id, node in self.block_graph.nodes.items()
+                if node_id in next_target_blocks
+            ]
+        else:
+            # 모든 블록 체크
+            nodes_to_check = list(self.block_graph.nodes.items())
+
+        # 노드에 대해 진입 조건 확인
+        for node_id, node in nodes_to_check:
             # 이미 활성 상태인 블록은 스킵 (중복 방지)
             # 완료된 블록은 덮어쓰기 가능 (새로운 패턴 시작)
             if node_id in active_blocks_map and active_blocks_map[node_id].is_active():
                 continue
 
             # 진입 조건 확인 (AND 조건)
-            if self._check_entry_conditions(node, context):
+            if self._check_entry_conditions(node, context, condition_name):
                 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                 # Spot 체크: SpotStrategy 패턴 사용
                 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -389,10 +410,21 @@ class DynamicBlockDetector:
                                 'block_type': target_prev_block.block_type,
                                 'ticker': ticker,
                                 'spot_date': current_date,
-                                'spot_count': target_prev_block.get_spot_count()
+                                'spot_count': target_prev_block.get_spot_count(),
+                                'skipped_block': node.block_id
                             }
                         )
                         # spot 추가 성공 → 새 블록 생성하지 않음
+                        # 다음에 이 블록을 재탐지하도록 기록
+                        if node.block_id not in next_target_blocks:
+                            next_target_blocks.append(node.block_id)
+                            logger.debug(
+                                f"Block {node.block_id} skipped (stay_spot), will retry next time",
+                                context={
+                                    'skipped_block': node.block_id,
+                                    'next_target_blocks': next_target_blocks
+                                }
+                            )
                         continue
                     else:
                         # spot 추가 실패 (max_spots 초과 등)
@@ -411,6 +443,10 @@ class DynamicBlockDetector:
                 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                 # 새 블록 생성 (spot 조건 불만족 또는 spot 추가 실패)
                 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+                # Early Start Spot 확인
+                early_start_info = context.get('_early_start_info')
+
                 logger.debug(
                     f"Creating new block: {node.block_id}",
                     context={
@@ -419,7 +455,8 @@ class DynamicBlockDetector:
                         'ticker': ticker,
                         'date': str(current_date),
                         'spot_added': target_prev_block is not None,
-                        'has_spot_condition': node.spot_condition is not None
+                        'has_spot_condition': node.spot_condition is not None,
+                        'has_early_start_info': early_start_info is not None
                     }
                 )
 
@@ -430,8 +467,86 @@ class DynamicBlockDetector:
                     condition_name=condition_name
                 )
 
-                new_block.start(current_date)
-                new_block.update_peak(current_date, current_price, current_volume)
+                # Early Start 처리
+                if early_start_info:
+                    # 조기 시작일로 블록 시작
+                    new_block.start(early_start_info.early_start_date)
+
+                    # spot1 추가 (early start date)
+                    new_block.add_spot(
+                        spot_date=early_start_info.spot1_date,
+                        open_price=early_start_info.spot1_data['open'],
+                        close_price=early_start_info.spot1_data['close'],
+                        high_price=early_start_info.spot1_data['high'],
+                        low_price=early_start_info.spot1_data['low'],
+                        volume=early_start_info.spot1_data['volume']
+                    )
+
+                    # spot2 추가 (current date)
+                    new_block.add_spot(
+                        spot_date=early_start_info.spot2_date,
+                        open_price=early_start_info.spot2_data['open'],
+                        close_price=early_start_info.spot2_data['close'],
+                        high_price=early_start_info.spot2_data['high'],
+                        low_price=early_start_info.spot2_data['low'],
+                        volume=early_start_info.spot2_data['volume']
+                    )
+
+                    # Peak 업데이트 (early start date부터 계산)
+                    # spot1 날짜부터 peak 계산
+                    all_stocks = context.get('all_stocks', [])
+                    for stock in all_stocks:
+                        if stock.date >= early_start_info.early_start_date and stock.date <= current_date:
+                            new_block.update_peak(stock.date, stock.close, stock.volume)
+
+                    # 이전 블록 종료 (spot1 - 1일)
+                    prev_block_id = early_start_info.prev_block_id
+                    if prev_block_id in active_blocks_map:
+                        prev_block = active_blocks_map[prev_block_id]
+                        if prev_block.is_active():
+                            # spot1 이전의 마지막 거래일 찾기
+                            actual_end_date = self._find_last_trading_day_before(
+                                early_start_info.spot1_date,
+                                all_stocks
+                            )
+                            prev_block.complete(actual_end_date)
+                            logger.info(
+                                f"Terminated {prev_block_id} at {actual_end_date} (day before spot1)",
+                                context={
+                                    'prev_block_id': prev_block_id,
+                                    'end_date': str(actual_end_date),
+                                    'new_block_spot1': str(early_start_info.spot1_date)
+                                }
+                            )
+
+                    logger.info(
+                        f"Created block with early start: {node.block_id}",
+                        context={
+                            'block_id': node.block_id,
+                            'early_start_date': str(early_start_info.early_start_date),
+                            'spot1_date': str(early_start_info.spot1_date),
+                            'spot2_date': str(early_start_info.spot2_date),
+                            'prev_block_id': prev_block_id
+                        }
+                    )
+
+                    # Early start info 클리어 (다음 노드에 영향 안 주도록)
+                    context.pop('_early_start_info', None)
+
+                else:
+                    # 일반 블록 생성
+                    new_block.start(current_date)
+                    new_block.update_peak(current_date, current_price, current_volume)
+
+                    # 자동 spot1 추가 (시작일 = spot1)
+                    new_block.add_spot(
+                        spot_date=current_date,
+                        open_price=current.open,
+                        close_price=current.close,
+                        high_price=current.high,
+                        low_price=current.low,
+                        volume=current.volume
+                    )
 
                 # 전일 종가 저장 (상승폭 계산용)
                 prev_stock = context.get('prev')
@@ -448,12 +563,24 @@ class DynamicBlockDetector:
 
                 new_blocks.append(new_block)
 
+                # 블록 생성 성공 → next_target_blocks에서 제거
+                if node.block_id in next_target_blocks:
+                    next_target_blocks.remove(node.block_id)
+                    logger.debug(
+                        f"Block {node.block_id} created successfully, removed from next_target_blocks",
+                        context={
+                            'created_block': node.block_id,
+                            'remaining_targets': next_target_blocks
+                        }
+                    )
+
         return new_blocks
 
     def _check_entry_conditions(
         self,
         node: BlockNode,
-        context: dict
+        context: dict,
+        condition_name: str = "seed"
     ) -> bool:
         """
         진입 조건 확인 (AND 조건 - 모든 조건을 만족해야 함)
@@ -461,22 +588,29 @@ class DynamicBlockDetector:
         Args:
             node: 블록 노드
             context: 평가 context
+            condition_name: 조건 이름 ("seed" 또는 "reentry")
 
         Returns:
             모든 조건을 만족하면 True
 
         Note:
-            디버깅을 위해 각 조건의 평가 결과를 DEBUG 레벨로 로깅합니다.
-            이는 2018-03-07 Block1 미탐지 이슈 조사를 위해 추가되었습니다.
-            (Issue: 짧은 기간 탐지 시 성공, 전체 기간 탐지 시 실패하는 현상)
+            - condition_name="seed": node.entry_conditions 사용
+            - condition_name="reentry": node.reentry_entry_conditions 사용
+            - 디버깅을 위해 각 조건의 평가 결과를 DEBUG 레벨로 로깅합니다.
         """
-        if not node.entry_conditions:
+        # condition_name에 따라 조건 선택
+        if condition_name == "reentry":
+            conditions = node.reentry_entry_conditions
+        else:
+            conditions = node.entry_conditions
+
+        if not conditions:
             return False
 
         current_date = context.get('current').date if context.get('current') else None
 
         try:
-            for condition in node.entry_conditions:
+            for condition in conditions:
                 # Condition 객체의 evaluate() 메서드 사용
                 result = condition.evaluate(self.expression_engine, context)
 
@@ -580,7 +714,8 @@ class DynamicBlockDetector:
     def _check_exit_conditions_with_reason(
         self,
         node: BlockNode,
-        context: dict
+        context: dict,
+        condition_name: str = "seed"
     ) -> Optional[str]:
         """
         종료 조건 확인 및 만족된 조건 반환 (OR 조건 - 하나라도 만족하면 종료)
@@ -588,21 +723,30 @@ class DynamicBlockDetector:
         Args:
             node: 블록 노드
             context: 평가 context
+            condition_name: 조건 이름 ("seed" 또는 "reentry")
 
         Returns:
             만족된 조건의 expression (만족된 조건이 없으면 None)
 
         Note:
-            디버깅을 위해 각 종료 조건의 평가 결과를 DEBUG 레벨로 로깅합니다.
-            종료 조건은 OR 조건으로, 하나라도 만족하면 블록이 종료됩니다.
+            - condition_name="seed": node.exit_conditions 사용
+            - condition_name="reentry": node.reentry_exit_conditions 사용
+            - 디버깅을 위해 각 종료 조건의 평가 결과를 DEBUG 레벨로 로깅합니다.
+            - 종료 조건은 OR 조건으로, 하나라도 만족하면 블록이 종료됩니다.
         """
-        if not node.exit_conditions:
+        # condition_name에 따라 조건 선택
+        if condition_name == "reentry":
+            conditions = node.reentry_exit_conditions
+        else:
+            conditions = node.exit_conditions
+
+        if not conditions:
             return None
 
         current_date = context.get('current').date if context.get('current') else None
 
         try:
-            for condition in node.exit_conditions:
+            for condition in conditions:
                 # Condition 객체의 evaluate() 메서드 사용
                 result = condition.evaluate(self.expression_engine, context)
 

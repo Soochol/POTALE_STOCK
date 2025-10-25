@@ -1,7 +1,8 @@
 """
 RedetectionDetector Service Unit Tests
 
-재탐지 탐지 서비스 단위 테스트
+재진입 탐지 서비스 단위 테스트
+(redetection 용어는 하위 호환성을 위해 유지됨)
 """
 import pytest
 from datetime import date

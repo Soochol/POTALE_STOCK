@@ -42,9 +42,14 @@ class BlockNode:
     # is_continuation_spot용: D-1, D-2일에 평가할 조건
     spot_entry_conditions: Optional[List['Condition']] = None
 
-    # 재탐지 조건 (선택적, NEW - 2025-10-25)
-    redetection_entry_conditions: Optional[List['Condition']] = None
-    redetection_exit_conditions: Optional[List['Condition']] = None
+    # Exclude conditions for early start spot (선택적, NEW - 2025-10-25)
+    # is_early_start_spot용: D-1, D-2일 평가 시 제외할 조건 이름 리스트
+    exclude_conditions: Optional[List[str]] = None
+
+    # 재진입 조건 (선택적, NEW - 2025-10-25)
+    # 블록 완료 후 재진입 시 사용할 조건
+    reentry_entry_conditions: Optional[List['Condition']] = None
+    reentry_exit_conditions: Optional[List['Condition']] = None
 
     parameters: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -100,22 +105,26 @@ class BlockNode:
         """
         return self.parameters.get(key, default)
 
-    def has_redetection(self) -> bool:
+    def has_reentry(self) -> bool:
         """
-        이 블록이 재탐지를 지원하는지 확인
+        이 블록이 재진입을 지원하는지 확인
 
         Returns:
-            재탐지 진입 조건이 정의되어 있으면 True
+            재진입 조건이 정의되어 있으면 True
 
         Example:
-            >>> if block_node.has_redetection():
-            ...     # Process redetection logic
+            >>> if block_node.has_reentry():
+            ...     # Process reentry logic
             ...     pass
         """
         return (
-            self.redetection_entry_conditions is not None
-            and len(self.redetection_entry_conditions) > 0
+            self.reentry_entry_conditions is not None
+            and len(self.reentry_entry_conditions) > 0
         )
+
+    def has_redetection(self) -> bool:
+        """하위 호환성을 위한 alias"""
+        return self.has_reentry()
 
     def validate(self) -> List[str]:
         """
