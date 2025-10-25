@@ -8,17 +8,11 @@ YAML 정의를 기반으로 동적으로 블록을 감지하고 관리하는 범
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Optional, Dict, Any, List, TYPE_CHECKING
-from enum import Enum
+
+from .block_status import BlockStatus
 
 if TYPE_CHECKING:
     from .redetection_event import RedetectionEvent
-
-
-class BlockStatus(Enum):
-    """블록 상태"""
-    ACTIVE = "active"  # 진행 중
-    COMPLETED = "completed"  # 정상 완료
-    FAILED = "failed"  # 조건 실패로 종료
 
 
 @dataclass

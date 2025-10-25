@@ -55,7 +55,7 @@ block_graph:
         # 재탐지 진입 조건 (완전 동적 expression)
         entry_conditions:
           - name: "block_completed"
-            expression: "parent_block.status == 'completed'"
+            expression: "parent_block.status.value == 'completed'"
             description: "원래 블록이 완료된 상태"
 
           - name: "time_window"
@@ -124,7 +124,7 @@ block_graph:
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       redetection:
         entry_conditions:
-          - expression: "parent_block.status == 'completed'"
+          - expression: "parent_block.status.value == 'completed'"
 
           - expression: "candles_between(parent_block.ended_at, current.date) >= 2 and candles_between(parent_block.ended_at, current.date) <= 40"
             description: "블록 종료 후 2~40일 이내 (더 짧은 윈도우)"

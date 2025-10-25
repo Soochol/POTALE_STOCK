@@ -103,7 +103,16 @@
       "Bash(if not exist docsarchivelegacy_codeinfrastructurecollectors mkdir docsarchivelegacy_codeinfrastructurecollectors)",
       "Bash(if not exist docsarchivelegacy_codeinfrastructurerepositoriescondition mkdir docsarchivelegacy_codeinfrastructurerepositoriescondition)",
       "Bash(find:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(if not exist srcinfrastructurelogging mkdir srcinfrastructurelogging)",
+      "Bash(.venvScriptspython.exe scriptsrule_based_detectiondetect_patterns.py --ticker 025980 --config presetsexamplestest1_alt.yaml --from-date 2015-01-01 --verbose)",
+      "Bash(Select-String -Pattern \"2018-03-07\" -Context 5,5)",
+      "Bash(venv/Scripts/python.exe:*)",
+      "Bash(del test_pattern_detection.py)",
+      "Bash(if [ -f test_pattern_detection.py ])",
+      "Bash(then rm test_pattern_detection.py)",
+      "Bash(else echo \"File not found\")",
+      "Bash(fi)"
     ],
     "deny": [],
     "ask": []
