@@ -174,7 +174,12 @@ class DynamicBlockRepositoryImpl(DynamicBlockRepository):
             peak_date=entity.peak_date,
             prev_close=entity.prev_close,
             parent_blocks=entity.parent_blocks,
-            custom_metadata=metadata
+            custom_metadata=metadata,
+            # Virtual Block System 필드 (NEW - 2025-10-26)
+            yaml_type=entity.yaml_type,
+            logical_level=entity.logical_level,
+            pattern_sequence=entity.pattern_sequence,
+            is_virtual=entity.is_virtual
         )
 
     def _update_model(self, model: DynamicBlockDetectionModel, entity: DynamicBlockDetection) -> None:
@@ -198,6 +203,11 @@ class DynamicBlockRepositoryImpl(DynamicBlockRepository):
         model.prev_close = entity.prev_close
         model.parent_blocks = entity.parent_blocks
         model.custom_metadata = metadata
+        # Virtual Block System 필드 (NEW - 2025-10-26)
+        model.yaml_type = entity.yaml_type
+        model.logical_level = entity.logical_level
+        model.pattern_sequence = entity.pattern_sequence
+        model.is_virtual = entity.is_virtual
 
     def _to_entity(self, model: DynamicBlockDetectionModel) -> DynamicBlockDetection:
         """ORM Model → Entity 변환"""
@@ -228,5 +238,10 @@ class DynamicBlockRepositoryImpl(DynamicBlockRepository):
             prev_close=model.prev_close,
             parent_blocks=model.parent_blocks or [],
             redetections=redetections,
-            metadata=metadata
+            metadata=metadata,
+            # Virtual Block System 필드 (NEW - 2025-10-26, 기본값 for 하위 호환성)
+            yaml_type=getattr(model, 'yaml_type', 0),
+            logical_level=getattr(model, 'logical_level', 0),
+            pattern_sequence=getattr(model, 'pattern_sequence', 0),
+            is_virtual=getattr(model, 'is_virtual', False)
         )

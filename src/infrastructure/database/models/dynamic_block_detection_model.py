@@ -47,6 +47,12 @@ class DynamicBlockDetectionModel(Base):
     # 관계 정보 (JSON)
     parent_blocks = Column(JSON, nullable=False, default=list)
 
+    # Virtual Block System (NEW - 2025-10-26)
+    yaml_type = Column(Integer, nullable=False, default=0, index=True)  # YAML 정의 block_type (불변)
+    logical_level = Column(Integer, nullable=False, default=0, index=True)  # 실제 급등 순서 (1, 2, 3, ...)
+    pattern_sequence = Column(Integer, nullable=False, default=0)  # 패턴 내 생성 순서
+    is_virtual = Column(Integer, nullable=False, default=0, index=True)  # 0/1 (Spot으로 스킵된 가상 블록 여부)
+
     # 메타데이터 (JSON) - 'metadata'는 SQLAlchemy 예약어이므로 'custom_metadata' 사용
     custom_metadata = Column(JSON, nullable=False, default=dict)
 

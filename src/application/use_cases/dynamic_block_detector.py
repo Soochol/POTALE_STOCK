@@ -13,6 +13,7 @@ from src.domain.entities.block_graph import BlockGraph, BlockNode
 from src.domain.entities.conditions import ExpressionEngine
 from src.domain.exceptions import ExpressionEvaluationError
 from src.application.services.spot_strategies import SpotStrategy, CompositeSpotStrategy
+from src.application.use_cases.pattern_detection_state import PatternDetectionState
 from src.infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
@@ -78,6 +79,9 @@ class DynamicBlockDetector:
         # 블록을 block_id로 매핑 (모든 블록 포함, 완료된 블록도 추적)
         active_blocks_map = {b.block_id: b for b in active_blocks}
 
+        # Virtual Block System 상태 관리
+        pattern_state = PatternDetectionState()
+
         # 스킵된 블록 추적 (is_stay_spot으로 스킵된 블록을 다음에 재탐지)
         next_target_blocks = []
 
@@ -106,7 +110,8 @@ class DynamicBlockDetector:
                 current_volume=current_stock.volume,
                 context=context,
                 active_blocks_map=active_blocks_map,
-                next_target_blocks=next_target_blocks
+                next_target_blocks=next_target_blocks,
+                pattern_state=pattern_state
             )
 
             # 2. 새로운 블록을 active_blocks_map에 추가
@@ -289,6 +294,10 @@ class DynamicBlockDetector:
         for block_id, condition_expr in blocks_to_complete:
             block = active_blocks_map[block_id]
 
+            # Virtual Block은 complete() 불필요 (이미 VIRTUAL_SKIPPED 상태)
+            if block.is_virtual:
+                continue
+
             # 종료 조건이 EXISTS() 함수를 사용하는지 확인
             is_exists_condition = 'exists(' in condition_expr.lower()
 
@@ -340,7 +349,8 @@ class DynamicBlockDetector:
         current_volume: int,
         context: dict,
         active_blocks_map: Dict[str, DynamicBlockDetection],
-        next_target_blocks: List[str]
+        next_target_blocks: List[str],
+        pattern_state: PatternDetectionState
     ) -> List[DynamicBlockDetection]:
         """
         새로운 블록 감지
@@ -354,9 +364,10 @@ class DynamicBlockDetector:
             context: 평가 context
             active_blocks_map: 활성 + 완료된 블록 맵 (context 참조용, 최신 블록만 유지)
             next_target_blocks: 스킵된 블록 리스트 (is_stay_spot으로 스킵된 블록을 재탐지)
+            pattern_state: Virtual Block System 상태 관리 객체
 
         Returns:
-            신규 감지된 블록 리스트
+            신규 감지된 블록 리스트 (real + virtual 블록 포함)
         """
         new_blocks = []
         current = context.get('current')
@@ -414,17 +425,48 @@ class DynamicBlockDetector:
                                 'skipped_block': node.block_id
                             }
                         )
-                        # spot 추가 성공 → 새 블록 생성하지 않음
-                        # 다음에 이 블록을 재탐지하도록 기록
-                        if node.block_id not in next_target_blocks:
-                            next_target_blocks.append(node.block_id)
-                            logger.debug(
-                                f"Block {node.block_id} skipped (stay_spot), will retry next time",
-                                context={
-                                    'skipped_block': node.block_id,
-                                    'next_target_blocks': next_target_blocks
-                                }
-                            )
+
+                        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                        # Virtual Block 생성 (Spot으로 스킵된 블록)
+                        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                        # Virtual Block System: spot으로 스킵되더라도 exists() 체크를 위해
+                        # virtual block을 즉시 생성하여 active_blocks_map에 추가
+
+                        logical_level, pattern_sequence = pattern_state.create_virtual_block()
+
+                        virtual_block = DynamicBlockDetection(
+                            block_id=node.block_id,
+                            block_type=node.block_type,
+                            ticker=ticker,
+                            condition_name=condition_name,
+                            # Virtual Block 전용 필드
+                            yaml_type=node.block_type,  # 원래 YAML 정의값
+                            logical_level=logical_level,  # 현재 level (증가 안 함)
+                            pattern_sequence=0,  # Virtual = 0
+                            is_virtual=True,  # Virtual 표시
+                            status=BlockStatus.VIRTUAL_SKIPPED  # 스킵 상태
+                        )
+
+                        # Virtual block은 시작/종료 없이 바로 VIRTUAL_SKIPPED 상태
+                        # started_at, ended_at은 None으로 남음
+
+                        new_blocks.append(virtual_block)
+                        active_blocks_map[node.block_id] = virtual_block
+
+                        logger.info(
+                            f"Created virtual block: {node.block_id}",
+                            context={
+                                'block_id': node.block_id,
+                                'block_type': node.block_type,
+                                'ticker': ticker,
+                                'logical_level': logical_level,
+                                'yaml_type': node.block_type,
+                                'reason': 'spot_skip'
+                            }
+                        )
+
+                        # Virtual 블록은 재탐지하지 않음 (next_target_blocks에 추가 안 함)
+                        # spot 추가 성공 → 새 real 블록 생성하지 않고 계속 진행
                         continue
                     else:
                         # spot 추가 실패 (max_spots 초과 등)
@@ -460,11 +502,19 @@ class DynamicBlockDetector:
                     }
                 )
 
+                # Virtual Block System: Real 블록 생성 시 logical_level, pattern_sequence 할당
+                logical_level, pattern_sequence = pattern_state.create_real_block()
+
                 new_block = DynamicBlockDetection(
                     block_id=node.block_id,
                     block_type=node.block_type,
                     ticker=ticker,
-                    condition_name=condition_name
+                    condition_name=condition_name,
+                    # Virtual Block System 필드
+                    yaml_type=node.block_type,  # 원래 YAML 정의값
+                    logical_level=logical_level,  # 실제 급등 순서 (증가됨)
+                    pattern_sequence=pattern_sequence,  # 패턴 내 생성 순서 (증가됨)
+                    is_virtual=False  # Real 블록
                 )
 
                 # Early Start 처리

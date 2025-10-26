@@ -121,14 +121,22 @@ class SeedPatternTreeManager:
         if block.block_id == 'block1':
             return None
 
-        # 시간 기반: 현재 블록보다 먼저 시작된 활성 패턴 중 가장 최근 것
-        candidate_patterns = [
-            p for p in self.active_patterns
-            if p.ticker == block.ticker
-            and p.root_block.started_at
-            and block.started_at
-            and p.root_block.started_at <= block.started_at
-        ]
+        # Virtual Block 처리: started_at이 None이므로 시간 기반 매칭 불가
+        # 대신 ticker만 매칭하여 가장 최근 활성 패턴에 할당
+        if block.is_virtual:
+            candidate_patterns = [
+                p for p in self.active_patterns
+                if p.ticker == block.ticker
+            ]
+        else:
+            # Real Block: 시간 기반 현재 블록보다 먼저 시작된 활성 패턴 중 가장 최근 것
+            candidate_patterns = [
+                p for p in self.active_patterns
+                if p.ticker == block.ticker
+                and p.root_block.started_at
+                and block.started_at
+                and p.root_block.started_at <= block.started_at
+            ]
 
         if not candidate_patterns:
             logger.warning(

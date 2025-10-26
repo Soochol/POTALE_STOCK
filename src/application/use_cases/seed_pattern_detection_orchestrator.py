@@ -182,8 +182,19 @@ class SeedPatternDetectionOrchestrator:
         if not blocks:
             return
 
-        # 시작 날짜순 정렬
-        sorted_blocks = sorted(blocks, key=lambda b: b.started_at or date.min)
+        # 시작 날짜순 정렬 (Virtual Block System 개선)
+        # CRITICAL FIX: Virtual blocks를 real blocks 뒤로 배치하여 패턴이 먼저 생성되도록 함
+        # - Real blocks: (0, started_at, pattern_sequence)
+        # - Virtual blocks: (1, date.max, pattern_sequence) → 가장 뒤로 배치
+        # 이렇게 해야 Block1→Block2 순서로 패턴이 생성된 후 Virtual Block3가 추가됨
+        sorted_blocks = sorted(
+            blocks,
+            key=lambda b: (
+                1 if b.is_virtual else 0,  # Virtual blocks를 뒤로
+                b.started_at or date.max,  # Virtual blocks는 date.max로
+                b.pattern_sequence
+            )
+        )
 
         # DEBUG: 블록 분포 확인
         block1_count = sum(1 for b in sorted_blocks if b.block_id == 'block1')
@@ -222,14 +233,29 @@ class SeedPatternDetectionOrchestrator:
                 if pattern:
                     try:
                         self.pattern_manager.add_block_to_pattern(pattern, block)
-                        logger.debug(
-                            f"Added {block.block_id} to pattern {pattern.pattern_id}",
-                            extra={
-                                'pattern_id': str(pattern.pattern_id),
-                                'block_id': block.block_id,
-                                'block_date': str(block.started_at)
-                            }
-                        )
+
+                        # Virtual Block 전용 로깅 (중요!)
+                        if block.is_virtual:
+                            logger.info(
+                                f"Added VIRTUAL {block.block_id} to pattern {pattern.pattern_id}",
+                                extra={
+                                    'pattern_id': str(pattern.pattern_id),
+                                    'block_id': block.block_id,
+                                    'is_virtual': True,
+                                    'logical_level': block.logical_level,
+                                    'yaml_type': block.yaml_type,
+                                    'pattern_sequence': block.pattern_sequence
+                                }
+                            )
+                        else:
+                            logger.debug(
+                                f"Added {block.block_id} to pattern {pattern.pattern_id}",
+                                extra={
+                                    'pattern_id': str(pattern.pattern_id),
+                                    'block_id': block.block_id,
+                                    'block_date': str(block.started_at)
+                                }
+                            )
                     except ValueError as e:
                         logger.warning(
                             f"Failed to add block to pattern: {e}",

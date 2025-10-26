@@ -49,6 +49,12 @@ class DynamicBlockDetection:
     ticker: str
     condition_name: str
 
+    # Virtual Block System (NEW - 2025-10-26)
+    yaml_type: int = 0  # YAML 정의 block_type (불변)
+    logical_level: int = 0  # 실제 급등 순서 (1, 2, 3...)
+    pattern_sequence: int = 0  # 패턴 내 생성 순서
+    is_virtual: bool = False  # Spot으로 스킵된 가상 블록 여부
+
     # 패턴 연결
     pattern_id: Optional[int] = None
 
@@ -153,8 +159,13 @@ class DynamicBlockDetection:
         self.status = BlockStatus.FAILED
 
     def is_active(self) -> bool:
-        """블록이 진행 중인지 확인"""
-        return self.status == BlockStatus.ACTIVE
+        """
+        블록이 진행 중인지 확인
+
+        Virtual Block도 "존재하는" 블록으로 간주하여 active로 처리.
+        이렇게 하면 같은 block_id로 새로운 블록이 생성되는 것을 방지.
+        """
+        return self.status in (BlockStatus.ACTIVE, BlockStatus.VIRTUAL_SKIPPED)
 
     def is_completed(self) -> bool:
         """블록이 정상 완료되었는지 확인"""
@@ -372,6 +383,11 @@ class DynamicBlockDetection:
             'peak_date': self.peak_date,
             'parent_blocks': self.parent_blocks,
             'metadata': self.metadata,
+            # Virtual Block System 필드
+            'yaml_type': self.yaml_type,
+            'logical_level': self.logical_level,
+            'pattern_sequence': self.pattern_sequence,
+            'is_virtual': self.is_virtual,
         }
 
     @classmethod
@@ -394,6 +410,11 @@ class DynamicBlockDetection:
             peak_date=data.get('peak_date'),
             parent_blocks=data.get('parent_blocks', []),
             metadata=data.get('metadata', {}),
+            # Virtual Block System 필드 (기본값 0/False for 하위 호환성)
+            yaml_type=data.get('yaml_type', 0),
+            logical_level=data.get('logical_level', 0),
+            pattern_sequence=data.get('pattern_sequence', 0),
+            is_virtual=data.get('is_virtual', False),
         )
 
     def __repr__(self) -> str:
