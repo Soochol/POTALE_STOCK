@@ -389,6 +389,13 @@ def detect_patterns_for_ticker(
             if total_redetections > 0:
                 console.print(f"      Total Redetections: {total_redetections}")
 
+                # Show redetection dates
+                for block_id, block in pattern.blocks.items():
+                    if block.redetections:
+                        for idx, redet in enumerate(block.redetections, 1):
+                            status_str = f"[{redet.status.value}]" if hasattr(redet, 'status') else ""
+                            console.print(f"         - Redetection {idx} ({block_id}): {redet.started_at} ~ {redet.ended_at or 'active'} {status_str}")
+
             console.print()
 
     if detections:

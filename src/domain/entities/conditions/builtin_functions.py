@@ -417,6 +417,59 @@ def is_volume_high(days: int, context: dict) -> bool:
 
 
 @function_registry.register(
+    name='is_volume_high_checkday',
+    category='condition',
+    description='검사일(check_day) 기준 N일 신고거래량 여부',
+    params_schema={'days': {'type': 'int', 'min': 1}}
+)
+def is_volume_high_checkday(days: int, context: dict) -> bool:
+    """
+    검사일(check_day) 기준 N일 신고거래량 여부
+
+    spot_entry_conditions에서 사용되며, check_day를 기준으로
+    N일 신고거래량인지 확인합니다.
+
+    Args:
+        days: 기간 (달력 기준 일수)
+        context: 평가 컨텍스트
+            - check_day: 검사 기준일 (D-1, D-2 등)
+            - all_stocks: 전체 주가 데이터
+
+    Returns:
+        True: check_day가 N일 신고거래량
+        False: 조건 불만족 또는 데이터 없음
+
+    Example:
+        # Block2 spot_entry_conditions에서 사용
+        spot_entry_conditions:
+          - expression: "is_volume_high_checkday(200)"
+            description: "검사일 기준 200일 신고거래량"
+    """
+    check_day = context.get('check_day')
+
+    if not check_day:
+        return False
+
+    # all_stocks에서 직접 계산
+    all_stocks = context.get('all_stocks', [])
+    if not all_stocks:
+        return False
+
+    # 검사일 날짜 기준 N일 전부터의 거래량들
+    cutoff_date = check_day.date - timedelta(days=days)
+    recent_volumes = [
+        s.volume for s in all_stocks
+        if s.ticker == check_day.ticker and cutoff_date <= s.date <= check_day.date
+    ]
+
+    if not recent_volumes:
+        return False
+
+    # 검사일 거래량이 N일 중 최대인지 확인
+    return check_day.volume == max(recent_volumes)
+
+
+@function_registry.register(
     name='is_new_high',
     category='condition',
     description='N일 신고가 여부',
@@ -450,6 +503,59 @@ def is_new_high(days: int, context: dict) -> bool:
 
     # 현재 고가가 N일 중 최대인지 확인
     return current.high == max(recent_highs)
+
+
+@function_registry.register(
+    name='is_new_high_checkday',
+    category='condition',
+    description='검사일(check_day) 기준 N일 신고가 여부',
+    params_schema={'days': {'type': 'int', 'min': 1}}
+)
+def is_new_high_checkday(days: int, context: dict) -> bool:
+    """
+    검사일(check_day) 기준 N일 신고가 여부
+
+    spot_entry_conditions에서 사용되며, check_day를 기준으로
+    N일 신고가인지 확인합니다.
+
+    Args:
+        days: 기간 (달력 기준 일수)
+        context: 평가 컨텍스트
+            - check_day: 검사 기준일 (D-1, D-2 등)
+            - all_stocks: 전체 주가 데이터
+
+    Returns:
+        True: check_day가 N일 신고가
+        False: 조건 불만족 또는 데이터 없음
+
+    Example:
+        # Block2 spot_entry_conditions에서 사용
+        spot_entry_conditions:
+          - expression: "is_new_high_checkday(200)"
+            description: "검사일 기준 200일 신고가"
+    """
+    check_day = context.get('check_day')
+
+    if not check_day:
+        return False
+
+    # all_stocks에서 직접 계산
+    all_stocks = context.get('all_stocks', [])
+    if not all_stocks:
+        return False
+
+    # 검사일 날짜 기준 N일 전부터의 고가들
+    cutoff_date = check_day.date - timedelta(days=days)
+    recent_highs = [
+        s.high for s in all_stocks
+        if s.ticker == check_day.ticker and cutoff_date <= s.date <= check_day.date
+    ]
+
+    if not recent_highs:
+        return False
+
+    # 검사일 고가가 N일 중 최대인지 확인
+    return check_day.high == max(recent_highs)
 
 
 @function_registry.register(
@@ -679,6 +785,115 @@ def is_price_doubling_surge(
 
     # 5. 조건 평가
     return current_high >= target_price
+
+
+@function_registry.register(
+    name='is_price_doubling_surge_ratio',
+    category='detection',
+    description='이전 블록 상승폭의 N% 이상 달성 여부',
+    params_schema={
+        'prev_block_id': {'type': 'str', 'required': True},
+        'ratio_pct': {'type': 'float', 'required': True, 'min': 0}
+    }
+)
+def is_price_doubling_surge_ratio(
+    prev_block_id: str,
+    ratio_pct: float,
+    context: dict
+) -> bool:
+    """
+    현재 고가가 이전 블록의 상승폭 * N% 이상 달성했는지 체크
+
+    계산 로직:
+    1. 전일 종가 = prev_block.prev_close (블록 시작 전일 종가)
+    2. 상승폭 = prev_block.peak_price - prev_block.prev_close
+    3. 목표가격 = prev_block.peak_price + (상승폭 * ratio_pct / 100.0)
+    4. 조건: current.high >= 목표가격
+
+    예시:
+        Block1: prev_close=10000, peak_price=15000
+        상승폭 = 15000 - 10000 = 5000
+
+        ratio_pct=100.0 → 목표가격 = 15000 + 5000*1.0 = 20000 (2배 상승)
+        ratio_pct=120.0 → 목표가격 = 15000 + 5000*1.2 = 21000 (2.2배 상승)
+        ratio_pct=80.0  → 목표가격 = 15000 + 5000*0.8 = 19000 (1.8배 상승)
+        ratio_pct=50.0  → 목표가격 = 15000 + 5000*0.5 = 17500 (1.5배 상승)
+
+    Args:
+        prev_block_id: 이전 블록 ID (예: 'block1')
+        ratio_pct: 상승폭의 비율 (100.0 = 100% = 상승폭과 동일, 2배 상승)
+        context: 평가 컨텍스트
+
+    Returns:
+        True: 상승폭의 N% 이상 달성
+        False: 조건 불만족 또는 데이터 없음
+
+    Example:
+        is_price_doubling_surge_ratio('block1', 100.0)
+        # Block1 상승폭의 100% 달성 (2배 상승)
+
+        is_price_doubling_surge_ratio('block1', 120.0)
+        # Block1 상승폭의 120% 달성 (2.2배 상승)
+
+        is_price_doubling_surge_ratio('block1', 80.0)
+        # Block1 상승폭의 80% 달성 (1.8배 상승)
+    """
+    # 1. 이전 블록 조회
+    prev_block = context.get(prev_block_id)
+    if prev_block is None:
+        return False
+
+    # 2. 필수 데이터 검증
+    if not hasattr(prev_block, 'peak_price') or prev_block.peak_price is None:
+        return False
+
+    if not hasattr(prev_block, 'prev_close') or prev_block.prev_close is None:
+        return False
+
+    if prev_block.peak_price <= 0 or prev_block.prev_close <= 0:
+        return False
+
+    # 3. 현재 고가 조회
+    current = context.get('current')
+    if not current or not hasattr(current, 'high'):
+        return False
+
+    current_high = current.high
+    if current_high is None or current_high <= 0:
+        return False
+
+    # 4. 상승폭 계산
+    surge_amount = prev_block.peak_price - prev_block.prev_close
+    if surge_amount <= 0:
+        return False
+
+    # 5. 목표가격 계산
+    # 목표가격 = peak_price + (상승폭 * ratio_pct / 100.0)
+    ratio = ratio_pct / 100.0
+    target_price = prev_block.peak_price + (surge_amount * ratio)
+
+    # DEBUG 로그 추가
+    from src.infrastructure.logging import get_logger
+    logger = get_logger(__name__)
+
+    current_date = context.get('current').date if context.get('current') and hasattr(context.get('current'), 'date') else 'unknown'
+    result = current_high >= target_price
+
+    logger.debug(
+        f"[DEBUG is_price_doubling_surge_ratio] "
+        f"date={current_date}, "
+        f"prev_block_id={prev_block_id}, "
+        f"prev_close={prev_block.prev_close}, "
+        f"peak_price={prev_block.peak_price}, "
+        f"surge_amount={surge_amount:.2f}, "
+        f"ratio_pct={ratio_pct}, "
+        f"target_price={target_price:.2f}, "
+        f"current_high={current_high:.2f}, "
+        f"result={result}"
+    )
+
+    # 6. 조건 평가
+    return result
 
 
 @function_registry.register(
