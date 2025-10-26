@@ -224,22 +224,29 @@ class ExpressionEngine:
         # 논리 연산 (AND, OR)
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         elif isinstance(node, ast.BoolOp):
-            op = self.operators[type(node.op)]
-
-            # 모든 값 평가
-            values = [self._eval_node(v, context) for v in node.values]
-
-            # 논리 연산 수행 (AND는 all(), OR는 any()와 유사)
-            result = values[0]
-            for val in values[1:]:
-                result = op(result, val)
-                # Short-circuit evaluation
-                if isinstance(node.op, ast.And) and not result:
-                    return False
-                elif isinstance(node.op, ast.Or) and result:
-                    return True
-
-            return result
+            # Short-circuit evaluation: evaluate values one by one and stop early
+            if isinstance(node.op, ast.And):
+                # AND: return False as soon as any value is False
+                for v in node.values:
+                    val = self._eval_node(v, context)
+                    if not val:
+                        return False
+                return True
+            elif isinstance(node.op, ast.Or):
+                # OR: return True as soon as any value is True
+                for v in node.values:
+                    val = self._eval_node(v, context)
+                    if val:
+                        return True
+                return False
+            else:
+                # Fallback for other boolean operators (shouldn't happen)
+                op = self.operators[type(node.op)]
+                values = [self._eval_node(v, context) for v in node.values]
+                result = values[0]
+                for val in values[1:]:
+                    result = op(result, val)
+                return result
 
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         # 단항 연산 (NOT, -, +)

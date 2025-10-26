@@ -1,0 +1,776 @@
+
+================================================================================
+패턴 트리 구조 - 025980
+총 패턴 개수: 64개
+================================================================================
+
+[Pattern #1] SEED_025980_20150824_001
+   Date: 2015-08-24
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2015-08-24 -> 2015-08-24
+        Duration: 1 days
+        Peak: 6,640 won (2015-08-24)
+        Volume: 4,949,225
+
+[Pattern #2] SEED_025980_20151030_002
+   Date: 2015-10-30
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2015-10-30 -> 2015-12-22
+        Duration: 54 days
+        Peak: 9,560 won (2015-11-06)
+        Volume: 4,005,895
+
+[Pattern #3] SEED_025980_20151109_003
+   Date: 2015-11-09
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2015-11-09 -> 2015-12-22
+        Duration: 44 days
+        Peak: 9,500 won (2015-12-10)
+        Volume: 3,838,605
+
+[Pattern #4] SEED_025980_20180307_004
+   Date: 2018-03-07
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2018-03-07 -> 2018-06-27
+   |    Duration: 113 days
+   |    Peak: 11,900 won (2018-06-19)
+   |    Volume: 18,257,495
+   +-- BLOCK2 (Type 2)
+        Period: 2018-05-21 -> 2018-06-27
+        Duration: 38 days
+        Peak: 11,900 won (2018-06-19)
+        Volume: 18,257,495
+
+[Pattern #5] SEED_025980_20180309_005
+   Date: 2018-03-09
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2018-03-09 -> 2018-06-27
+   |    Duration: 111 days
+   |    Peak: 11,900 won (2018-06-19)
+   |    Volume: 18,257,495
+   +-- BLOCK2 (Type 2)
+        Period: 2018-05-21 -> 2018-06-27
+        Duration: 38 days
+        Peak: 11,900 won (2018-06-19)
+        Volume: 18,257,495
+
+[Pattern #6] SEED_025980_20180517_006
+   Date: 2018-05-17
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2018-05-17 -> 2018-06-27
+   |    Duration: 42 days
+   |    Peak: 11,900 won (2018-06-19)
+   |    Volume: 18,257,495
+   +-- BLOCK2 (Type 2)
+        Period: 2018-05-21 -> 2018-06-27
+        Duration: 38 days
+        Peak: 11,900 won (2018-06-19)
+        Volume: 18,257,495
+
+[Pattern #7] SEED_025980_20180521_007
+   Date: 2018-05-21
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2018-05-21 -> 2018-06-27
+   |    Duration: 38 days
+   |    Peak: 11,900 won (2018-06-19)
+   |    Volume: 18,257,495
+   +-- BLOCK2 (Type 2)
+        Period: 2018-06-01 -> 2018-06-27
+        Duration: 27 days
+        Peak: 11,900 won (2018-06-19)
+        Volume: 16,419,052
+
+[Pattern #8] SEED_025980_20180528_008
+   Date: 2018-05-28
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2018-05-28 -> 2018-06-27
+   |    Duration: 31 days
+   |    Peak: 11,900 won (2018-06-19)
+   |    Volume: 16,419,052
+   +-- BLOCK2 (Type 2)
+        Period: 2018-06-18 -> 2018-06-27
+        Duration: 10 days
+        Peak: 11,900 won (2018-06-19)
+        Volume: 16,419,052
+
+[Pattern #9] SEED_025980_20180601_009
+   Date: 2018-06-01
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2018-06-01 -> 2018-06-27
+   |    Duration: 27 days
+   |    Peak: 11,900 won (2018-06-19)
+   |    Volume: 16,419,052
+   +-- BLOCK2 (Type 2)
+        Period: 2018-06-18 -> 2018-06-27
+        Duration: 10 days
+        Peak: 11,900 won (2018-06-19)
+        Volume: 16,419,052
+
+[Pattern #10] SEED_025980_20180604_010
+   Date: 2018-06-04
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2018-06-04 -> 2018-06-27
+        Duration: 24 days
+        Peak: 11,900 won (2018-06-19)
+        Volume: 16,419,052
+
+[Pattern #11] SEED_025980_20180611_011
+   Date: 2018-06-11
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2018-06-11 -> 2018-06-27
+        Duration: 17 days
+        Peak: 11,900 won (2018-06-19)
+        Volume: 16,419,052
+
+[Pattern #12] SEED_025980_20180618_012
+   Date: 2018-06-18
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2018-06-18 -> 2018-06-27
+        Duration: 10 days
+        Peak: 11,900 won (2018-06-19)
+        Volume: 16,419,052
+
+[Pattern #13] SEED_025980_20180817_013
+   Date: 2018-08-17
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2018-08-17 -> 2018-08-17
+        Duration: 1 days
+        Peak: 8,630 won (2018-08-17)
+        Volume: 5,906,995
+
+[Pattern #14] SEED_025980_20180906_014
+   Date: 2018-09-06
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2018-09-06 -> 2018-09-06
+        Duration: 1 days
+        Peak: 8,030 won (2018-09-06)
+        Volume: 6,011,060
+
+[Pattern #15] SEED_025980_20180910_015
+   Date: 2018-09-10
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2018-09-10 -> 2018-10-25
+   |    Duration: 46 days
+   |    Peak: 11,850 won (2018-10-08)
+   |    Volume: 25,854,143
+   +-- BLOCK2 (Type 2)
+        Period: 2018-10-04 -> 2018-10-25
+        Duration: 22 days
+        Peak: 11,850 won (2018-10-08)
+        Volume: 10,507,500
+
+[Pattern #16] SEED_025980_20180921_016
+   Date: 2018-09-21
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2018-09-21 -> 2018-10-25
+   |    Duration: 35 days
+   |    Peak: 11,850 won (2018-10-08)
+   |    Volume: 25,854,143
+   +-- BLOCK2 (Type 2)
+        Period: 2018-10-04 -> 2018-10-25
+        Duration: 22 days
+        Peak: 11,850 won (2018-10-08)
+        Volume: 10,507,500
+
+[Pattern #17] SEED_025980_20181004_017
+   Date: 2018-10-04
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2018-10-04 -> 2018-10-25
+        Duration: 22 days
+        Peak: 11,850 won (2018-10-08)
+        Volume: 10,507,500
+
+[Pattern #18] SEED_025980_20181211_018
+   Date: 2018-12-11
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2018-12-11 -> 2019-02-28
+   |    Duration: 80 days
+   |    Peak: 31,150 won (2019-01-23)
+   |    Volume: 36,873,292
+   +-- BLOCK2 (Type 2)
+        Period: 2018-12-14 -> 2019-02-28
+        Duration: 77 days
+        Peak: 31,150 won (2019-01-23)
+        Volume: 36,873,292
+
+[Pattern #19] SEED_025980_20181214_019
+   Date: 2018-12-14
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2018-12-14 -> 2019-02-28
+   |    Duration: 77 days
+   |    Peak: 31,150 won (2019-01-23)
+   |    Volume: 36,873,292
+   +-- BLOCK2 (Type 2)
+        Period: 2018-12-17 -> 2019-02-28
+        Duration: 74 days
+        Peak: 31,150 won (2019-01-23)
+        Volume: 36,873,292
+
+[Pattern #20] SEED_025980_20181217_020
+   Date: 2018-12-17
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2018-12-17 -> 2019-02-28
+   |    Duration: 74 days
+   |    Peak: 31,150 won (2019-01-23)
+   |    Volume: 36,873,292
+   +-- BLOCK2 (Type 2)
+        Period: 2018-12-18 -> 2019-02-28
+        Duration: 73 days
+        Peak: 31,150 won (2019-01-23)
+        Volume: 25,567,152
+
+[Pattern #21] SEED_025980_20181218_021
+   Date: 2018-12-18
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2018-12-18 -> 2019-02-28
+   |    Duration: 73 days
+   |    Peak: 31,150 won (2019-01-23)
+   |    Volume: 25,567,152
+   +-- BLOCK2 (Type 2)
+        Period: 2019-01-08 -> 2019-02-28
+        Duration: 52 days
+        Peak: 31,150 won (2019-01-23)
+        Volume: 25,567,152
+
+[Pattern #22] SEED_025980_20190108_022
+   Date: 2019-01-08
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2019-01-08 -> 2019-02-28
+   |    Duration: 52 days
+   |    Peak: 31,150 won (2019-01-23)
+   |    Volume: 25,567,152
+   +-- BLOCK2 (Type 2)
+        Period: 2019-01-10 -> 2019-02-28
+        Duration: 50 days
+        Peak: 31,150 won (2019-01-23)
+        Volume: 15,072,372
+
+[Pattern #23] SEED_025980_20190110_023
+   Date: 2019-01-10
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2019-01-10 -> 2019-02-28
+   |    Duration: 50 days
+   |    Peak: 31,150 won (2019-01-23)
+   |    Volume: 15,072,372
+   +-- BLOCK2 (Type 2)
+        Period: 2019-01-11 -> 2019-02-28
+        Duration: 49 days
+        Peak: 31,150 won (2019-01-23)
+        Volume: 12,861,164
+
+[Pattern #24] SEED_025980_20190111_024
+   Date: 2019-01-11
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2019-01-11 -> 2019-02-28
+   |    Duration: 49 days
+   |    Peak: 31,150 won (2019-01-23)
+   |    Volume: 12,861,164
+   +-- BLOCK2 (Type 2)
+        Period: 2019-01-21 -> 2019-02-28
+        Duration: 39 days
+        Peak: 31,150 won (2019-01-23)
+        Volume: 12,861,164
+
+[Pattern #25] SEED_025980_20190121_025
+   Date: 2019-01-21
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2019-01-21 -> 2019-02-28
+   |    Duration: 39 days
+   |    Peak: 31,150 won (2019-01-23)
+   |    Volume: 12,861,164
+   +-- BLOCK2 (Type 2)
+        Period: 2019-01-23 -> 2019-02-28
+        Duration: 37 days
+        Peak: 31,150 won (2019-01-23)
+        Volume: 12,861,164
+
+[Pattern #26] SEED_025980_20190123_026
+   Date: 2019-01-23
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2019-01-23 -> 2019-02-28
+   |    Duration: 37 days
+   |    Peak: 31,150 won (2019-01-23)
+   |    Volume: 12,861,164
+   +-- BLOCK2 (Type 2)
+        Period: 2019-02-12 -> 2019-02-28
+        Duration: 17 days
+        Peak: 28,450 won (2019-02-27)
+        Volume: 12,861,164
+
+[Pattern #27] SEED_025980_20190212_027
+   Date: 2019-02-12
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2019-02-12 -> 2019-02-28
+   |    Duration: 17 days
+   |    Peak: 28,450 won (2019-02-27)
+   |    Volume: 12,861,164
+   +-- BLOCK2 (Type 2)
+        Period: 2019-02-19 -> 2019-02-28
+        Duration: 10 days
+        Peak: 28,450 won (2019-02-27)
+        Volume: 12,861,164
+
+[Pattern #28] SEED_025980_20190219_028
+   Date: 2019-02-19
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2019-02-19 -> 2019-02-28
+        Duration: 10 days
+        Peak: 28,450 won (2019-02-27)
+        Volume: 12,861,164
+
+[Pattern #29] SEED_025980_20190312_029
+   Date: 2019-03-12
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2019-03-12 -> 2019-03-12
+        Duration: 1 days
+        Peak: 19,750 won (2019-03-12)
+        Volume: 7,323,508
+
+[Pattern #30] SEED_025980_20190329_030
+   Date: 2019-03-29
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2019-03-29 -> 2019-03-29
+        Duration: 1 days
+        Peak: 15,350 won (2019-03-29)
+        Volume: 21,664,062
+
+[Pattern #31] SEED_025980_20190416_031
+   Date: 2019-04-16
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2019-04-16 -> 2019-04-16
+        Duration: 1 days
+        Peak: 15,950 won (2019-04-16)
+        Volume: 10,905,112
+
+[Pattern #32] SEED_025980_20190910_032
+   Date: 2019-09-10
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2019-09-10 -> 2019-09-10
+        Duration: 1 days
+        Peak: 12,750 won (2019-09-10)
+        Volume: 5,815,992
+
+[Pattern #33] SEED_025980_20190916_033
+   Date: 2019-09-16
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2019-09-16 -> 2019-10-07
+        Duration: 22 days
+        Peak: 15,150 won (2019-09-23)
+        Volume: 8,603,484
+
+[Pattern #34] SEED_025980_20200331_034
+   Date: 2020-03-31
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2020-03-31 -> 2020-03-31
+        Duration: 1 days
+        Peak: 6,010 won (2020-03-31)
+        Volume: 25,711,525
+
+[Pattern #35] SEED_025980_20200401_035
+   Date: 2020-04-01
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2020-04-01 -> 2020-04-01
+        Duration: 1 days
+        Peak: 6,050 won (2020-04-01)
+        Volume: 40,650,904
+
+[Pattern #36] SEED_025980_20200402_036
+   Date: 2020-04-02
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2020-04-02 -> 2020-04-02
+        Duration: 1 days
+        Peak: 6,350 won (2020-04-02)
+        Volume: 23,198,110
+
+[Pattern #37] SEED_025980_20200407_037
+   Date: 2020-04-07
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2020-04-07 -> 2020-04-07
+        Duration: 1 days
+        Peak: 7,150 won (2020-04-07)
+        Volume: 19,814,212
+
+[Pattern #38] SEED_025980_20200414_038
+   Date: 2020-04-14
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2020-04-14 -> 2020-04-14
+        Duration: 1 days
+        Peak: 7,940 won (2020-04-14)
+        Volume: 73,566,715
+
+[Pattern #39] SEED_025980_20200416_039
+   Date: 2020-04-16
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2020-04-16 -> 2020-06-15
+   |    Duration: 61 days
+   |    Peak: 12,300 won (2020-05-08)
+   |    Volume: 83,279,719
+   +-- BLOCK2 (Type 2)
+        Period: 2020-04-20 -> 2020-06-15
+        Duration: 57 days
+        Peak: 12,300 won (2020-05-08)
+        Volume: 57,113,996
+
+[Pattern #40] SEED_025980_20200420_040
+   Date: 2020-04-20
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2020-04-20 -> 2020-06-15
+   |    Duration: 57 days
+   |    Peak: 12,300 won (2020-05-08)
+   |    Volume: 57,113,996
+   +-- BLOCK2 (Type 2)
+        Period: 2020-05-07 -> 2020-06-15
+        Duration: 40 days
+        Peak: 12,300 won (2020-05-08)
+        Volume: 45,357,478
+
+[Pattern #41] SEED_025980_20200507_041
+   Date: 2020-05-07
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2020-05-07 -> 2020-06-15
+   |    Duration: 40 days
+   |    Peak: 12,300 won (2020-05-08)
+   |    Volume: 45,357,478
+   +-- BLOCK2 (Type 2)
+        Period: 2020-05-08 -> 2020-06-15
+        Duration: 39 days
+        Peak: 12,300 won (2020-05-08)
+        Volume: 45,357,478
+
+[Pattern #42] SEED_025980_20200508_042
+   Date: 2020-05-08
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2020-05-08 -> 2020-06-15
+   |    Duration: 39 days
+   |    Peak: 12,300 won (2020-05-08)
+   |    Volume: 45,357,478
+   +-- BLOCK2 (Type 2)
+        Period: 2020-05-26 -> 2020-06-15
+        Duration: 21 days
+        Peak: 10,950 won (2020-06-05)
+        Volume: 20,746,480
+
+[Pattern #43] SEED_025980_20200526_043
+   Date: 2020-05-26
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2020-05-26 -> 2020-06-15
+        Duration: 21 days
+        Peak: 10,950 won (2020-06-05)
+        Volume: 20,746,480
+
+[Pattern #44] SEED_025980_20200616_044
+   Date: 2020-06-16
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2020-06-16 -> 2020-06-17
+        Duration: 2 days
+        Peak: 9,460 won (2020-06-16)
+        Volume: 10,234,777
+
+[Pattern #45] SEED_025980_20200619_045
+   Date: 2020-06-19
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2020-06-19 -> 2020-06-19
+        Duration: 1 days
+        Peak: 9,350 won (2020-06-19)
+        Volume: 68,483,080
+
+[Pattern #46] SEED_025980_20200624_046
+   Date: 2020-06-24
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2020-06-24 -> 2020-06-29
+        Duration: 6 days
+        Peak: 10,450 won (2020-06-24)
+        Volume: 46,815,064
+
+[Pattern #47] SEED_025980_20200821_047
+   Date: 2020-08-21
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2020-08-21 -> 2020-08-21
+        Duration: 1 days
+        Peak: 9,180 won (2020-08-21)
+        Volume: 11,412,038
+
+[Pattern #48] SEED_025980_20200925_048
+   Date: 2020-09-25
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2020-09-25 -> 2020-09-25
+        Duration: 1 days
+        Peak: 9,330 won (2020-09-25)
+        Volume: 19,921,065
+
+[Pattern #49] SEED_025980_20201104_049
+   Date: 2020-11-04
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2020-11-04 -> 2020-11-04
+        Duration: 1 days
+        Peak: 9,150 won (2020-11-04)
+        Volume: 15,547,643
+
+[Pattern #50] SEED_025980_20210526_050
+   Date: 2021-05-26
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2021-05-26 -> 2021-07-14
+   |    Duration: 50 days
+   |    Peak: 11,450 won (2021-06-21)
+   |    Volume: 30,825,352
+   +-- BLOCK2 (Type 2)
+        Period: 2021-06-18 -> 2021-07-14
+        Duration: 27 days
+        Peak: 11,450 won (2021-06-21)
+        Volume: 23,876,578
+
+[Pattern #51] SEED_025980_20210618_051
+   Date: 2021-06-18
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2021-06-18 -> 2021-07-14
+        Duration: 27 days
+        Peak: 11,450 won (2021-06-21)
+        Volume: 23,876,578
+
+[Pattern #52] SEED_025980_20210727_052
+   Date: 2021-07-27
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2021-07-27 -> 2021-07-27
+        Duration: 1 days
+        Peak: 10,400 won (2021-07-27)
+        Volume: 47,855,272
+
+[Pattern #53] SEED_025980_20210728_053
+   Date: 2021-07-28
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2021-07-28 -> 2021-08-13
+        Duration: 17 days
+        Peak: 12,000 won (2021-08-06)
+        Volume: 30,986,416
+
+[Pattern #54] SEED_025980_20210924_054
+   Date: 2021-09-24
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2021-09-24 -> 2021-09-24
+        Duration: 1 days
+        Peak: 11,850 won (2021-09-24)
+        Volume: 27,436,911
+
+[Pattern #55] SEED_025980_20210927_055
+   Date: 2021-09-27
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2021-09-27 -> 2021-11-05
+   |    Duration: 40 days
+   |    Peak: 14,100 won (2021-10-01)
+   |    Volume: 27,398,078
+   +-- BLOCK2 (Type 2)
+        Period: 2021-09-30 -> 2021-11-05
+        Duration: 37 days
+        Peak: 14,100 won (2021-10-01)
+        Volume: 17,861,759
+
+[Pattern #56] SEED_025980_20210930_056
+   Date: 2021-09-30
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2021-09-30 -> 2021-11-05
+        Duration: 37 days
+        Peak: 14,100 won (2021-10-01)
+        Volume: 17,861,759
+
+[Pattern #57] SEED_025980_20230116_057
+   Date: 2023-01-16
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2023-01-16 -> 2023-02-27
+        Duration: 43 days
+        Peak: 7,880 won (2023-01-31)
+        Volume: 10,610,763
+
+[Pattern #58] SEED_025980_20230621_058
+   Date: 2023-06-21
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2023-06-21 -> 2023-07-24
+        Duration: 34 days
+        Peak: 7,570 won (2023-06-21)
+        Volume: 5,846,084
+
+[Pattern #59] SEED_025980_20230810_059
+   Date: 2023-08-10
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2023-08-10 -> 2023-09-22
+   |    Duration: 44 days
+   |    Peak: 8,730 won (2023-08-14)
+   |    Volume: 32,487,760
+   +-- BLOCK2 (Type 2)
+        Period: 2023-08-11 -> 2023-09-22
+        Duration: 43 days
+        Peak: 8,730 won (2023-08-14)
+        Volume: 24,289,241
+
+[Pattern #60] SEED_025980_20230811_060
+   Date: 2023-08-11
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2023-08-11 -> 2023-09-22
+        Duration: 43 days
+        Peak: 8,730 won (2023-08-14)
+        Volume: 24,289,241
+
+[Pattern #61] SEED_025980_20241127_061
+   Date: 2024-11-27
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2024-11-27 -> 2024-12-05
+        Duration: 9 days
+        Peak: 5,770 won (2024-11-27)
+        Volume: 14,038,847
+
+[Pattern #62] SEED_025980_20250612_062
+   Date: 2025-06-12
+   Status: active
+   Blocks: 2
+   +-- BLOCK1 (Type 1)
+   |    Period: 2025-06-12 -> 2025-07-28
+   |    Duration: 47 days
+   |    Peak: 11,330 won (2025-06-24)
+   |    Volume: 28,575,176
+   +-- BLOCK2 (Type 2)
+        Period: 2025-06-24 -> 2025-07-28
+        Duration: 35 days
+        Peak: 11,330 won (2025-06-24)
+        Volume: 10,817,088
+
+[Pattern #63] SEED_025980_20250624_063
+   Date: 2025-06-24
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2025-06-24 -> 2025-07-28
+        Duration: 35 days
+        Peak: 11,330 won (2025-06-24)
+        Volume: 10,817,088
+
+[Pattern #64] SEED_025980_20250731_064
+   Date: 2025-07-31
+   Status: active
+   Blocks: 1
+   +-- BLOCK1 (Type 1)
+        Period: 2025-07-31 -> 2025-08-22
+        Duration: 23 days
+        Peak: 10,730 won (2025-08-12)
+        Volume: 13,975,637
+

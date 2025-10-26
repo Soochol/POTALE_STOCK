@@ -22,8 +22,5 @@ block_graph:
           expression: "(current.close * current.volume) < 5000000000"
           description: "거래대금 50억 미만"
 
-      parameters:
-        min_duration: 1
-        max_duration: 50
 
   edges: []

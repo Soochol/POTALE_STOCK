@@ -39,9 +39,6 @@ block_graph:
           description: "가격 하락으로 종료"
 
       # 블록 파라미터
-      parameters:
-        min_duration_candles: 1
-        max_duration_candles: 50
 
     # ═══════════════════════════════════════════════════════
     # Block 2 - 지속 구간
@@ -66,9 +63,6 @@ block_graph:
           expression: "current.close < 10000"
           description: "가격 이탈"
 
-      parameters:
-        min_duration_candles: 1
-        max_duration_candles: 30
 
     # ═══════════════════════════════════════════════════════
     # Block 3 - 추가 상승
@@ -89,9 +83,6 @@ block_graph:
           expression: "current.volume < 500000"
           description: "거래량 소진"
 
-      parameters:
-        min_duration_candles: 1
-        max_duration_candles: 20
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 블록 간 관계 (엣지)

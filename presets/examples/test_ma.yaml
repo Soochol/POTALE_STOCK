@@ -20,8 +20,5 @@ block_graph:
           expression: "current.close < ma(60)"
           description: "종가가 60일 이동평균 미만"
 
-      parameters:
-        min_duration_candles: 1
-        max_duration_candles: 10
 
   edges: []

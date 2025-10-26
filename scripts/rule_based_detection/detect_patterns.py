@@ -312,7 +312,7 @@ def detect_patterns_for_ticker(
 
             progress.update(task, completed=True)
 
-            # Extract all blocks from patterns for compatibility
+            # Extract all blocks from patterns (for statistics display only)
             detections = []
             for pattern in patterns:
                 detections.extend(pattern.blocks.values())
@@ -330,14 +330,34 @@ def detect_patterns_for_ticker(
         console.print("[cyan]5. Database operations...[/cyan]")
         console.print(f"   [green]OK[/green] Patterns auto-saved by Orchestrator")
 
-        # Also save individual blocks for compatibility
-        if detections:
-            try:
-                repo = DynamicBlockRepositoryImpl(session)
-                saved_detections = repo.save_all(detections)
-                console.print(f"   [green]OK[/green] Saved {len(saved_detections)} blocks to dynamic_block_detection\n")
-            except Exception as e:
-                console.print(f"   [red]WARNING[/red] Block save failed: {e}\n")
+        # NOTE (2025-10-26): Blocks are already saved as JSON in seed_pattern.block_features
+        # Saving them again to dynamic_block_detection causes duplication.
+        # This section is disabled until we determine if dynamic_block_detection table is needed.
+        #
+        # Background: With the Multi-Pattern Tree system (Option D refactoring),
+        # blocks are stored as part of the pattern in seed_pattern.block_features column.
+        # The dynamic_block_detection table may be redundant for the new system.
+        #
+        # TODO: Determine if any code relies on reading from dynamic_block_detection table.
+        # If not, remove this save operation entirely and potentially deprecate the table.
+
+        if False:  # Temporarily disabled to prevent duplication
+            # Also save individual blocks for compatibility
+            if detections:
+                try:
+                    console.print(f"   [cyan]DEBUG[/cyan] About to save {len(detections)} blocks...")
+                    repo = DynamicBlockRepositoryImpl(session)
+                    saved_detections = repo.save_all(detections)
+                    console.print(f"   [green]OK[/green] Saved {len(saved_detections)} blocks to dynamic_block_detection\n")
+
+                    # DEBUG: Check database count after save
+                    block_count = session.execute(
+                        "SELECT COUNT(*) FROM dynamic_block_detection WHERE ticker=:ticker",
+                        {'ticker': ticker}
+                    ).scalar()
+                    console.print(f"   [cyan]DEBUG[/cyan] Database now has {block_count} blocks for {ticker}\n")
+                except Exception as e:
+                    console.print(f"   [red]WARNING[/red] Block save failed: {e}\n")
     else:
         console.print("[yellow]5. Skipping save (dry-run mode)[/yellow]\n")
 
@@ -396,6 +416,16 @@ def detect_patterns_for_ticker(
         console.print()
     else:
         console.print("[yellow]No blocks detected.[/yellow]\n")
+
+    # Commit transaction (if not dry-run)
+    if not dry_run:
+        try:
+            session.commit()
+            console.print("[green]OK[/green] Database transaction committed\n")
+        except Exception as e:
+            session.rollback()
+            console.print(f"[red]ERROR[/red] Database commit failed: {e}\n")
+            raise
 
     session.close()
     return detections

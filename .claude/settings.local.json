@@ -119,7 +119,22 @@
       "Bash(del:*)",
       "Bash(/c/myCode/potale_stock/.venv/Scripts/python.exe scripts/rule_based_detection/detect_patterns.py --ticker 025980 --config presets/examples/test1_alt.yaml --from-date 2020-01-01)",
       "Bash(xargs -r kill:*)",
-      "Bash(if exist scriptsreentrydetect_reentry.py del scriptsreentrydetect_reentry.py)"
+      "Bash(if exist scriptsreentrydetect_reentry.py del scriptsreentrydetect_reentry.py)",
+      "Bash(\"/c/myCode/potale_stock/.venv/Scripts/python.exe\" migrations/migrate_add_virtual_block_system.py)",
+      "Bash(PYTHONIOENCODING=utf-8 echo:*)",
+      "Bash(if [ -f data/database/stock_data.db ])",
+      "Bash(then rm data/database/stock_data.db)",
+      "Bash(else echo \"DB not found\")",
+      "Bash(for db in data/database/stock_data_backup*.db)",
+      "Bash(do echo \"=== $db ===\")",
+      "Bash(tee:*)",
+      "Bash(/c/myCode/potale_stock/.venv/Scripts/python.exe:*)",
+      "Bash(cmd /c \"c:\\myCode\\potale_stock\\.venv\\Scripts\\python.exe scripts\\rule_based_detection\\detect_patterns.py --ticker 025980 --config presets\\examples\\test_simple_conditions.yaml --from-date 2015-01-01\")",
+      "Bash(for file in presets/examples/test_simple_conditions.yaml presets/examples/test_virtual_block.yaml)",
+      "Bash(for file in extended_pattern_example.yaml simple_pattern_example.yaml with_redetection_example.yaml seed_redetection_pair.yaml redetection_simple.yaml)",
+      "Bash(do echo \"Processing $file...\")",
+      "Bash(for file in test1.yaml test1_alt_block1_only.yaml test1_alt_minimal.yaml test1_alt_debug.yaml test_debug_simple.yaml test_volume_only.yaml test_ma.yaml test_direct.yaml)",
+      "Bash(\"/c/myCode/potale_stock/.venv/Scripts/python.exe\" -c \"from src.application.services.block_graph_loader import BlockGraphLoader; graph = BlockGraphLoader.load_from_yaml(''presets/examples/test1_alt.yaml''); print(f''✅ YAML loaded successfully: {len(graph.nodes)} nodes'')\")"
     ],
     "deny": [],
     "ask": []

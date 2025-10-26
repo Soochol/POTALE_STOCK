@@ -46,7 +46,7 @@ block_graph:
           description: "거래량이 120일 평균 대비 2.5배 이상"
 
         - name: "high_surge_rate"
-          expression: "prev and ((current.high - prev.close) / prev.close * 100) >= 10.0"
+          expression: "prev != None and ((current.high - prev.close) / prev.close * 100) >= 10.0"
           description: "고가 등락률 (전일 종가 대비) 10% 이상"
 
       # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
@@ -56,9 +56,6 @@ block_graph:
           description: "저가가 60일 이동평균 아래로 터치"
 
       # 블록 파라미터
-      parameters:
-        min_duration: 1
-        max_duration: 100
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 블록 간 관계 (엣지)

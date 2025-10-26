@@ -53,9 +53,6 @@ block_graph:
           expression: "current.close < ma(all_stocks, 120) * 0.97"
           description: "Close < 120-day MA * 0.97"
 
-      parameters:
-        min_duration: 1
-        max_duration: 150
 
       metadata:
         color: "#FFB6B6"
@@ -82,9 +79,6 @@ block_graph:
           expression: "current.volume < avg(all_stocks[-20:], 'volume') * 0.9"
           description: "Volume < 20-day avg * 0.9"
 
-      parameters:
-        min_duration: 1
-        max_duration: 100
 
       metadata:
         color: "#8FE7D7"
@@ -110,9 +104,6 @@ block_graph:
           expression: "current.volume < avg(all_stocks[-20:], 'volume') * 1.2"
           description: "Volume < 20-day avg * 1.2"
 
-      parameters:
-        min_duration: 1
-        max_duration: 80
 
       metadata:
         color: "#C5F1E7"

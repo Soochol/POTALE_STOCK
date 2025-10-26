@@ -26,8 +26,5 @@ block_graph:
           expression: "current.low < ma(all_stocks, 60)"
           description: "저가가 60일 이동평균 아래로 터치"
 
-      parameters:
-        min_duration: 1
-        max_duration: 100
 
   edges: []

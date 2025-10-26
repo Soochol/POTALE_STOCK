@@ -56,6 +56,13 @@ class DynamicBlockDetector:
         """
         주가 데이터에서 블록 감지
 
+        .. deprecated::
+            이 메서드는 멀티패턴 지원을 위해 deprecated되었습니다.
+            대신 SeedPatternDetectionOrchestrator를 사용하세요.
+
+            내부적으로는 여전히 작동하지만, 패턴별 독립 평가가 필요한 경우
+            evaluate_entry_condition(), evaluate_exit_condition()을 직접 사용하세요.
+
         Args:
             ticker: 종목 코드
             stocks: 주가 데이터 리스트 (시간순 정렬)
@@ -64,6 +71,10 @@ class DynamicBlockDetector:
 
         Returns:
             감지된 블록 리스트 (신규 + 업데이트된 기존 블록)
+
+        Note:
+            이 메서드는 여전히 동작하지만, 멀티패턴 탐지를 제대로 지원하지 못합니다.
+            새 코드에서는 SeedPatternDetectionOrchestrator.detect_patterns()를 사용하세요.
         """
         if active_blocks is None:
             active_blocks = []
@@ -147,6 +158,118 @@ class DynamicBlockDetector:
 
         # 모든 블록 반환 (active_blocks_map에 모든 블록이 포함됨)
         return list(active_blocks_map.values())
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # Public API - Stateless 조건 평가 메서드 (Option D 리팩토링)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def evaluate_entry_condition(
+        self,
+        node: BlockNode,
+        context: dict,
+        condition_name: str = "seed"
+    ) -> bool:
+        """
+        블록 진입 조건 평가 (stateless)
+
+        상태 관리 없이 순수하게 조건만 평가합니다.
+        패턴별 독립 평가를 위해 사용됩니다.
+
+        Args:
+            node: 평가할 블록 노드
+            context: 평가 컨텍스트
+                - current: 현재 주가
+                - prev: 이전 주가
+                - all_stocks: 전체 주가 데이터
+                - block1, block2, ...: 활성 블록들 (패턴별)
+            condition_name: 조건 이름 ("seed" 또는 "redetection")
+
+        Returns:
+            진입 조건 만족 여부
+
+        Example:
+            >>> detector = DynamicBlockDetector(graph, engine)
+            >>> context = {
+            ...     'current': stock,
+            ...     'prev': prev_stock,
+            ...     'all_stocks': all_stocks,
+            ...     'block1': pattern.blocks['block1']
+            ... }
+            >>> detector.evaluate_entry_condition(block2_node, context)
+            True
+
+        Note:
+            Option D 리팩토링의 핵심 메서드.
+            Orchestrator가 패턴별로 컨텍스트를 구성하여 호출합니다.
+        """
+        return self._check_entry_conditions(node, context, condition_name)
+
+    def evaluate_exit_condition(
+        self,
+        node: BlockNode,
+        context: dict,
+        condition_name: str = "seed"
+    ) -> Optional[str]:
+        """
+        블록 종료 조건 평가 (stateless)
+
+        상태 관리 없이 순수하게 조건만 평가합니다.
+
+        Args:
+            node: 평가할 블록 노드
+            context: 평가 컨텍스트
+            condition_name: 조건 이름
+
+        Returns:
+            만족된 종료 조건 표현식 (만족 안 하면 None)
+
+        Example:
+            >>> exit_expr = detector.evaluate_exit_condition(block1_node, context)
+            >>> if exit_expr:
+            ...     print(f"Exit condition met: {exit_expr}")
+
+        Note:
+            EXISTS() 조건 vs 가격 조건을 구분하여 반환합니다.
+            Orchestrator는 이를 통해 종료일을 결정합니다.
+        """
+        return self._check_exit_conditions_with_reason(node, context, condition_name)
+
+    def evaluate_spot_strategy(
+        self,
+        current_node: BlockNode,
+        context: dict
+    ) -> Optional[DynamicBlockDetection]:
+        """
+        Spot 전략 평가 (stateless)
+
+        현재 노드가 spot으로 추가되어야 하는지 판단합니다.
+
+        Args:
+            current_node: 현재 평가 중인 노드
+            context: 평가 컨텍스트
+                - active_blocks: 패턴의 활성 블록 맵
+
+        Returns:
+            spot 추가 대상 블록 (추가하지 않으면 None)
+
+        Example:
+            >>> target_block = detector.evaluate_spot_strategy(block2_node, context)
+            >>> if target_block:
+            ...     target_block.add_spot(...)
+
+        Note:
+            SpotStrategy 패턴을 내부적으로 사용합니다.
+        """
+        active_blocks = context.get('active_blocks', {})
+        return self.spot_strategy.should_add_spot(
+            current_node=current_node,
+            context=context,
+            active_blocks=active_blocks
+        )
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # Private Helper Methods
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     def _find_last_valid_day(
         self,

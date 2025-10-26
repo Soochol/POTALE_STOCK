@@ -20,8 +20,5 @@ block_graph:
           expression: "current.volume < 1000000"
           description: "거래량 100만주 미만"
 
-      parameters:
-        min_duration_candles: 1
-        max_duration_candles: 10
 
   edges: []

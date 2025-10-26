@@ -23,7 +23,7 @@ block_graph:
       # 진입 조건 (AND 조건: 모두 만족해야 함)
       entry_conditions:
         - name: "high_surge_rate"
-          expression: "prev and ((current.high - prev.close) / prev.close) >= 0.10"
+          expression: "prev != None and ((current.high - prev.close) / prev.close) >= 0.10"
           description: "전날 종가 대비 당일 고가 상승률 10% 이상"
 
         - name: "trading_value_threshold"
@@ -44,10 +44,6 @@ block_graph:
           expression: "exists('block2')"
           description: "Block2가 시작되면 Block1 자동 종료"
 
-      # 블록 파라미터
-      parameters:
-        min_duration: 1
-        max_duration: 100
 
     # ═══════════════════════════════════════════════════════
     # Block 2 - Virtual Block 테스트용 (항상 spot으로 스킵됨)
@@ -66,7 +62,7 @@ block_graph:
           description: "Block1이 존재해야 Block2 시작 가능 (순차적 패턴)"
 
         - name: "high_surge_rate_easy"
-          expression: "prev and ((current.high - prev.close) / prev.close) >= 0.01"
+          expression: "prev != None and ((current.high - prev.close) / prev.close) >= 0.01"
           description: "전날 종가 대비 당일 고가 상승률 1% 이상 (테스트용 완화)"
 
         - name: "trading_value_threshold_easy"
@@ -96,10 +92,6 @@ block_graph:
           expression: "exists('block3')"
           description: "Block3가 시작되면 Block2 자동 종료"
 
-      # 블록 파라미터
-      parameters:
-        min_duration: 1
-        max_duration: 100
 
     # ═══════════════════════════════════════════════════════
     # Block 3 - Virtual Block2 존재 여부 확인용
@@ -118,7 +110,7 @@ block_graph:
           description: "Block2가 존재해야 Block3 시작 가능 (Virtual Block2도 인식되어야 함!)"
 
         - name: "high_surge_rate_easy"
-          expression: "prev and ((current.high - prev.close) / prev.close) >= 0.01"
+          expression: "prev != None and ((current.high - prev.close) / prev.close) >= 0.01"
           description: "전날 종가 대비 당일 고가 상승률 1% 이상 (테스트용 완화)"
 
         - name: "trading_value_threshold_easy"
@@ -131,10 +123,6 @@ block_graph:
           expression: "current.low < ma(60)"
           description: "저가가 60일 이동평균 아래로 터치"
 
-      # 블록 파라미터
-      parameters:
-        min_duration: 1
-        max_duration: 100
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 블록 간 관계 (엣지)

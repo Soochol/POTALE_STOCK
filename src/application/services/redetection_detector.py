@@ -171,11 +171,11 @@ class RedetectionDetector:
         # 모든 진입 조건 평가
         for condition_expr in block_node.reentry_entry_conditions:
             try:
-                if not self.expression_engine.evaluate(condition_expr, redet_context):
+                if not condition_expr.evaluate(self.expression_engine, redet_context):
                     return False
             except Exception as e:
                 logger.warning(
-                    f"Redetection entry condition evaluation failed: {condition_expr}",
+                    f"Redetection entry condition evaluation failed: {condition_expr}\nError: {str(e)}",
                     extra={
                         'block_id': parent_block.block_id,
                         'expression': condition_expr,
@@ -219,7 +219,7 @@ class RedetectionDetector:
         # 종료 조건 평가 (OR 조건: 하나라도 만족하면 종료)
         for condition_expr in block_node.reentry_exit_conditions:
             try:
-                if self.expression_engine.evaluate(condition_expr, redet_context):
+                if condition_expr.evaluate(self.expression_engine, redet_context):
                     # 종료 조건 만족 → 재탐지 종료
                     redetection.complete(current.date)
 
@@ -237,7 +237,7 @@ class RedetectionDetector:
 
             except Exception as e:
                 logger.warning(
-                    f"Redetection exit condition evaluation failed: {condition_expr}",
+                    f"Redetection exit condition evaluation failed: {condition_expr}\nError: {str(e)}",
                     extra={
                         'redetection_sequence': redetection.sequence,
                         'expression': condition_expr,

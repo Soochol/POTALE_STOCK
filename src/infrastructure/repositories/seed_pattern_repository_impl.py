@@ -26,17 +26,27 @@ class SeedPatternRepositoryImpl(SeedPatternRepository):
         self.session = session
 
     def save(self, seed_pattern: SeedPattern) -> SeedPattern:
-        """Seed pattern 저장 (생성 또는 업데이트)"""
+        """Seed pattern 저장 (생성 또는 업데이트) - UPSERT"""
         if seed_pattern.id:
-            # 업데이트
+            # ID가 있으면 ID로 업데이트
             model = self.session.query(SeedPatternModel).filter_by(id=seed_pattern.id).first()
             if not model:
                 raise ValueError(f"SeedPattern with id {seed_pattern.id} not found")
             self._update_model(model, seed_pattern)
         else:
-            # 생성
-            model = self._to_model(seed_pattern)
-            self.session.add(model)
+            # ID가 없으면 pattern_name으로 조회
+            existing = self.session.query(SeedPatternModel).filter_by(
+                pattern_name=seed_pattern.pattern_name
+            ).first()
+
+            if existing:
+                # 이미 존재하면 업데이트
+                self._update_model(existing, seed_pattern)
+                model = existing
+            else:
+                # 없으면 새로 생성
+                model = self._to_model(seed_pattern)
+                self.session.add(model)
 
         self.session.flush()
         return self._to_entity(model)

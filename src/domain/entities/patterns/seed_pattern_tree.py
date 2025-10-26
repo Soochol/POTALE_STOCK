@@ -257,7 +257,7 @@ class SeedPatternTree:
             if block.started_at and block.ended_at:
                 duration = (block.ended_at - block.started_at).days + 1
 
-            # BlockFeatures 생성
+            # Seed 블록 BlockFeatures 생성
             feature = BlockFeatures(
                 block_id=block.block_id,
                 block_type=block.block_type,
@@ -271,7 +271,8 @@ class SeedPatternTree:
                 min_volume=block.peak_volume or 0,
                 max_volume=block.peak_volume or 0,
                 peak_volume=block.peak_volume or 0,
-                avg_volume=block.peak_volume or 0
+                avg_volume=block.peak_volume or 0,
+                metadata={"condition_name": "seed"}
             )
             block_features.append(feature)
 
@@ -281,9 +282,50 @@ class SeedPatternTree:
             if block.peak_volume:
                 volumes.append(float(block.peak_volume))
 
+            # 재탐지 블록 추가 (NEW!)
+            for redet in block.redetections:
+                # Duration 계산
+                redet_duration = 0
+                if redet.started_at and redet.ended_at:
+                    redet_duration = (redet.ended_at - redet.started_at).days + 1
+
+                # 재탐지 BlockFeatures 생성
+                redet_feature = BlockFeatures(
+                    block_id=f"{block.block_id}_redet_{redet.sequence}",
+                    block_type=block.block_type,
+                    started_at=redet.started_at,
+                    ended_at=redet.ended_at,
+                    duration_candles=redet_duration,
+                    low_price=redet.peak_price,
+                    high_price=redet.peak_price,
+                    peak_price=redet.peak_price,
+                    peak_date=redet.started_at,  # RedetectionEvent에는 peak_date가 없으므로 started_at 사용
+                    min_volume=redet.peak_volume,
+                    max_volume=redet.peak_volume,
+                    peak_volume=redet.peak_volume,
+                    avg_volume=redet.peak_volume,
+                    metadata={
+                        "condition_name": "redetection",
+                        "parent_block_id": block.block_id,
+                        "redetection_sequence": redet.sequence
+                    }
+                )
+                block_features.append(redet_feature)
+
         # 정규화
         price_shape = SeedPattern.normalize_sequence(prices) if prices else []
         volume_shape = SeedPattern.normalize_sequence(volumes) if volumes else []
+
+        # Status 매핑: PatternStatus → SeedPatternStatus
+        # ACTIVE/COMPLETED → ACTIVE (redetection 가능)
+        # ARCHIVED → ARCHIVED (보관됨)
+        from src.domain.entities.patterns.seed_pattern import SeedPatternStatus
+
+        if self.status == PatternStatus.ARCHIVED:
+            seed_status = SeedPatternStatus.ARCHIVED
+        else:
+            # ACTIVE 또는 COMPLETED → ACTIVE (완료되었지만 redetection 가능)
+            seed_status = SeedPatternStatus.ACTIVE
 
         # SeedPattern 생성
         return SeedPattern(
@@ -293,7 +335,8 @@ class SeedPatternTree:
             detection_date=self.root_block.started_at or date.today(),
             block_features=block_features,
             price_shape=price_shape,
-            volume_shape=volume_shape
+            volume_shape=volume_shape,
+            status=seed_status
         )
 
     def get_metadata(self) -> Dict[str, Any]:

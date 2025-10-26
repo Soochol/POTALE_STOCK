@@ -88,9 +88,6 @@ block_graph:
             expression: "current.volume < volume_ma(20) * 0.5"
             description: "거래량이 20일 평균의 50% 이하로 감소"
 
-      parameters:
-        min_duration: 1
-        max_duration: 100
 
     # ═══════════════════════════════════════════════════════
     # Block 2 - 더 강한 거래대금 + 거래량 폭발
@@ -141,9 +138,6 @@ block_graph:
           - expression: "candles_between(active_redetection.started_at, current.date) >= 15"
             description: "재탐지 시작 후 15일 경과"
 
-      parameters:
-        min_duration: 1
-        max_duration: 100
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 블록 간 관계 (엣지)

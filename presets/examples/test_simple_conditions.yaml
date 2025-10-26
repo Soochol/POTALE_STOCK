@@ -1,0 +1,56 @@
+version: "1.0"
+
+block_graph:
+  pattern_type: "seed"
+  root_node: "block1"
+
+  nodes:
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "High Trading Value Block"
+      description: "거래대금 300억 이상 + 10% 상승"
+
+      entry_conditions:
+        - name: "high_surge_rate"
+          expression: "prev != None and ((current.high - prev.close) / prev.close) >= 0.10"
+          description: "전날 종가 대비 당일 고가 상승률 10% 이상"
+
+        - name: "trading_value_threshold"
+          expression: "current.trading_value >= 30000000000"
+          description: "당일 거래대금 300억 이상"
+
+      exit_conditions:
+        - name: "low_below_ma60"
+          expression: "current.low < ma(60)"
+          description: "저가가 60일 이동평균 아래로 터치"
+
+    block2:
+      block_id: "block2"
+      block_type: 2
+      name: "Super High Trading Value Block"
+      description: "거래대금 1000억 이상"
+
+      entry_conditions:
+        - name: "requires_block1"
+          expression: "exists('block1')"
+          description: "Block1이 존재해야 Block2 시작 가능"
+
+        - name: "high_surge_rate"
+          expression: "prev != None and ((current.high - prev.close) / prev.close) >= 0.10"
+          description: "전날 종가 대비 당일 고가 상승률 10% 이상"
+
+        - name: "ultra_high_trading_value"
+          expression: "current.trading_value >= 100000000000"
+          description: "당일 거래대금 1000억 이상"
+
+      exit_conditions:
+        - name: "low_below_ma60"
+          expression: "current.low < ma(60)"
+          description: "저가가 60일 이동평균 아래로 터치"
+
+  edges:
+    - from_block: "block1"
+      to_block: "block2"
+      edge_type: "sequential"
+      priority: 1

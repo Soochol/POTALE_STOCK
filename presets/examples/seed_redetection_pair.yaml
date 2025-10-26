@@ -44,9 +44,6 @@ seed_pattern:
             expression: "current.close < ma(all_stocks, 120) * 0.95"
             description: "120일 이동평균 대비 5% 이상 하락"
 
-        parameters:
-          min_duration: 1
-          max_duration: 150
 
         metadata:
           color: "#FF6B6B"
@@ -73,9 +70,6 @@ seed_pattern:
             expression: "current.volume < avg(all_stocks[-20:], 'volume') * 0.8"
             description: "거래량이 20일 평균 80% 미만으로 감소"
 
-        parameters:
-          min_duration: 1
-          max_duration: 100
 
         metadata:
           color: "#4ECDC4"
@@ -101,9 +95,6 @@ seed_pattern:
             expression: "current.volume < avg(all_stocks[-20:], 'volume')"
             description: "거래량이 20일 평균 미만"
 
-        parameters:
-          min_duration: 1
-          max_duration: 80
 
         metadata:
           color: "#95E1D3"
@@ -185,9 +176,6 @@ redetection_pattern:
             expression: "current.close < ma(all_stocks, 120) * 0.97"
             description: "120일 이동평균 대비 3% 이상 하락 (seed: 5%)"
 
-        parameters:
-          min_duration: 1
-          max_duration: 150
 
         metadata:
           color: "#FFB6B6"
@@ -221,9 +209,6 @@ redetection_pattern:
             expression: "current.volume < avg(all_stocks[-20:], 'volume') * 0.9"
             description: "거래량 평균 90% 미만 (seed: 80%)"
 
-        parameters:
-          min_duration: 1
-          max_duration: 100
 
         metadata:
           color: "#8FE7D7"
@@ -256,9 +241,6 @@ redetection_pattern:
             expression: "current.volume < avg(all_stocks[-20:], 'volume') * 1.2"
             description: "거래량 평균 120% 미만"
 
-        parameters:
-          min_duration: 1
-          max_duration: 80
 
         metadata:
           color: "#C5F1E7"

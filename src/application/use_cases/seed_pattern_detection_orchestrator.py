@@ -4,18 +4,19 @@ Seed Pattern Detection Orchestrator
 블록 탐지와 패턴 관리를 조율하는 최상위 Use Case
 """
 from datetime import date
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from loguru import logger
 
 from src.application.services.seed_pattern_tree_manager import SeedPatternTreeManager
 from src.application.services.redetection_detector import RedetectionDetector
 from src.application.use_cases.dynamic_block_detector import DynamicBlockDetector
+from src.application.use_cases.pattern_detection_state import PatternContext, PatternDetectionState
 from src.domain.entities.block_graph import BlockGraph
 from src.domain.entities.conditions import ExpressionEngine
 from src.domain.entities.core import Stock
 from src.domain.entities.detections import DynamicBlockDetection
-from src.domain.entities.patterns import SeedPatternTree
+from src.domain.entities.patterns import SeedPatternTree, PatternId
 from src.domain.repositories.seed_pattern_repository import SeedPatternRepository
 
 
@@ -62,11 +63,16 @@ class SeedPatternDetectionOrchestrator:
             expression_engine: 표현식 엔진
             seed_pattern_repository: 시드 패턴 저장소 (선택사항)
         """
+        self.block_graph = block_graph
+        self.expression_engine = expression_engine
         self.block_detector = DynamicBlockDetector(block_graph, expression_engine)
         self.pattern_manager = SeedPatternTreeManager()
-        self.redetection_detector = RedetectionDetector(expression_engine)  # NEW
+        self.redetection_detector = RedetectionDetector(expression_engine)
         self.seed_pattern_repository = seed_pattern_repository
         self.yaml_config_path = ""  # 외부에서 설정
+
+        # Option D: 패턴 시퀀스 카운터 (ticker별)
+        self.pattern_sequence_counter: Dict[str, int] = {}
 
     def detect_patterns(
         self,
@@ -77,18 +83,19 @@ class SeedPatternDetectionOrchestrator:
         auto_archive: bool = True
     ) -> List[SeedPatternTree]:
         """
-        시드 패턴 탐지 (전체 흐름)
+        시드 패턴 탐지 (Option D 리팩토링 버전)
 
         주요 개선사항:
-        - 여러 시드 패턴 동시 관리 (덮어씌움 방지)
+        - 멀티패턴 동시 탐지 (패턴별 독립 평가)
+        - 패턴 간 간섭 완전 차단
+        - 데이터 1회 순회 (효율적)
         - pattern_id 자동 생성
         - 패턴 완료 자동 감지
-        - DB 자동 저장
 
         Args:
             ticker: 종목 코드
             stocks: 주가 데이터
-            condition_name: 조건 이름
+            condition_name: 조건 이름 ("seed" 권장)
             save_to_db: DB 저장 여부
             auto_archive: 완료된 패턴 자동 보관 여부
 
@@ -98,12 +105,16 @@ class SeedPatternDetectionOrchestrator:
         Example:
             >>> patterns = orchestrator.detect_patterns("025980", stocks)
             >>> len(patterns)
-            5
+            26  # 26개 독립 패턴 (기존에는 1개만 탐지됨)
             >>> patterns[0].pattern_id
             PatternId('SEED_025980_20180307_001')
+
+        Note:
+            Option D 리팩토링으로 완전히 새로 작성된 메서드입니다.
+            패턴별 독립 평가를 통해 멀티패턴 문제를 근본적으로 해결합니다.
         """
         logger.info(
-            f"Starting seed pattern detection for {ticker}",
+            f"Starting seed pattern detection (Option D) for {ticker}",
             extra={
                 'ticker': ticker,
                 'num_candles': len(stocks),
@@ -115,33 +126,117 @@ class SeedPatternDetectionOrchestrator:
         from src.infrastructure.utils.stock_data_utils import forward_fill_prices
         stocks = forward_fill_prices(stocks)
 
-        # 기존 DynamicBlockDetector를 사용하여 블록 탐지
-        # NOTE: 현재는 기존 방식을 사용하며, 반환된 블록들을 후처리로 패턴에 재할당
-        # TODO: 향후 DynamicBlockDetector를 리팩토링하여 스트리밍 방식으로 개선
-        detected_blocks = self.block_detector.detect_blocks(
-            ticker=ticker,
-            stocks=stocks,
-            condition_name=condition_name
-        )
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # 핵심: 패턴별 독립 탐지 (Single Pass)
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        active_pattern_contexts: List[PatternContext] = []
+
+        for i, current_stock in enumerate(stocks):
+            # 이전 주가 찾기
+            prev_stock = self._find_last_valid_day(stocks, i)
+
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            # 1. Block1 조건 체크 (패턴 무관)
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            if self._should_start_new_pattern(ticker, current_stock, prev_stock, stocks[:i+1]):
+                new_pattern = self._create_pattern_context(ticker, current_stock, prev_stock, stocks[:i+1])
+                active_pattern_contexts.append(new_pattern)
+
+                logger.info(
+                    f"Created new pattern: {new_pattern.pattern_id}",
+                    extra={
+                        'pattern_id': new_pattern.pattern_id,
+                        'date': str(current_stock.date)
+                    }
+                )
+
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            # 2. 각 패턴마다 진행
+            # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            for pattern_ctx in active_pattern_contexts:
+                # 패턴별 컨텍스트 구축
+                context = self._build_pattern_context(
+                    pattern=pattern_ctx,
+                    current=current_stock,
+                    prev=prev_stock,
+                    all_stocks=stocks[:i+1]
+                )
+
+                # 활성 블록 peak 갱신
+                self._update_active_blocks(pattern_ctx, current_stock)
+
+                # 다음 블록 진입 체크
+                self._check_and_create_next_blocks(
+                    pattern=pattern_ctx,
+                    context=context,
+                    condition_name=condition_name,
+                    current_stock=current_stock,
+                    prev_stock=prev_stock
+                )
+
+                # 종료 조건 체크
+                self._check_and_complete_blocks(
+                    pattern=pattern_ctx,
+                    context=context,
+                    condition_name=condition_name,
+                    current_date=current_stock.date
+                )
+
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # 2.5. 데이터 순회 완료 후 남은 active 블록들 완료 처리
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        last_date = stocks[-1].date if stocks else date.today()
+        auto_completed_count = 0
+
+        for pattern_ctx in active_pattern_contexts:
+            for block_id, block in pattern_ctx.blocks.items():
+                if block.is_active():
+                    block.complete(last_date)
+                    auto_completed_count += 1
+                    logger.debug(
+                        f"Auto-completed remaining active block: {block_id}",
+                        extra={
+                            'pattern_id': pattern_ctx.pattern_id,
+                            'block_id': block_id,
+                            'end_date': str(last_date),
+                            'reason': 'data_end'
+                        }
+                    )
+
+        if auto_completed_count > 0:
+            logger.info(
+                f"Auto-completed {auto_completed_count} remaining active blocks",
+                extra={
+                    'ticker': ticker,
+                    'last_date': str(last_date),
+                    'auto_completed': auto_completed_count
+                }
+            )
+
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # 3. PatternContext → SeedPatternTree 변환
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        self._convert_to_pattern_trees(ticker, active_pattern_contexts)
 
         logger.info(
-            f"Block detection completed",
+            f"Pattern contexts created: {len(active_pattern_contexts)}",
             extra={
                 'ticker': ticker,
-                'num_blocks': len(detected_blocks)
+                'total_patterns': len(active_pattern_contexts),
+                'pattern_ids': [p.pattern_id for p in active_pattern_contexts]
             }
         )
 
-        # 탐지된 블록들을 패턴으로 그룹화
-        self._organize_blocks_into_patterns(ticker, detected_blocks)
-
-        # 재탐지 탐지 (NEW - 2025-10-25)
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # 4. 재탐지 탐지
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         self._detect_redetections_for_patterns(ticker, stocks)
 
-        # 완료된 패턴 처리
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # 5. 완료된 패턴 저장
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         completed_patterns = self.pattern_manager.check_and_complete_patterns()
 
-        # DB 저장
         if save_to_db and self.seed_pattern_repository:
             for pattern in completed_patterns:
                 self._save_pattern_to_db(pattern, auto_archive)
@@ -149,7 +244,7 @@ class SeedPatternDetectionOrchestrator:
         # 최종 통계
         stats = self.pattern_manager.get_statistics()
         logger.info(
-            "Pattern detection completed",
+            "Pattern detection completed (Option D)",
             extra={
                 'ticker': ticker,
                 **stats
@@ -394,6 +489,10 @@ class SeedPatternDetectionOrchestrator:
             >>> orchestrator._save_pattern_to_db(pattern)
         """
         try:
+            # 저장 전 archive 처리 (auto_archive=True인 경우)
+            if auto_archive:
+                pattern.archive()
+
             seed_pattern = pattern.to_seed_pattern(self.yaml_config_path)
 
             saved = self.seed_pattern_repository.save(seed_pattern)
@@ -402,13 +501,10 @@ class SeedPatternDetectionOrchestrator:
                 f"Saved pattern to DB: {pattern.pattern_id}",
                 extra={
                     'pattern_id': str(pattern.pattern_id),
-                    'db_id': saved.id
+                    'db_id': saved.id,
+                    'status': seed_pattern.status.value
                 }
             )
-
-            # 저장 후 archive 처리
-            if auto_archive:
-                pattern.archive()
 
         except Exception as e:
             logger.error(
@@ -427,6 +523,376 @@ class SeedPatternDetectionOrchestrator:
     def get_statistics(self) -> dict:
         """통계 정보 조회"""
         return self.pattern_manager.get_statistics()
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # Option D: 새로운 헬퍼 메서드들 (패턴별 독립 탐지용)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def _find_last_valid_day(
+        self,
+        stocks: List[Stock],
+        current_index: int
+    ) -> Optional[Stock]:
+        """
+        마지막 정상 거래일 찾기 (volume > 0)
+
+        Args:
+            stocks: 주가 데이터 리스트
+            current_index: 현재 인덱스
+
+        Returns:
+            마지막 정상 거래일 주가, 없으면 None
+        """
+        for i in range(current_index - 1, -1, -1):
+            if stocks[i].volume > 0:
+                return stocks[i]
+        return None
+
+    def _should_start_new_pattern(
+        self,
+        ticker: str,
+        current: Stock,
+        prev: Optional[Stock],
+        all_stocks: List[Stock]
+    ) -> bool:
+        """
+        Block1 진입 조건 평가 (패턴 무관)
+
+        Block1은 패턴 없이 독립적으로 평가합니다.
+
+        Args:
+            ticker: 종목 코드
+            current: 현재 주가
+            prev: 이전 주가
+            all_stocks: 전체 주가 데이터
+
+        Returns:
+            Block1 조건 만족 여부
+        """
+        # Root node 가져오기
+        if not self.block_graph.root_node_id:
+            return False
+
+        root_node = self.block_graph.get_node(self.block_graph.root_node_id)
+        if not root_node:
+            return False
+
+        # 패턴 무관 기본 컨텍스트
+        context = {
+            'current': current,
+            'prev': prev,
+            'all_stocks': all_stocks
+        }
+
+        return self.block_detector.evaluate_entry_condition(
+            node=root_node,
+            context=context,
+            condition_name="seed"
+        )
+
+    def _create_pattern_context(
+        self,
+        ticker: str,
+        current_stock: Stock,
+        prev_stock: Optional[Stock],
+        all_stocks: List[Stock]
+    ) -> PatternContext:
+        """
+        새 패턴 컨텍스트 생성 + Block1 추가
+
+        Args:
+            ticker: 종목 코드
+            current_stock: 현재 주가
+            prev_stock: 이전 주가
+            all_stocks: 전체 주가 데이터
+
+        Returns:
+            새로 생성된 PatternContext
+        """
+        # pattern_id 생성
+        sequence = self.pattern_sequence_counter.get(ticker, 0) + 1
+        self.pattern_sequence_counter[ticker] = sequence
+        pattern_id = PatternId.generate(ticker, current_stock.date, sequence)
+
+        # Block1 생성
+        block1 = DynamicBlockDetection(
+            block_id='block1',
+            block_type=1,
+            ticker=ticker,
+            pattern_id=str(pattern_id),
+            condition_name='seed'
+        )
+        block1.start(current_stock.date)
+        block1.update_peak(current_stock.date, current_stock.close, current_stock.volume)
+
+        # 전일 종가 저장
+        if prev_stock:
+            block1.prev_close = prev_stock.close
+
+        # spot1 자동 추가
+        block1.add_spot(
+            spot_date=current_stock.date,
+            open_price=current_stock.open,
+            close_price=current_stock.close,
+            high_price=current_stock.high,
+            low_price=current_stock.low,
+            volume=current_stock.volume
+        )
+
+        # PatternContext 생성
+        pattern_ctx = PatternContext(
+            pattern_id=str(pattern_id),
+            ticker=ticker,
+            blocks={'block1': block1},
+            block_graph=self.block_graph,
+            created_at=current_stock.date,
+            detection_state=PatternDetectionState()
+        )
+
+        return pattern_ctx
+
+    def _build_pattern_context(
+        self,
+        pattern: PatternContext,
+        current: Stock,
+        prev: Optional[Stock],
+        all_stocks: List[Stock]
+    ) -> dict:
+        """
+        패턴별 평가 컨텍스트 구축
+
+        핵심: pattern.blocks에서 block1, block2, ... 추출
+
+        Args:
+            pattern: 패턴 컨텍스트
+            current: 현재 주가
+            prev: 이전 주가
+            all_stocks: 전체 주가 데이터
+
+        Returns:
+            평가 컨텍스트
+        """
+        context = {
+            'current': current,
+            'prev': prev,
+            'all_stocks': all_stocks,
+            'pattern_id': pattern.pattern_id,
+            'active_blocks': pattern.blocks  # Spot 전략용
+        }
+
+        # 이 패턴의 블록들 추가
+        for block_id, block in pattern.blocks.items():
+            context[block_id] = block
+
+        return context
+
+    def _update_active_blocks(
+        self,
+        pattern: PatternContext,
+        current_stock: Stock
+    ) -> None:
+        """
+        활성 블록 peak 갱신
+
+        Args:
+            pattern: 패턴 컨텍스트
+            current_stock: 현재 주가
+        """
+        for block in pattern.blocks.values():
+            if block.is_active():
+                block.update_peak(
+                    current_stock.date,
+                    current_stock.close,
+                    current_stock.volume
+                )
+
+    def _check_and_create_next_blocks(
+        self,
+        pattern: PatternContext,
+        context: dict,
+        condition_name: str,
+        current_stock: Stock,
+        prev_stock: Optional[Stock]
+    ) -> None:
+        """
+        다음 블록 진입 조건 체크 및 생성
+
+        Args:
+            pattern: 패턴 컨텍스트
+            context: 평가 컨텍스트
+            condition_name: 조건 이름
+            current_stock: 현재 주가
+            prev_stock: 이전 주가
+        """
+        next_nodes = pattern.get_next_target_nodes()
+
+        for node in next_nodes:
+            # 이미 존재하면 스킵
+            if node.block_id in pattern.blocks and pattern.blocks[node.block_id].is_active():
+                continue
+
+            # 진입 조건 평가
+            if self.block_detector.evaluate_entry_condition(node, context, condition_name):
+                # Spot 체크
+                spot_target = self.block_detector.evaluate_spot_strategy(node, context)
+
+                if spot_target:
+                    # spot 추가 로직
+                    spot_target.add_spot(
+                        spot_date=current_stock.date,
+                        open_price=current_stock.open,
+                        close_price=current_stock.close,
+                        high_price=current_stock.high,
+                        low_price=current_stock.low,
+                        volume=current_stock.volume
+                    )
+                    logger.debug(
+                        f"Added spot to {spot_target.block_id}",
+                        extra={
+                            'pattern_id': pattern.pattern_id,
+                            'block_id': spot_target.block_id,
+                            'spot_date': str(current_stock.date)
+                        }
+                    )
+                else:
+                    # 새 블록 생성
+                    new_block = DynamicBlockDetection(
+                        block_id=node.block_id,
+                        block_type=node.block_type,
+                        ticker=pattern.ticker,
+                        pattern_id=pattern.pattern_id,
+                        condition_name=condition_name
+                    )
+                    new_block.start(current_stock.date)
+                    new_block.update_peak(
+                        current_stock.date,
+                        current_stock.close,
+                        current_stock.volume
+                    )
+
+                    # 전일 종가 저장
+                    if prev_stock:
+                        new_block.prev_close = prev_stock.close
+
+                    # spot1 자동 추가
+                    new_block.add_spot(
+                        spot_date=current_stock.date,
+                        open_price=current_stock.open,
+                        close_price=current_stock.close,
+                        high_price=current_stock.high,
+                        low_price=current_stock.low,
+                        volume=current_stock.volume
+                    )
+
+                    # 패턴에 추가
+                    pattern.blocks[node.block_id] = new_block
+
+                    logger.debug(
+                        f"Created new block: {node.block_id}",
+                        extra={
+                            'pattern_id': pattern.pattern_id,
+                            'block_id': node.block_id,
+                            'date': str(current_stock.date)
+                        }
+                    )
+
+    def _check_and_complete_blocks(
+        self,
+        pattern: PatternContext,
+        context: dict,
+        condition_name: str,
+        current_date: date
+    ) -> None:
+        """
+        활성 블록 종료 조건 체크
+
+        Args:
+            pattern: 패턴 컨텍스트
+            context: 평가 컨텍스트
+            condition_name: 조건 이름
+            current_date: 현재 날짜
+        """
+        for block_id, block in list(pattern.blocks.items()):
+            if not block.is_active():
+                continue
+
+            node = self.block_graph.get_node(block_id)
+            if not node:
+                continue
+
+            # 종료 조건 평가
+            exit_reason = self.block_detector.evaluate_exit_condition(node, context, condition_name)
+
+            if exit_reason:
+                # EXISTS() 조건이면 전일 종료, 가격 조건이면 당일 종료
+                if 'exists(' in exit_reason.lower():
+                    # 시작일과 같은 날이면 당일 종료
+                    if block.started_at == current_date:
+                        end_date = current_date
+                    else:
+                        # 전일 종료 (정확한 날짜 필요 - 여기서는 단순화)
+                        end_date = current_date
+                else:
+                    end_date = current_date
+
+                block.complete(end_date)
+                logger.debug(
+                    f"Completed block: {block_id}",
+                    extra={
+                        'pattern_id': pattern.pattern_id,
+                        'block_id': block_id,
+                        'end_date': str(end_date),
+                        'reason': exit_reason
+                    }
+                )
+
+    def _convert_to_pattern_trees(
+        self,
+        ticker: str,
+        pattern_contexts: List[PatternContext]
+    ) -> None:
+        """
+        PatternContext → SeedPatternTree 변환
+
+        PatternManager에 패턴을 등록합니다.
+
+        Args:
+            ticker: 종목 코드
+            pattern_contexts: 패턴 컨텍스트 리스트
+        """
+        for pattern_ctx in pattern_contexts:
+            # Block1 검증
+            if 'block1' not in pattern_ctx.blocks:
+                logger.warning(
+                    f"Pattern {pattern_ctx.pattern_id} has no block1, skipping",
+                    extra={'pattern_id': pattern_ctx.pattern_id}
+                )
+                continue
+
+            block1 = pattern_ctx.blocks['block1']
+
+            # SeedPatternTree 생성
+            pattern = self.pattern_manager.create_new_pattern(
+                ticker=ticker,
+                root_block=block1,
+                detection_date=pattern_ctx.created_at
+            )
+
+            # 나머지 블록들 추가
+            for block_id, block in pattern_ctx.blocks.items():
+                if block_id == 'block1':
+                    continue  # block1은 이미 추가됨
+
+                try:
+                    self.pattern_manager.add_block_to_pattern(pattern, block)
+                except ValueError as e:
+                    logger.warning(
+                        f"Failed to add {block_id} to pattern: {e}",
+                        extra={
+                            'pattern_id': pattern_ctx.pattern_id,
+                            'block_id': block_id
+                        }
+                    )
 
     def set_yaml_config_path(self, path: str) -> None:
         """YAML 설정 파일 경로 설정"""

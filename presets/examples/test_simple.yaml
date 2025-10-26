@@ -30,11 +30,11 @@ block_graph:
           description: "200일 신고 거래량"
 
         - name: "high_surge_rate"
-          expression: "prev and ((current.high - prev.close) / prev.close * 100) >= 10.0"
+          expression: "prev != None and ((current.high - prev.close) / prev.close * 100) >= 10.0"
           description: "고가 등락률 (전일 종가 대비) 10% 이상"
 
         - name: "volume_surge_vs_prev"
-          expression: "prev and current.volume >= prev.volume * 3.0"
+          expression: "prev != None and current.volume >= prev.volume * 3.0"
           description: "전일 대비 거래량 3배 이상"
 
         - name: "price_3month_high"
@@ -49,9 +49,5 @@ block_graph:
         - name: "low_below_ma60"
           expression: "current.low < ma(60)"
           description: "저가가 60일 이동평균 아래로 터치"
-
-      parameters:
-        min_duration: 1
-        max_duration: 100
 
   edges: []

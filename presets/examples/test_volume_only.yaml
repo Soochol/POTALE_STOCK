@@ -20,8 +20,5 @@ block_graph:
           expression: "current.close < 0"
           description: "종료 안 함"
 
-      parameters:
-        min_duration_candles: 1
-        max_duration_candles: 5
 
   edges: []

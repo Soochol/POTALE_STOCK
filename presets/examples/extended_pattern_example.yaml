@@ -36,9 +36,6 @@ block_graph:
           expression: "current.close < 9000"
           description: "종가 9,000원 미만으로 하락"
 
-      parameters:
-        min_duration: 1
-        max_duration: 100
 
       metadata:
         color: "#FF6B6B"
@@ -64,9 +61,6 @@ block_graph:
           expression: "current.close < 10000"
           description: "종가 10,000원 미만으로 하락"
 
-      parameters:
-        min_duration: 1
-        max_duration: 100
 
       metadata:
         color: "#4ECDC4"
@@ -88,9 +82,6 @@ block_graph:
           expression: "current.volume < 500000"
           description: "거래량 50만주 미만으로 감소"
 
-      parameters:
-        min_duration: 1
-        max_duration: 100
 
       metadata:
         color: "#95E1D3"
@@ -116,9 +107,6 @@ block_graph:
           expression: "current.close < 12000"
           description: "종가 12,000원 미만으로 하락"
 
-      parameters:
-        min_duration: 1
-        max_duration: 100
 
       metadata:
         color: "#F38181"
@@ -148,9 +136,6 @@ block_graph:
           expression: "current.volume < 400000"
           description: "거래량 40만주 미만으로 감소"
 
-      parameters:
-        min_duration: 1
-        max_duration: 100
 
       metadata:
         color: "#AA96DA"
@@ -180,9 +165,6 @@ block_graph:
           expression: "current.volume < 300000"
           description: "거래량 30만주 미만 (거래량 소진)"
 
-      parameters:
-        min_duration: 1
-        max_duration: 100
 
       metadata:
         color: "#FCBAD3"

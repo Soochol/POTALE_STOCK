@@ -45,9 +45,6 @@ block_graph:
           description: "저가가 60일 이동평균 아래로 터치"
 
       # 블록 파라미터
-      parameters:
-        min_duration_candles: 1
-        max_duration_candles: 100
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 블록 간 관계 (엣지)
