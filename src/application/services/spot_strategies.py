@@ -69,7 +69,7 @@ class ExpressionBasedSpotStrategy(SpotStrategy):
     Expression 기반 Spot 전략
 
     spot_condition을 평가하여 spot 추가 여부 결정.
-    is_stay_spot, is_levelup_spot 등 모든 함수 지원.
+    is_backward_spot, is_levelup_spot 등 모든 함수 지원.
     """
 
     def __init__(self, expression_engine: ExpressionEngine):
@@ -153,7 +153,7 @@ class ExpressionBasedSpotStrategy(SpotStrategy):
         일반화된 패턴으로 함수명에 관계없이 첫 번째 문자열 인자 추출.
 
         Examples:
-            >>> _extract_prev_block_id("is_stay_spot('block1', 1, 2)")
+            >>> _extract_prev_block_id("is_backward_spot('block1', -1, -2)")
             'block1'
             >>> _extract_prev_block_id("is_levelup_spot('block2', 1, 2)")
             'block2'
@@ -215,7 +215,7 @@ class StaySpotStrategy(SpotStrategy):
             return None
 
         try:
-            # spot_condition 평가 (is_stay_spot 함수)
+            # spot_condition 평가 (is_backward_spot 함수)
             should_stay = current_node.spot_condition.evaluate(
                 self.expression_engine,
                 context
@@ -345,8 +345,8 @@ class StaySpotStrategy(SpotStrategy):
 
         Args:
             expression: spot_condition 표현식
-                예: "is_stay_spot('block1', -1, -2)"  # D-1, D-2 체크
-                예: "is_stay_spot('block1', -1, -5)"  # D-1~D-5 체크
+                예: "is_backward_spot('block1', -1, -2)"  # D-1, D-2 체크
+                예: "is_backward_spot('block1', -1, -5)"  # D-1~D-5 체크
 
         Returns:
             (offset_start, offset_end) 튜플 (음수)

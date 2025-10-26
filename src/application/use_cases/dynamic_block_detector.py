@@ -93,7 +93,7 @@ class DynamicBlockDetector:
         # Virtual Block System 상태 관리
         pattern_state = PatternDetectionState()
 
-        # 스킵된 블록 추적 (is_stay_spot으로 스킵된 블록을 다음에 재탐지)
+        # 스킵된 블록 추적 (is_backward_spot으로 스킵된 블록을 다음에 재탐지)
         next_target_blocks = []
 
         # 주가 데이터 순회
@@ -494,7 +494,7 @@ class DynamicBlockDetector:
             current_volume: 현재 거래량
             context: 평가 context
             active_blocks_map: 활성 + 완료된 블록 맵 (context 참조용, 최신 블록만 유지)
-            next_target_blocks: 스킵된 블록 리스트 (is_stay_spot으로 스킵된 블록을 재탐지)
+            next_target_blocks: 스킵된 블록 리스트 (is_backward_spot으로 스킵된 블록을 재탐지)
             pattern_state: Virtual Block System 상태 관리 객체
 
         Returns:

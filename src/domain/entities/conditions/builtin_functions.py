@@ -682,29 +682,29 @@ def is_price_doubling_surge(
 
 
 @function_registry.register(
-    name='is_stay_spot',
+    name='is_backward_spot',
     category='detection',
-    description='회고적 spot 패턴 체크 (음수 오프셋 사용) - Block 유지 전략',
+    description='회고적 spot 패턴 체크 (음수 오프셋 사용) - 과거 회고 전략',
     params_schema={
         'prev_block_id': {'type': 'str', 'required': True},
         'offset_start': {'type': 'int', 'required': True, 'max': -1},
         'offset_end': {'type': 'int', 'required': True, 'max': -1}
     }
 )
-def is_stay_spot(
+def is_backward_spot(
     prev_block_id: str,
     offset_start: int,
     offset_end: int,
     context: dict
 ) -> bool:
     """
-    회고적 spot 패턴 체크 (Stay Spot) - Block 유지 전략
+    회고적 spot 패턴 체크 (Backward Spot) - 과거 회고 전략
 
     다음 블록 조건이 D일에 만족될 때, 지정된 오프셋 범위의 날짜를 회고적으로 검사하여
     spot_entry_conditions를 만족하면 현재 블록에 spot을 추가하고
     다음 블록으로 전환하지 않습니다 (블록 유지).
 
-    실제 회고 로직은 StaySpotStrategy에서 수행되며,
+    실제 회고 로직은 BackwardSpotStrategy에서 수행되며,
     이 함수는 기본 검증(블록 존재, active 상태, spot2 여부)만 수행합니다.
 
     Args:
@@ -717,30 +717,30 @@ def is_stay_spot(
             - all_stocks: 전체 주가 데이터
 
     Returns:
-        True: 이전 블록이 존재하고 active이며 spot2가 없음 (Stay 전략 적용 가능)
+        True: 이전 블록이 존재하고 active이며 spot2가 없음 (Backward 전략 적용 가능)
         False: 조건 불만족 (다음 블록으로 전환)
 
     Logic:
         1. prev_block이 context에 존재하는가?
         2. prev_block이 active 상태인가?
         3. prev_block이 spot2를 아직 안 가졌나?
-        4. 조건 만족 시 StaySpotStrategy가 offset_start ~ offset_end일 검사 수행
+        4. 조건 만족 시 BackwardSpotStrategy가 offset_start ~ offset_end일 검사 수행
 
     Examples:
-        >>> is_stay_spot('block1', -1, -2)
+        >>> is_backward_spot('block1', -1, -2)
         # D-1, D-2일 회고 검사 (가장 일반적)
 
-        >>> is_stay_spot('block1', -1, -1)
+        >>> is_backward_spot('block1', -1, -1)
         # D-1일만 체크
 
-        >>> is_stay_spot('block1', -1, -5)
+        >>> is_backward_spot('block1', -1, -5)
         # D-1~D-5일 회고 검사 (5일 범위)
 
-        >>> is_stay_spot('block1', -2, -4)
+        >>> is_backward_spot('block1', -2, -4)
         # D-2~D-4일 회고 검사 (D-1 건너뜀)
 
         >>> # YAML에서 사용 예시 (Block2 spot_condition)
-        >>> spot_condition: "is_stay_spot('block1', -1, -2)"
+        >>> spot_condition: "is_backward_spot('block1', -1, -2)"
 
     Note:
         - 음수 오프셋 사용: -1 = "1일 전", -2 = "2일 전" (직관적)
@@ -748,6 +748,7 @@ def is_stay_spot(
         - spot_entry_conditions가 BlockNode에 정의되어 있어야 함
         - Block 유지 전략: Block1 유지, Block2로 넘어가지 않음
         - 파라미터 변경만으로 확장 가능 (코드 수정 불필요)
+        - is_forward_spot과 대칭: forward(전진) ↔ backward(후진)
     """
     # 1. 이전 블록 조회
     prev_block = context.get(prev_block_id)

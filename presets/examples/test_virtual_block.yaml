@@ -74,7 +74,7 @@ block_graph:
       # ========================================================
       # Block2 entry_conditions가 만족되면, spot_entry_conditions도
       # 항상 만족되도록 설정 → Virtual Block2 생성!
-      spot_condition: "is_stay_spot('block1', -1, -2)"
+      spot_condition: "is_backward_spot('block1', -1, -2)"
 
       # Spot 진입 조건 - 항상 참 (TEST 용도)
       spot_entry_conditions:
