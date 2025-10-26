@@ -23,11 +23,11 @@ block_graph:
       # 진입 조건 (AND 조건: 모두 만족해야 함)
       entry_conditions:
         - name: "high_surge_rate"
-          expression: "prev and ((current.high - prev.close) / prev.close) >= 0.10"
+          expression: "prev != None and ((current.high - prev.close) / prev.close) >= 0.10"
           description: "전날 종가 대비 당일 고가 상승률 10% 이상"
 
         - name: "trading_value_threshold"
-          expression: "(current.close * current.volume) >= 30000000000"
+          expression: "current.trading_value >= 30000000000"
           description: "당일 거래대금 300억 이상"
 
         - name: "normalized_volume_surge"
@@ -48,16 +48,12 @@ block_graph:
           expression: "current.low < ma(60)"
           description: "저가가 60일 이동평균 아래로 터치"
 
-        - name: "block2_started"
-          expression: "exists('block2')"
-          description: "Block2가 시작되면 Block1 자동 종료"
-
       # 재탐지 조건 (Block1 완료 후)
       reentry:
         # 재진입 조건 (AND 조건)
         entry_conditions:
           - name: "price_surge_from_prev_close"
-            expression: "prev and current.high >= prev.close * 1.10"
+            expression: "prev != None and current.high >= prev.close * 1.10"
             description: "전일 종가 대비 당일 고가 등락률 10% 이상"
 
           - name: "normalized_volume_surge"
@@ -78,11 +74,6 @@ block_graph:
             expression: "current.low < ma(60)"
             description: "저가가 60일 이동평균 아래로 터치"
 
-      # 블록 파라미터
-      parameters:
-        min_duration: 1
-        max_duration: 100
-
     # ═══════════════════════════════════════════════════════
     # Block 2 - 더 강한 거래대금 + 거래량 폭발
     # ═══════════════════════════════════════════════════════
@@ -99,16 +90,28 @@ block_graph:
           description: "Block1이 존재해야 Block2 시작 가능 (순차적 패턴)"
 
         - name: "high_surge_rate"
-          expression: "prev and ((current.high - prev.close) / prev.close) >= 0.10"
+          expression: "prev != None and ((current.high - prev.close) / prev.close) >= 0.10"
           description: "전날 종가 대비 당일 고가 상승률 10% 이상"
 
         - name: "trading_value_threshold"
-          expression: "(current.close * current.volume) >= 30000000000"
+          expression: "current.trading_value >= 30000000000"
           description: "당일 거래대금 300억 이상"
 
         - name: "normalized_volume_surge"
           expression: "normalized_volume(60) >= 300.0"
           description: "거래량정규화 60일 기준 300% 이상"
+
+        - name: "high_gain_from_block1"
+          expression: "exists('block1') and current.high >= block1.peak_price * 1.10"
+          description: "Block1 고점 대비 당일 고가 10% 이상"
+
+        - name: "low_not_too_low_from_block1"
+          expression: "exists('block1') and current.low >= block1.peak_price * 0.95"
+          description: "Block1 고점 대비 당일 저가 -5% 이내"
+
+        - name: "mid_price_above_block1"
+          expression: "exists('block1') and (current.high + current.low) / 2 > block1.peak_price"
+          description: "중심가가 Block1 고점보다 위"
 
       # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
       exit_conditions:
@@ -119,6 +122,32 @@ block_graph:
         - name: "block3_started"
           expression: "exists('block3')"
           description: "Block3가 시작되면 Block2 자동 종료"
+
+      # 재탐지 조건 (Block2 완료 후)
+      reentry:
+        # 재진입 조건 (AND 조건)
+        entry_conditions:
+          - name: "price_surge_from_prev_close"
+            expression: "prev != None and current.high >= prev.close * 1.10"
+            description: "전일 종가 대비 당일 고가 등락률 10% 이상"
+
+          - name: "normalized_volume_surge"
+            expression: "normalized_volume(60) >= 300.0"
+            description: "거래량정규화 60일 기준 300% 이상"
+
+          - name: "peak_price_similarity"
+            expression: "within_range(current.high, parent_block.peak_price, 10.0)"
+            description: "고점이 시드블록 고점 대비 +/-10% 이내"
+
+        # 재진입 종료 조건 (OR 조건)
+        exit_conditions:
+          - name: "redetection_duration_limit"
+            expression: "candles_between(active_redetection.started_at, current.date) >= 30"
+            description: "재진입 시작 후 30일 경과"
+
+          - name: "low_below_ma60"
+            expression: "current.low < ma(60)"
+            description: "저가가 60일 이동평균 아래로 터치"
 
       # Spot 조건 (선택적) - 회고적 spot 패턴 (NEW - 2025-10-25)
       # Block2 조건이 D일에 만족될 때, D-1, D-2일을 회고적으로 검사하여
@@ -143,50 +172,26 @@ block_graph:
       # Spot 진입 조건 (회고적 검사용, NEW - 2025-10-25)
       # D-1, D-2일에 평가할 조건 (is_price_doubling_surge 제외)
       spot_entry_conditions:
-        - name: "current_high_greater_than_check_day"
-          expression: "current and current.high > check_day.high"
-        - name: "close_high_ratio"
-          expression: "check_day and upside_extension_ratio(check_day.high, current.high, current.low) >= 200"
+        - name: "high_gain_from_check_day"
+          expression: "check_day and current.high >= check_day.high * 1.10"
+          description: "검사일 고가 대비 당일 고가 10% 이상"
 
-      # 재탐지 조건 (Block2 완료 후)
-      reentry:
-        # 재진입 조건 (AND 조건)
-        entry_conditions:
-          - name: "price_surge_from_prev_close"
-            expression: "prev and current.high >= prev.close * 1.10"
-            description: "전일 종가 대비 당일 고가 등락률 10% 이상"
+        - name: "low_not_too_low_from_check_day"
+          expression: "check_day and current.low >= check_day.high * 0.95"
+          description: "검사일 고가 대비 당일 저가 -5% 이내"
 
-          - name: "normalized_volume_surge"
-            expression: "normalized_volume(60) >= 300.0"
-            description: "거래량정규화 60일 기준 300% 이상"
-
-          - name: "peak_price_similarity"
-            expression: "within_range(current.high, parent_block.peak_price, 10.0)"
-            description: "고점이 시드블록 고점 대비 +/-10% 이내"
-
-        # 재진입 종료 조건 (OR 조건)
-        exit_conditions:
-          - name: "redetection_duration_limit"
-            expression: "candles_between(active_redetection.started_at, current.date) >= 20"
-            description: "재진입 시작 후 20일 경과"
-
-          - name: "low_below_ma120"
-            expression: "current.low < ma(120)"
-            description: "저가가 120일 이동평균 아래로 터치 (장기 추세 이탈)"
-
-      # 블록 파라미터
-      parameters:
-        min_duration: 1
-        max_duration: 100
+        - name: "mid_price_above_check_day"
+          expression: "check_day and (current.high + current.low) / 2 > check_day.high"
+          description: "중심가가 검사일 고가보다 위"
 
     # ═══════════════════════════════════════════════════════
-    # Block 3 - 더 강한 거래대금 + 거래량 폭발
+    # Block 3 - 지속적인 강세 패턴
     # ═══════════════════════════════════════════════════════
     block3:
       block_id: "block3"
       block_type: 3
-      name: "Super Surge with Ultra High Trading Value"
-      description: "거래대금 300억 이상 + 전일 대비 1.2배 + 200일 신고가 + 정규화 거래량 300% (지속 패턴)"
+      name: "Sustained Momentum Pattern"
+      description: "거래대금 300억 이상 + 거래량 급등 + Block2 이후 지속 패턴"
 
       # 진입 조건 (AND 조건: 모두 만족해야 함)
       entry_conditions:
@@ -195,57 +200,28 @@ block_graph:
           description: "Block2가 존재해야 Block3 시작 가능 (순차적 패턴)"
 
         - name: "high_surge_rate"
-          expression: "prev and ((current.high - prev.close) / prev.close) >= 0.10"
+          expression: "prev != None and ((current.high - prev.close) / prev.close) >= 0.10"
           description: "전날 종가 대비 당일 고가 상승률 10% 이상"
 
         - name: "trading_value_threshold"
-          expression: "(current.close * current.volume) >= 30000000000"
+          expression: "current.trading_value >= 30000000000"
           description: "당일 거래대금 300억 이상"
 
         - name: "normalized_volume_surge"
-          expression: "normalized_volume(60) >= 300.0"
+          expression: "normalized_volume(60)>= 300.0"
           description: "거래량정규화 60일 기준 300% 이상"
 
-      # Spot 조건 (선택적) - 회고적 spot 패턴 (NEW - 2025-10-25)
-      # Block3 조건이 D일에 만족될 때, D-1, D-2일을 회고적으로 검사하여
-      # spot_entry_conditions를 만족하는지 확인
-      # -1 = D-1일, -2 = D-2일 (음수 오프셋)
-      # spot_condition: "is_stay_spot('block2', -1, -2)"
+        - name: "high_gain_from_block2"
+          expression: "exists('block2') and current.high >= block2.peak_price * 1.10"
+          description: "Block2 고점 대비 당일 고가 10% 이상"
 
-      # Levelup Spot (Block3 생성하되 시작일 조정, Block2 종료)
-      # -1 = D-1일, -2 = D-2일 (음수 오프셋)
-      spot_condition: "is_levelup_spot('block2', -1, -2)"
+        - name: "low_not_too_low_from_block2"
+          expression: "exists('block2') and current.low >= block2.peak_price * 0.95"
+          description: "Block2 고점 대비 당일 저가 -5% 이내"
 
-      # Exclude conditions: D-1, D-2 평가 시 제외할 조건
-      exclude_conditions:
-        - "price_breakout_from_block2"
-
-      # Spot 진입 조건 (회고적 검사용, NEW - 2025-10-25)
-      # D-1, D-2일에 평가할 조건 (모든 entry_conditions 포함)
-      spot_entry_conditions:
-        - name: "ultra_high_trading_value"
-          expression: "(current.close * current.volume) >= 30000000000"
-          description: "거래대금 300억원 이상"
-
-        - name: "volume_surge_vs_prev"
-          expression: "prev and current.volume >= prev.volume * 1.2"
-          description: "직전 정상 거래일 대비 거래량 1.2배 이상"
-
-        - name: "price_yearly_high"
-          expression: "is_new_high(200)"
-          description: "가격 N일 신고가"
-
-        - name: "high_surge_rate"
-          expression: "prev and ((current.high - prev.close) / prev.close * 100) >= 10.0"
-          description: "고가 등락률 (전일 종가 대비) N% 이상"
-
-        - name: "normalized_volume_surge"
-          expression: "normalized_volume(20) >= 300.0"
-          description: "정규화 거래량 300% 이상 (20일 평균 대비 3배)"
-
-        - name: "price_breakout_from_block2"
-          expression: "is_price_breakout('block2', 3.0)"
-          description: "Block2 고점 대비 -3% 이상에서 시작 (레벨업 패턴)"
+        - name: "mid_price_above_block2"
+          expression: "exists('block2') and (current.high + current.low) / 2 > block2.peak_price"
+          description: "중심가가 Block2 고점보다 위"
 
       # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
       exit_conditions:
@@ -253,12 +229,29 @@ block_graph:
           expression: "current.low < ma(60)"
           description: "저가가 60일 이동평균 아래로 터치"
 
+      # Spot 조건 (선택적) - 회고적 spot 패턴
+      spot_condition: "is_stay_spot('block2', -1, -2)"
+
+      # Spot 진입 조건 (회고적 검사용)
+      spot_entry_conditions:
+        - name: "high_gain_from_check_day"
+          expression: "check_day and current.high >= check_day.high * 1.10"
+          description: "검사일 고가 대비 당일 고가 10% 이상"
+
+        - name: "low_not_too_low_from_check_day"
+          expression: "check_day and current.low >= check_day.high * 0.95"
+          description: "검사일 고가 대비 당일 저가 -5% 이내"
+
+        - name: "mid_price_above_check_day"
+          expression: "check_day and (current.high + current.low) / 2 > check_day.high"
+          description: "중심가가 검사일 고가보다 위"
+
       # 재탐지 조건 (Block3 완료 후)
       reentry:
         # 재진입 조건 (AND 조건)
         entry_conditions:
           - name: "price_surge_from_prev_close"
-            expression: "prev and current.high >= prev.close * 1.10"
+            expression: "prev != None and current.high >= prev.close * 1.10"
             description: "전일 종가 대비 당일 고가 등락률 10% 이상"
 
           - name: "normalized_volume_surge"
@@ -272,21 +265,12 @@ block_graph:
         # 재진입 종료 조건 (OR 조건)
         exit_conditions:
           - name: "redetection_duration_limit"
-            expression: "candles_between(active_redetection.started_at, current.date) >= 15"
-            description: "재진입 시작 후 15일 경과"
+            expression: "candles_between(active_redetection.started_at, current.date) >= 30"
+            description: "재진입 시작 후 30일 경과"
 
-          - name: "low_below_ma120"
-            expression: "current.low < ma(120)"
-            description: "저가가 120일 이동평균 아래로 터치 (장기 추세 이탈)"
-
-          - name: "volume_drying_up"
-            expression: "current.volume < volume_ma(20) * 0.5"
-            description: "거래량이 20일 평균의 50% 미만 (관심 소멸)"
-
-      # 블록 파라미터
-      parameters:
-        min_duration: 1
-        max_duration: 100
+          - name: "low_below_ma60"
+            expression: "current.low < ma(60)"
+            description: "저가가 60일 이동평균 아래로 터치"
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 블록 간 관계 (엣지)
@@ -297,3 +281,9 @@ block_graph:
       edge_type: "sequential"
       priority: 1
       description: "Block1에서 Block2로 전이 (더 강한 급등 시)"
+
+    - from_block: "block2"
+      to_block: "block3"
+      edge_type: "sequential"
+      priority: 1
+      description: "Block2에서 Block3로 전이 (지속적인 강세 패턴)"
