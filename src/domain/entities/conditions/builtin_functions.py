@@ -254,54 +254,86 @@ def within_range(value: float, base: float, tolerance_pct: float, context: dict)
 @function_registry.register(
     name='upside_extension_ratio',
     category='price',
-    description='기준 가격 대비 고가/저가 확장 비율 (방향성 포함)',
+    description='기준 가격 대비 레벨업 확장 비율 (3중 조건 검증)',
     params_schema={
         'base_price': {'type': 'float', 'required': True},
         'high_price': {'type': 'float', 'required': True},
-        'low_price': {'type': 'float', 'required': True}
+        'low_price': {'type': 'float', 'required': True},
+        'min_high_gain_pct': {'type': 'float', 'required': False, 'default': 10.0},
+        'max_low_drop_pct': {'type': 'float', 'required': False, 'default': 5.0}
     }
 )
 def upside_extension_ratio(
     base_price: float,
     high_price: float,
     low_price: float,
-    context: dict
+    min_high_gain_pct: float = 10.0,
+    max_low_drop_pct: float = 5.0,
+    context: dict = None
 ) -> float:
     """
-    기준 가격 대비 고가/저가 확장 비율 (방향성 포함)
+    기준 가격 대비 레벨업 확장 비율 (3중 조건 검증)
 
-    기준 가격에서 고가까지의 거리와 저가까지의 거리의 비율을 계산합니다.
-    부호는 방향성을 나타냅니다 (+ = 고가가 기준보다 위, - = 고가가 기준보다 아래).
+    가격이 기준 대비 "레벨업"했는지 판단하고, 조건 만족 시 확장 비율을 반환합니다.
+
+    레벨업 조건 (모두 만족해야 함):
+    1. 고가 >= base * (1 + min_high_gain_pct/100) - 최소 상승률
+    2. 저가 >= base * (1 - max_low_drop_pct/100) - 최대 하락 허용
+    3. 중심가격 (high + low) / 2 > base - 전체적으로 위로 이동
 
     Args:
-        base_price: 기준 가격 (예: check_day.close, prev.close)
+        base_price: 기준 가격 (예: check_day.high, prev.close)
         high_price: 당일 고가 (예: current.high)
         low_price: 당일 저가 (예: current.low)
-        context: 평가 컨텍스트
+        min_high_gain_pct: 고가 최소 상승률 (%, 기본값 10.0)
+        max_low_drop_pct: 저가 최대 하락률 (%, 기본값 5.0)
+        context: 평가 컨텍스트 (선택)
 
     Returns:
-        (고가 확장 거리) / (저가 확장 거리) * 100 (부호 포함)
-        예: +200 = 고가가 기준보다 위 + 상승폭이 하락폭보다 2배
-        예: -50 = 고가가 기준보다 아래 + 하락폭이 상승폭보다 2배
+        조건 만족: (고가 확장) / (저가 확장) * 100
+        조건 불만족: 0.0
 
     Examples:
-        >>> # 상승 케이스: base=10000, high=12000, low=11000
-        >>> upside_extension_ratio(10000, 12000, 11000, {})
-        200.0  # +방향 (상승), 상승폭(2000)이 하락폭(1000)보다 2배
+        >>> # 레벨업 성공: base=10000, high=12000, low=11000
+        >>> upside_extension_ratio(10000, 12000, 11000)
+        200.0  # 모든 조건 만족
 
-        >>> # 하락 케이스: base=10000, high=9000, low=8000
-        >>> upside_extension_ratio(10000, 9000, 8000, {})
-        -50.0  # -방향 (하락), 상승폭(1000)이 하락폭(2000)의 0.5배
+        >>> # 레벨업 성공: base=10000, high=12000, low=9500
+        >>> upside_extension_ratio(10000, 12000, 9500)
+        400.0  # 저가 -5% 경계, 조건 만족
 
-        >>> # 검사일 종가 기준, D일 고저 비율
-        >>> upside_extension_ratio(check_day.close, current.high, current.low)
+        >>> # 레벨업 실패: base=10000, high=12000, low=9000
+        >>> upside_extension_ratio(10000, 12000, 9000)
+        0.0  # 저가 -10% (조건 2 실패)
+
+        >>> # 레벨업 실패: base=10000, high=10500, low=10200
+        >>> upside_extension_ratio(10000, 10500, 10200)
+        0.0  # 고가 +5% (조건 1 실패)
+
+        >>> # 커스텀 임계값 사용
+        >>> upside_extension_ratio(10000, 12000, 9000, min_high_gain_pct=15.0, max_low_drop_pct=10.0)
 
     Note:
-        - 0으로 나누기 방지: 분모가 0이면 0.0 반환
-        - 절댓값으로 거리 계산 후 고가 방향으로 부호 결정
-        - 전제 조건: 일반적으로 high_price > base_price 상황에서 사용 권장
+        - 조건 불만족 시 0.0 반환 (YAML에서 >= 200 조건으로 필터링 가능)
+        - 기본값: 고가 +10% 이상, 저가 -5% 이내
+        - YAML 호환: 파라미터 생략 시 기본값 사용
     """
-    # 거리 계산 (절댓값으로 크기만)
+    # 조건 1: 고가가 최소 상승률을 만족하는가?
+    min_high_threshold = base_price * (1 + min_high_gain_pct / 100)
+    if high_price < min_high_threshold:
+        return 0.0
+
+    # 조건 2: 저가가 최대 하락률 이내인가?
+    min_low_threshold = base_price * (1 - max_low_drop_pct / 100)
+    if low_price < min_low_threshold:
+        return 0.0
+
+    # 조건 3: 중심가격이 기준가보다 위인가?
+    mid_price = (high_price + low_price) / 2
+    if mid_price <= base_price:
+        return 0.0
+
+    # 모든 조건 통과 → 비율 계산
     distance_to_high = abs(base_price - high_price)
     distance_to_low = abs(base_price - low_price)
 
@@ -309,14 +341,10 @@ def upside_extension_ratio(
     if distance_to_low == 0:
         return 0.0
 
-    # 비율 계산 (절댓값)
+    # 비율 계산 (조건 1, 3 통과했으므로 항상 양수)
     ratio = (distance_to_high / distance_to_low) * 100
 
-    # 방향 결정 (고가 기준)
-    if high_price >= base_price:
-        return ratio   # + 방향 (상승)
-    else:
-        return -ratio  # - 방향 (하락)
+    return ratio
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
