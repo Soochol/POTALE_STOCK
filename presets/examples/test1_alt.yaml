@@ -31,7 +31,7 @@ block_graph:
           description: "당일 거래대금 300억 이상"
 
         - name: "normalized_volume_surge"
-          expression: "normalized_volume(60) >= 3.0"
+          expression: "normalized_volume(60) >= 300.0"
           description: "거래량정규화 60일 기준 300% 이상"
 
       # NOTE: Block1은 시작 블록이므로 spot_condition과 spot_entry_conditions 불필요
@@ -61,7 +61,7 @@ block_graph:
             description: "전일 종가 대비 당일 고가 등락률 10% 이상"
 
           - name: "normalized_volume_surge"
-            expression: "normalized_volume(60) >= 3.0"
+            expression: "normalized_volume(60) >= 300.0"
             description: "거래량정규화 60일 기준 300% 이상"
 
           - name: "peak_price_similarity"
@@ -107,8 +107,18 @@ block_graph:
           description: "당일 거래대금 300억 이상"
 
         - name: "normalized_volume_surge"
-          expression: "normalized_volume(60) >= 3.0"
+          expression: "normalized_volume(60) >= 300.0"
           description: "거래량정규화 60일 기준 300% 이상"
+
+      # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
+      exit_conditions:
+        - name: "low_below_ma60"
+          expression: "current.low < ma(60)"
+          description: "저가가 60일 이동평균 아래로 터치"
+
+        - name: "block3_started"
+          expression: "exists('block3')"
+          description: "Block3가 시작되면 Block2 자동 종료"
 
       # Spot 조건 (선택적) - 회고적 spot 패턴 (NEW - 2025-10-25)
       # Block2 조건이 D일에 만족될 때, D-1, D-2일을 회고적으로 검사하여
@@ -136,17 +146,7 @@ block_graph:
         - name: "current_high_greater_than_check_day"
           expression: "current and current.high > check_day.high"
         - name: "close_high_ratio"
-          expression: "check_day and upside_extension_ratio(check_day.HIGH, current.high, current.low) >= 200"
-
-      # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
-      exit_conditions:
-        - name: "low_below_ma60"
-          expression: "current.low < ma(60)"
-          description: "저가가 60일 이동평균 아래로 터치"
-
-        - name: "block3_started"
-          expression: "exists('block3')"
-          description: "Block3가 시작되면 Block2 자동 종료"
+          expression: "check_day and upside_extension_ratio(check_day.high, current.high, current.low) >= 200"
 
       # 재탐지 조건 (Block2 완료 후)
       reentry:
@@ -157,7 +157,7 @@ block_graph:
             description: "전일 종가 대비 당일 고가 등락률 10% 이상"
 
           - name: "normalized_volume_surge"
-            expression: "normalized_volume(60) >= 3.0"
+            expression: "normalized_volume(60) >= 300.0"
             description: "거래량정규화 60일 기준 300% 이상"
 
           - name: "peak_price_similarity"
@@ -203,7 +203,7 @@ block_graph:
           description: "당일 거래대금 300억 이상"
 
         - name: "normalized_volume_surge"
-          expression: "normalized_volume(60) >= 3.0"
+          expression: "normalized_volume(60) >= 300.0"
           description: "거래량정규화 60일 기준 300% 이상"
 
       # Spot 조건 (선택적) - 회고적 spot 패턴 (NEW - 2025-10-25)
@@ -262,7 +262,7 @@ block_graph:
             description: "전일 종가 대비 당일 고가 등락률 10% 이상"
 
           - name: "normalized_volume_surge"
-            expression: "normalized_volume(60) >= 3.0"
+            expression: "normalized_volume(60) >= 300.0"
             description: "거래량정규화 60일 기준 300% 이상"
 
           - name: "peak_price_similarity"
