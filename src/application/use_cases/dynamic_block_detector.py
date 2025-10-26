@@ -149,6 +149,14 @@ class DynamicBlockDetector:
                 condition_name
             )
 
+            # 4.5. Forward Spot 체크 (NEW - 2025-10-26)
+            # Active 블록의 D+1, D+2일에 spot 조건을 만족하면 spot 추가
+            self._check_forward_spots(
+                active_blocks_map,
+                current_stock.date,
+                context
+            )
+
             # 5. 활성 블록들의 peak 갱신 (종료된 블록 제외)
             self._update_peaks(
                 active_blocks_map,
@@ -1189,3 +1197,150 @@ class DynamicBlockDetector:
             return None
 
         return prev_block
+
+    def _check_forward_spots(
+        self,
+        active_blocks_map: Dict[str, DynamicBlockDetection],
+        current_date: date,
+        context: dict
+    ) -> None:
+        """
+        Forward Spot 체크 (NEW - 2025-10-26)
+
+        Active 블록의 forward_spot_condition을 평가하여
+        D+1, D+2일에 spot 조건을 만족하면 spot을 추가합니다.
+
+        Args:
+            active_blocks_map: 활성 블록 맵 (block_id -> DynamicBlockDetection)
+            current_date: 현재 날짜
+            context: 평가 컨텍스트
+        """
+        for block_id, block in active_blocks_map.items():
+            # Active 블록만 체크
+            if block.status != BlockStatus.ACTIVE:
+                continue
+
+            # BlockNode 조회
+            node = self.block_graph.get_node(block_id)
+            if not node:
+                continue
+
+            # forward_spot_condition이 정의되어 있는가?
+            if not node.forward_spot_condition:
+                continue
+
+            # spot_entry_conditions가 정의되어 있는가?
+            if not node.spot_entry_conditions:
+                logger.debug(
+                    "forward_spot_condition defined but spot_entry_conditions missing",
+                    context={
+                        'block_id': block_id,
+                        'date': current_date
+                    }
+                )
+                continue
+
+            # check_day를 Block 시작일 데이터로 설정
+            # spot_entry_conditions에서 check_day.high를 사용할 수 있도록
+            all_stocks = context.get('all_stocks', [])
+            started_at_stock = None
+            for stock in all_stocks:
+                if stock.date == block.started_at:
+                    started_at_stock = stock
+                    break
+
+            if not started_at_stock:
+                logger.debug(
+                    "Started at stock not found for forward spot check",
+                    context={
+                        'block_id': block_id,
+                        'started_at': block.started_at,
+                        'current_date': current_date
+                    }
+                )
+                continue
+
+            # check_day 설정
+            context['check_day'] = started_at_stock
+
+            # forward_spot_condition 평가
+            try:
+                forward_condition_met = self._evaluate_condition(
+                    node.forward_spot_condition,
+                    context
+                )
+            except Exception as e:
+                logger.error(
+                    "Forward spot condition evaluation failed",
+                    context={
+                        'block_id': block_id,
+                        'date': current_date,
+                        'expression': node.forward_spot_condition.expression,
+                        'error': str(e)
+                    }
+                )
+                continue
+
+            if not forward_condition_met:
+                continue
+
+            # spot_entry_conditions 평가
+            try:
+                all_spot_conditions_met = self._evaluate_all_conditions(
+                    node.spot_entry_conditions,
+                    context
+                )
+            except Exception as e:
+                logger.error(
+                    "Spot entry conditions evaluation failed",
+                    context={
+                        'block_id': block_id,
+                        'date': current_date,
+                        'error': str(e)
+                    }
+                )
+                continue
+
+            if not all_spot_conditions_met:
+                logger.debug(
+                    "Forward spot condition met but spot_entry_conditions not satisfied",
+                    context={
+                        'block_id': block_id,
+                        'date': current_date
+                    }
+                )
+                continue
+
+            # Spot 추가 (중복 방지)
+            if block.spot1_date is None:
+                block.set_spot1(current_date)
+                logger.info(
+                    "Forward spot1 added",
+                    context={
+                        'block_id': block_id,
+                        'block_type': block.block_type,
+                        'started_at': block.started_at,
+                        'spot1_date': current_date
+                    }
+                )
+            elif block.spot2_date is None:
+                block.set_spot2(current_date)
+                logger.info(
+                    "Forward spot2 added",
+                    context={
+                        'block_id': block_id,
+                        'block_type': block.block_type,
+                        'started_at': block.started_at,
+                        'spot2_date': current_date
+                    }
+                )
+            else:
+                logger.debug(
+                    "Forward spot already full (spot1 and spot2)",
+                    context={
+                        'block_id': block_id,
+                        'spot1_date': block.spot1_date,
+                        'spot2_date': block.spot2_date,
+                        'current_date': current_date
+                    }
+                )

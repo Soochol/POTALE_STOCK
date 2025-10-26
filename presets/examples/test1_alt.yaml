@@ -44,9 +44,31 @@ block_graph:
 
       # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
       exit_conditions:
-        - name: "low_below_ma60"
-          expression: "current.low < ma(60)"
-          description: "저가가 60일 이동평균 아래로 터치"
+        - name: "block2_started"
+          expression: "exists('block2')"
+          description: "Block2가 시작되면 Block1 자동 종료"
+
+        - name: "max_duration_limit"
+          expression: "candles_between(active_block.started_at, current.date) >= 180"
+          description: "Block1 시작 후 180일 경과 시 자동 종료"
+
+      # Forward Spot 조건 (NEW - 2025-10-26)
+      # Block1이 시작된 후 D+1, D+2일에 조건을 만족하면 spot 추가
+      forward_spot_condition: "is_forward_spot('block1', 1, 2)"
+
+      # Forward Spot 진입 조건 (D+1, D+2일 평가용)
+      spot_entry_conditions:
+        - name: "high_gain_from_started_day"
+          expression: "check_day and current.high >= check_day.high * 1.10"
+          description: "Block1 시작일 고가 대비 당일 고가 10% 이상"
+
+        - name: "low_not_too_low_from_started_day"
+          expression: "check_day and current.low >= check_day.high * 0.95"
+          description: "Block1 시작일 고가 대비 당일 저가 -5% 이내"
+
+        - name: "mid_price_above_started_day"
+          expression: "check_day and (current.high + current.low) / 2 > check_day.high"
+          description: "중심가가 Block1 시작일 고가보다 위"
 
       # 재탐지 조건 (Block1 완료 후)
       reentry:
@@ -69,10 +91,6 @@ block_graph:
           - name: "redetection_duration_limit"
             expression: "candles_between(active_redetection.started_at, current.date) >= 30"
             description: "재진입 시작 후 30일 경과"
-
-          - name: "low_below_ma60"
-            expression: "current.low < ma(60)"
-            description: "저가가 60일 이동평균 아래로 터치"
 
     # ═══════════════════════════════════════════════════════
     # Block 2 - 더 강한 거래대금 + 거래량 폭발
@@ -113,15 +131,19 @@ block_graph:
           expression: "exists('block1') and (current.high + current.low) / 2 > block1.peak_price"
           description: "중심가가 Block1 고점보다 위"
 
+        - name: "price_doubling_surge_from_block1"
+          expression: "is_price_doubling_surge('block1')"
+          description: "Block1의 상승폭(시작 전날 종가 → 최고가)을 Block1 최고가에서 반복 (2배 상승)"
+
       # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
       exit_conditions:
-        - name: "low_below_ma60"
-          expression: "current.low < ma(60)"
-          description: "저가가 60일 이동평균 아래로 터치"
-
         - name: "block3_started"
           expression: "exists('block3')"
           description: "Block3가 시작되면 Block2 자동 종료"
+
+        - name: "max_duration_limit"
+          expression: "candles_between(active_block.started_at, current.date) >= 180"
+          description: "Block2 시작 후 180일 경과 시 자동 종료"
 
       # 재탐지 조건 (Block2 완료 후)
       reentry:
@@ -144,10 +166,6 @@ block_graph:
           - name: "redetection_duration_limit"
             expression: "candles_between(active_redetection.started_at, current.date) >= 30"
             description: "재진입 시작 후 30일 경과"
-
-          - name: "low_below_ma60"
-            expression: "current.low < ma(60)"
-            description: "저가가 60일 이동평균 아래로 터치"
 
       # Spot 조건 (선택적) - 회고적 spot 패턴 (NEW - 2025-10-25)
       # Block2 조건이 D일에 만족될 때, D-1, D-2일을 회고적으로 검사하여
@@ -225,9 +243,9 @@ block_graph:
 
       # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
       exit_conditions:
-        - name: "low_below_ma60"
-          expression: "current.low < ma(60)"
-          description: "저가가 60일 이동평균 아래로 터치"
+        - name: "max_duration_limit"
+          expression: "candles_between(active_block.started_at, current.date) >= 180"
+          description: "Block3 시작 후 180일 경과 시 자동 종료"
 
       # Spot 조건 (선택적) - 회고적 spot 패턴
       spot_condition: "is_stay_spot('block2', -1, -2)"
@@ -267,10 +285,6 @@ block_graph:
           - name: "redetection_duration_limit"
             expression: "candles_between(active_redetection.started_at, current.date) >= 30"
             description: "재진입 시작 후 30일 경과"
-
-          - name: "low_below_ma60"
-            expression: "current.low < ma(60)"
-            description: "저가가 60일 이동평균 아래로 터치"
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 블록 간 관계 (엣지)

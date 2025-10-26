@@ -241,6 +241,11 @@ class BlockGraphLoader:
                     node_data['spot_entry_conditions']
                 )
 
+            # forward_spot_condition 추출 (NEW - 2025-10-26)
+            forward_spot_condition = self._parse_single_condition(
+                node_data.get('forward_spot_condition')
+            )
+
             # 재탐지 조건 추출 (NEW - 2025-10-25)
             # 재진입 조건 파싱 (reentry 또는 redetection 키워드 지원)
             reentry_entry_conditions = None
@@ -267,6 +272,7 @@ class BlockGraphLoader:
                 entry_conditions=entry_conditions,
                 exit_conditions=exit_conditions,
                 spot_condition=spot_condition,
+                forward_spot_condition=forward_spot_condition,
                 spot_entry_conditions=spot_entry_conditions,
                 exclude_conditions=exclude_conditions,
                 reentry_entry_conditions=reentry_entry_conditions,

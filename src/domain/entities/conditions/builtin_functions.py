@@ -867,6 +867,128 @@ def is_levelup_spot(
     return True
 
 
+@function_registry.register(
+    name='is_forward_spot',
+    category='detection',
+    description='전진형 spot 패턴 체크 (양수 오프셋 사용) - Block 유지 + Spot 추가',
+    params_schema={
+        'block_id': {'type': 'str', 'required': True},
+        'offset_start': {'type': 'int', 'required': True, 'min': 1},
+        'offset_end': {'type': 'int', 'required': True, 'min': 1}
+    }
+)
+def is_forward_spot(
+    block_id: str,
+    offset_start: int,
+    offset_end: int,
+    context: dict
+) -> bool:
+    """
+    전진형 spot 패턴 체크 (Forward Spot) - Block 유지 + Spot 추가 전략
+
+    블록이 active 상태일 때, 블록 시작일로부터 D+offset_start ~ D+offset_end 범위의
+    날짜에서 spot_entry_conditions를 만족하면 현재 블록에 spot을 추가합니다.
+
+    실제 spot 추가 로직은 DynamicBlockDetector에서 수행되며,
+    이 함수는 기본 검증(블록 존재, active 상태, 날짜 범위)만 수행합니다.
+
+    Args:
+        block_id: 블록 ID (예: 'block1')
+        offset_start: 시작 오프셋 (1 = D+1일, 2 = D+2일)
+        offset_end: 종료 오프셋 (2 = D+2일, 5 = D+5일)
+        context: 평가 컨텍스트
+            - {block_id}: 블록 객체
+            - current: 현재 주가 데이터
+            - all_stocks: 전체 주가 데이터
+
+    Returns:
+        True: 블록이 존재하고 active이며 현재 날짜가 D+offset_start ~ D+offset_end 범위
+        False: 조건 불만족
+
+    Logic:
+        1. block이 context에 존재하는가?
+        2. block이 active 상태인가?
+        3. 현재 날짜가 Block 시작일로부터 offset_start ~ offset_end일 범위인가?
+        4. 조건 만족 시 DynamicBlockDetector가 spot_entry_conditions 평가 및 spot 추가
+
+    Examples:
+        >>> is_forward_spot('block1', 1, 2)
+        # D+1, D+2일 전진 검사 (가장 일반적)
+
+        >>> is_forward_spot('block1', 1, 1)
+        # D+1일만 체크
+
+        >>> is_forward_spot('block1', 1, 5)
+        # D+1~D+5일 전진 검사 (5일 범위)
+
+        >>> is_forward_spot('block1', 2, 4)
+        # D+2~D+4일 전진 검사 (D+1 건너뜀)
+
+        >>> # YAML에서 사용 예시 (Block1 forward_spot_condition)
+        >>> forward_spot_condition: "is_forward_spot('block1', 1, 2)"
+
+    Note:
+        - 양수 오프셋 사용: 1 = "1일 후", 2 = "2일 후" (직관적)
+        - Block active 상태에서만 작동
+        - spot_entry_conditions가 BlockNode에 정의되어 있어야 함
+        - Block 유지 전략: Block1 유지, spot만 추가
+        - 중복 방지: DynamicBlockDetector에서 이미 추가된 spot 체크
+        - 파라미터 변경만으로 확장 가능 (코드 수정 불필요)
+    """
+    # 1. 블록 조회
+    block = context.get(block_id)
+    if not block:
+        return False
+
+    # 2. 블록이 active 상태인가?
+    if not hasattr(block, 'status'):
+        return False
+
+    from src.domain.entities.detections.block_status import BlockStatus
+    if block.status != BlockStatus.ACTIVE:
+        return False
+
+    # 3. 현재 날짜 조회
+    current = context.get('current')
+    if not current or not hasattr(current, 'date'):
+        return False
+
+    current_date = current.date
+    if not current_date:
+        return False
+
+    # 4. Block 시작일 조회
+    started_at = block.started_at
+    if not started_at:
+        return False
+
+    # 5. all_stocks에서 날짜 차이 계산 (거래일 기준)
+    all_stocks = context.get('all_stocks', [])
+    if not all_stocks:
+        return False
+
+    # 시작일 인덱스 찾기
+    start_index = None
+    current_index = None
+    for i, stock in enumerate(all_stocks):
+        if stock.date == started_at:
+            start_index = i
+        if stock.date == current_date:
+            current_index = i
+
+    if start_index is None or current_index is None:
+        return False
+
+    # 거래일 기준 날짜 차이 계산
+    days_diff = current_index - start_index
+
+    # 6. offset_start ~ offset_end 범위 체크
+    if offset_start <= days_diff <= offset_end:
+        return True
+
+    return False
+
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 재탐지 (Redetection) 관련 함수 (NEW - 2025-10-25)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

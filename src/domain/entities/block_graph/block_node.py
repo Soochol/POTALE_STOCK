@@ -38,6 +38,10 @@ class BlockNode:
     exit_conditions: List['Condition'] = field(default_factory=list)
     spot_condition: Optional['Condition'] = None
 
+    # Forward Spot 조건 (선택적, NEW - 2025-10-26)
+    # is_forward_spot용: D+1, D+2일에 전진 검사
+    forward_spot_condition: Optional['Condition'] = None
+
     # Spot 진입 조건 (선택적, NEW - 2025-10-25)
     # is_continuation_spot용: D-1, D-2일에 평가할 조건
     spot_entry_conditions: Optional[List['Condition']] = None
