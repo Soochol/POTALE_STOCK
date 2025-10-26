@@ -252,49 +252,56 @@ def within_range(value: float, base: float, tolerance_pct: float, context: dict)
 
 
 @function_registry.register(
-    name='high_low_distance_ratio',
+    name='upside_extension_ratio',
     category='price',
-    description='기준 가격 대비 고가/저가까지의 거리 비율',
+    description='기준 가격 대비 고가/저가 확장 비율 (방향성 포함)',
     params_schema={
         'base_price': {'type': 'float', 'required': True},
         'high_price': {'type': 'float', 'required': True},
         'low_price': {'type': 'float', 'required': True}
     }
 )
-def high_low_distance_ratio(
+def upside_extension_ratio(
     base_price: float,
     high_price: float,
     low_price: float,
     context: dict
 ) -> float:
     """
-    기준 가격 대비 고가/저가까지의 거리 비율
+    기준 가격 대비 고가/저가 확장 비율 (방향성 포함)
 
     기준 가격에서 고가까지의 거리와 저가까지의 거리의 비율을 계산합니다.
-    값이 클수록 기준 가격이 저가에 가까움을 의미합니다.
+    부호는 방향성을 나타냅니다 (+ = 고가가 기준보다 위, - = 고가가 기준보다 아래).
 
     Args:
-        base_price: 기준 가격 (예: prev.close, current.close)
-        high_price: 고가 (예: current.high, prev.high)
-        low_price: 저가 (예: current.low, prev.low)
+        base_price: 기준 가격 (예: check_day.close, prev.close)
+        high_price: 당일 고가 (예: current.high)
+        low_price: 당일 저가 (예: current.low)
         context: 평가 컨텍스트
 
     Returns:
-        (기준-고가 거리) / (기준-저가 거리) * 100
-        예: 200 = 기준이 저가에 2배 더 가까움
+        (고가 확장 거리) / (저가 확장 거리) * 100 (부호 포함)
+        예: +200 = 고가가 기준보다 위 + 상승폭이 하락폭보다 2배
+        예: -50 = 고가가 기준보다 아래 + 하락폭이 상승폭보다 2배
 
     Examples:
-        >>> # 검사일 종가 기준, D일 고저 비율
-        >>> high_low_distance_ratio(prev.close, current.high, current.low)
+        >>> # 상승 케이스: base=10000, high=12000, low=11000
+        >>> upside_extension_ratio(10000, 12000, 11000, {})
+        200.0  # +방향 (상승), 상승폭(2000)이 하락폭(1000)보다 2배
 
-        >>> # 당일 종가 기준, 전일 고저 비율
-        >>> high_low_distance_ratio(current.close, prev.high, prev.low)
+        >>> # 하락 케이스: base=10000, high=9000, low=8000
+        >>> upside_extension_ratio(10000, 9000, 8000, {})
+        -50.0  # -방향 (하락), 상승폭(1000)이 하락폭(2000)의 0.5배
+
+        >>> # 검사일 종가 기준, D일 고저 비율
+        >>> upside_extension_ratio(check_day.close, current.high, current.low)
 
     Note:
         - 0으로 나누기 방지: 분모가 0이면 0.0 반환
-        - 절댓값 사용: abs()로 방향 무시
+        - 절댓값으로 거리 계산 후 고가 방향으로 부호 결정
+        - 전제 조건: 일반적으로 high_price > base_price 상황에서 사용 권장
     """
-    # 거리 계산
+    # 거리 계산 (절댓값으로 크기만)
     distance_to_high = abs(base_price - high_price)
     distance_to_low = abs(base_price - low_price)
 
@@ -302,10 +309,14 @@ def high_low_distance_ratio(
     if distance_to_low == 0:
         return 0.0
 
-    # 비율 계산
+    # 비율 계산 (절댓값)
     ratio = (distance_to_high / distance_to_low) * 100
 
-    return ratio
+    # 방향 결정 (고가 기준)
+    if high_price >= base_price:
+        return ratio   # + 방향 (상승)
+    else:
+        return -ratio  # - 방향 (하락)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

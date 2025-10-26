@@ -136,7 +136,7 @@ block_graph:
         - name: "current_high_greater_than_check_day"
           expression: "current and current.high > check_day.high"
         - name: "close_high_ratio"
-          expression: "check_day and high_low_distance_ratio(check_day.close, current.high, current.low) >= 200"
+          expression: "check_day and upside_extension_ratio(check_day.HIGH, current.high, current.low) >= 200"
 
       # 종료 조건 (OR 조건: 하나라도 만족하면 종료)
       exit_conditions:
