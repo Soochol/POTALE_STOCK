@@ -134,7 +134,14 @@
       "Bash(for file in extended_pattern_example.yaml simple_pattern_example.yaml with_redetection_example.yaml seed_redetection_pair.yaml redetection_simple.yaml)",
       "Bash(do echo \"Processing $file...\")",
       "Bash(for file in test1.yaml test1_alt_block1_only.yaml test1_alt_minimal.yaml test1_alt_debug.yaml test_debug_simple.yaml test_volume_only.yaml test_ma.yaml test_direct.yaml)",
-      "Bash(\"/c/myCode/potale_stock/.venv/Scripts/python.exe\" -c \"from src.application.services.block_graph_loader import BlockGraphLoader; graph = BlockGraphLoader.load_from_yaml(''presets/examples/test1_alt.yaml''); print(f''✅ YAML loaded successfully: {len(graph.nodes)} nodes'')\")"
+      "Bash(\"/c/myCode/potale_stock/.venv/Scripts/python.exe\" -c \"from src.application.services.block_graph_loader import BlockGraphLoader; graph = BlockGraphLoader.load_from_yaml(''presets/examples/test1_alt.yaml''); print(f''✅ YAML loaded successfully: {len(graph.nodes)} nodes'')\")",
+      "Bash(git rev-parse:*)",
+      "Bash(\"/c/myCode/potale_stock/.venv/Scripts/python.exe\":*)",
+      "Bash(c:\\myCode\\potale_stock\\.venv\\Scripts\\python.exe:*)",
+      "Bash(.venvScriptspython.exe verify_forward_spot.py)",
+      "Bash(.venvScriptspython.exe -m pytest tests/unit/entities/test_builtin_functions_forward_spot.py -v --no-cov)",
+      "Bash(where:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []
