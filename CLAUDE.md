@@ -4,9 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-POTALE_STOCK is a Korean stock market analysis and AI learning program that implements a sophisticated **YAML-based dynamic block pattern detection system**. The project follows Clean Architecture principles with strict layer separation.
+POTALE_STOCK is a Korean stock market analysis and AI/ML training data collection system that implements a sophisticated **YAML-based dynamic block pattern detection system**. The project follows Clean Architecture principles with strict layer separation.
+
+**Primary Goals**:
+
+1. **ML Training Data Collection**: Collect high-quality labeled pattern data for AI model training
+2. **Pattern Analysis**: Detect and analyze stock price patterns using configurable YAML rules
+3. **Long-term Tracking**: Track pattern evolution over 1125 days (4.5 years) for ML training
 
 **Core Functionality**: Detects and analyzes stock price patterns using a **dynamic block system (Block1 → Block2 → Block3 → ... → BlockN)**, where blocks are defined in YAML configuration files with custom conditions evaluated by an expression engine. Supports unlimited block types without code changes.
+
+**Detection Modes** (as of Phase 3):
+
+- **Sequential Mode**: Traditional forward-looking detection (Block1 → Block2 → ...)
+- **Highlight-Centric Mode**: Backward/forward scanning for ML data collection (Highlight → Root → Forward evolution)
 
 ## Essential Commands
 
