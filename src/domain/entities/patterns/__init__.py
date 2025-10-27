@@ -7,6 +7,8 @@ from .seed_pattern import SeedPattern, SeedPatternStatus, BlockFeatures
 from .pattern_id import PatternId
 from .pattern_status import PatternStatus
 from .seed_pattern_tree import SeedPatternTree
+from .backward_scan_result import BackwardScanResult
+from .highlight_centric_pattern import HighlightCentricPattern, create_highlight_centric_pattern
 
 __all__ = [
     'RedetectionConfig',
@@ -18,4 +20,7 @@ __all__ = [
     'PatternId',
     'PatternStatus',
     'SeedPatternTree',
+    'BackwardScanResult',
+    'HighlightCentricPattern',
+    'create_highlight_centric_pattern',
 ]

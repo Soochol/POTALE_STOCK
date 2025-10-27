@@ -70,6 +70,11 @@ class SeedPatternTree:
     created_at: datetime = field(default_factory=datetime.now)
     completed_at: Optional[datetime] = None
 
+    # Highlight tracking (NEW - 2025-10-27)
+    primary_highlight_block_id: Optional[str] = None
+    highlight_detected: bool = False
+    highlight_metadata: Dict[str, Any] = field(default_factory=dict)
+
     def __post_init__(self):
         """
         불변 조건 검증
@@ -151,6 +156,80 @@ class SeedPatternTree:
     def get_block_count(self) -> int:
         """블록 개수"""
         return len(self.blocks)
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 하이라이트 관련 메서드 (NEW - 2025-10-27)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def set_primary_highlight(self, block_id: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+        """
+        Primary 하이라이트 블록 설정
+
+        Args:
+            block_id: 하이라이트 블록 ID
+            metadata: 하이라이트 메타데이터 (선택적)
+
+        Raises:
+            ValueError: 블록이 존재하지 않음
+
+        Example:
+            >>> tree.set_primary_highlight('block1', {'spot_count': 2})
+            >>> tree.has_highlight()
+            True
+        """
+        if not self.has_block(block_id):
+            raise ValueError(
+                f"Block '{block_id}' does not exist in pattern {self.pattern_id}"
+            )
+
+        self.primary_highlight_block_id = block_id
+        self.highlight_detected = True
+
+        if metadata:
+            self.highlight_metadata.update(metadata)
+
+    def get_primary_highlight(self) -> Optional['DynamicBlockDetection']:
+        """
+        Primary 하이라이트 블록 조회
+
+        Returns:
+            하이라이트 블록 또는 None
+
+        Example:
+            >>> highlight = tree.get_primary_highlight()
+            >>> if highlight:
+            ...     print(f"Highlight: {highlight.block_id}")
+        """
+        if not self.primary_highlight_block_id:
+            return None
+
+        return self.get_block(self.primary_highlight_block_id)
+
+    def has_highlight(self) -> bool:
+        """
+        하이라이트 존재 여부
+
+        Returns:
+            하이라이트가 설정되어 있으면 True
+
+        Example:
+            >>> tree.has_highlight()
+            False
+        """
+        return self.highlight_detected and self.primary_highlight_block_id is not None
+
+    def clear_highlight(self) -> None:
+        """
+        하이라이트 설정 초기화
+
+        Example:
+            >>> tree.clear_highlight()
+            >>> tree.has_highlight()
+            False
+        """
+        self.primary_highlight_block_id = None
+        self.highlight_detected = False
+        self.highlight_metadata.clear()
 
     def check_completion(self) -> bool:
         """
@@ -364,7 +443,11 @@ class SeedPatternTree:
             'created_at': self.created_at.isoformat(),
             'completed_at': self.completed_at.isoformat() if self.completed_at else None,
             'duration_seconds': duration_seconds,
-            'root_block_date': self.root_block.started_at.isoformat() if self.root_block.started_at else None
+            'root_block_date': self.root_block.started_at.isoformat() if self.root_block.started_at else None,
+            # Highlight information (NEW - 2025-10-27)
+            'has_highlight': self.has_highlight(),
+            'primary_highlight_block_id': self.primary_highlight_block_id,
+            'highlight_metadata': self.highlight_metadata.copy() if self.highlight_metadata else {}
         }
 
     def __repr__(self) -> str:

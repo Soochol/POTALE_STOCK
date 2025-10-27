@@ -246,6 +246,11 @@ class BlockGraphLoader:
                 node_data.get('forward_spot_condition')
             )
 
+            # highlight_condition 추출 (NEW - 2025-10-27)
+            highlight_condition = self._parse_highlight_condition(
+                node_data.get('highlight_condition')
+            )
+
             # 재탐지 조건 추출 (NEW - 2025-10-25)
             # 재진입 조건 파싱 (reentry 또는 redetection 키워드 지원)
             reentry_entry_conditions = None
@@ -277,6 +282,7 @@ class BlockGraphLoader:
                 exclude_conditions=exclude_conditions,
                 reentry_entry_conditions=reentry_entry_conditions,
                 reentry_exit_conditions=reentry_exit_conditions,
+                highlight_condition=highlight_condition,
                 parameters=node_data.get('parameters', {}),
                 metadata=node_data.get('metadata', {})
             )
@@ -426,6 +432,74 @@ class BlockGraphLoader:
         expression = f"{function_name}({', '.join(arg_strings)})"
         return expression
 
+    def _parse_highlight_condition(
+        self,
+        condition_data: Any
+    ) -> Optional['HighlightCondition']:
+        """
+        highlight_condition 데이터를 HighlightCondition 객체로 변환
+
+        지원 형식:
+        1. None: 하이라이트 조건 없음
+        2. dict: {"type": "forward_spot", "enabled": true, "priority": 1, "parameters": {...}}
+
+        Args:
+            condition_data: 하이라이트 조건 데이터 (dict 또는 None)
+
+        Returns:
+            HighlightCondition 객체 또는 None
+
+        Example:
+            >>> condition_data = {
+            ...     "type": "forward_spot",
+            ...     "enabled": True,
+            ...     "priority": 1,
+            ...     "parameters": {"required_spot_count": 2},
+            ...     "description": "2 consecutive spots"
+            ... }
+            >>> highlight_condition = loader._parse_highlight_condition(condition_data)
+        """
+        if condition_data is None:
+            return None
+
+        if not isinstance(condition_data, dict):
+            error_msg = f"highlight_condition은 dict 형식이어야 합니다: {condition_data}"
+            logger.error(error_msg, context={'condition_data': condition_data})
+            raise ValidationError(error_msg, context={'condition_data': condition_data})
+
+        # 필수 필드 확인: 'type'
+        if 'type' not in condition_data:
+            error_msg = "highlight_condition에 'type' 필드가 없습니다"
+            logger.error(error_msg, context={'condition_data': condition_data})
+            raise ValidationError(error_msg, context={'condition_data': condition_data})
+
+        # HighlightCondition import (지연 import로 순환 참조 방지)
+        from src.domain.entities.highlights import HighlightCondition
+
+        try:
+            highlight_condition = HighlightCondition(
+                type=condition_data['type'],
+                enabled=condition_data.get('enabled', True),
+                priority=condition_data.get('priority', 1),
+                parameters=condition_data.get('parameters', {}),
+                description=condition_data.get('description', '')
+            )
+
+            logger.debug(
+                f"Parsed highlight_condition",
+                context={
+                    'type': highlight_condition.type,
+                    'enabled': highlight_condition.enabled,
+                    'priority': highlight_condition.priority
+                }
+            )
+
+            return highlight_condition
+
+        except ValueError as e:
+            error_msg = f"HighlightCondition 생성 실패: {str(e)}"
+            logger.error(error_msg, context={'condition_data': condition_data}, exc=e)
+            raise ValidationError(error_msg, context={'condition_data': condition_data}) from e
 
     def _load_edges(self, edges_data: List[Dict[str, Any]]) -> List[BlockEdge]:
         """

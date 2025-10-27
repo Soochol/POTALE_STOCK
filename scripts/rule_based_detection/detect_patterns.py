@@ -73,16 +73,22 @@ sys.path.insert(0, str(project_root))
 from src.application.services.block_graph_loader import BlockGraphLoader
 from src.application.use_cases.dynamic_block_detector import DynamicBlockDetector
 from src.application.use_cases.seed_pattern_detection_orchestrator import SeedPatternDetectionOrchestrator
+from src.application.use_cases.highlight_centric_detector import HighlightCentricDetector
 from src.application.services.indicators.block1_indicator_calculator import Block1IndicatorCalculator
+from src.application.services.highlight_detector import HighlightDetector
+from src.application.services.support_resistance_analyzer import SupportResistanceAnalyzer
 from src.domain.entities.conditions import ExpressionEngine, function_registry
 from src.domain.entities.detections import DynamicBlockDetection
-from src.domain.entities.patterns import SeedPatternTree
+from src.domain.entities.patterns import SeedPatternTree, HighlightCentricPattern
 from src.infrastructure.database.connection import get_db_connection
 from src.infrastructure.repositories.dynamic_block_repository_impl import (
     DynamicBlockRepositoryImpl,
 )
 from src.infrastructure.repositories.seed_pattern_repository_impl import (
     SeedPatternRepositoryImpl,
+)
+from src.infrastructure.repositories.highlight_centric_pattern_repository_impl import (
+    HighlightCentricPatternRepositoryImpl,
 )
 from src.infrastructure.repositories.stock.sqlite_stock_repository import (
     SqliteStockRepository,
@@ -202,7 +208,10 @@ def detect_patterns_for_ticker(
     to_date: date,
     db_path: str,
     verbose: bool = False,
-    dry_run: bool = False
+    dry_run: bool = False,
+    mode: str = "sequential",
+    backward_days: int = 30,
+    forward_days: int = 1125
 ) -> List[DynamicBlockDetection]:
     """
     단일 종목에 대한 블록 패턴 탐지
@@ -215,6 +224,9 @@ def detect_patterns_for_ticker(
         db_path: 데이터베이스 파일 경로
         verbose: 상세 출력 여부
         dry_run: 저장하지 않고 미리보기만
+        mode: 탐지 모드 ("sequential" or "highlight-centric")
+        backward_days: 하이라이트 모드 역방향 스캔 일수
+        forward_days: 하이라이트 모드 순방향 스캔 일수
 
     Returns:
         List[DynamicBlockDetection]: 탐지된 블록 리스트
@@ -283,7 +295,7 @@ def detect_patterns_for_ticker(
     console.print(f"   [green]OK[/green] Indicators calculated\n")
 
     # 4. 블록 탐지
-    console.print("[cyan]4. Detecting blocks...[/cyan]")
+    console.print(f"[cyan]4. Detecting blocks (mode: {mode})...[/cyan]")
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -294,32 +306,80 @@ def detect_patterns_for_ticker(
         try:
             expression_engine = ExpressionEngine(function_registry)
 
-            # Use Orchestrator for pattern-based detection
-            seed_pattern_repo = SeedPatternRepositoryImpl(session) if not dry_run else None
-            orchestrator = SeedPatternDetectionOrchestrator(
-                block_graph=block_graph,
-                expression_engine=expression_engine,
-                seed_pattern_repository=seed_pattern_repo
-            )
-            orchestrator.set_yaml_config_path(config_path)
+            if mode == "sequential":
+                # Sequential Detection Mode (기존)
+                seed_pattern_repo = SeedPatternRepositoryImpl(session) if not dry_run else None
+                orchestrator = SeedPatternDetectionOrchestrator(
+                    block_graph=block_graph,
+                    expression_engine=expression_engine,
+                    seed_pattern_repository=seed_pattern_repo
+                )
+                orchestrator.set_yaml_config_path(config_path)
 
-            patterns = orchestrator.detect_patterns(
-                ticker=ticker,
-                stocks=stocks,
-                condition_name="seed",
-                save_to_db=(not dry_run)
-            )
+                patterns = orchestrator.detect_patterns(
+                    ticker=ticker,
+                    stocks=stocks,
+                    condition_name="seed",
+                    save_to_db=(not dry_run)
+                )
 
-            progress.update(task, completed=True)
+                progress.update(task, completed=True)
 
-            # Extract all blocks from patterns (for statistics display only)
-            detections = []
-            for pattern in patterns:
-                detections.extend(pattern.blocks.values())
+                # Extract all blocks from patterns (for statistics display only)
+                detections = []
+                for pattern in patterns:
+                    detections.extend(pattern.blocks.values())
 
-            # Show detection stats
-            block1_count = sum(1 for d in detections if d.block_id == 'block1')
-            console.print(f"   [green]OK[/green] Detected {len(patterns)} patterns ({block1_count} Block1s, {len(detections)} total blocks)\n")
+                # Show detection stats
+                block1_count = sum(1 for d in detections if d.block_id == 'block1')
+                console.print(f"   [green]OK[/green] Detected {len(patterns)} patterns ({block1_count} Block1s, {len(detections)} total blocks)\n")
+
+            else:  # highlight-centric
+                # Highlight-Centric Detection Mode (신규)
+                # Initialize components
+                dynamic_block_detector = DynamicBlockDetector(
+                    block_graph=block_graph,
+                    expression_engine=expression_engine
+                )
+                highlight_detector = HighlightDetector(expression_engine)
+                sr_analyzer = SupportResistanceAnalyzer(tolerance_pct=2.0)
+
+                hc_detector = HighlightCentricDetector(
+                    block_graph=block_graph,
+                    highlight_detector=highlight_detector,
+                    support_resistance_analyzer=sr_analyzer,
+                    dynamic_block_detector=dynamic_block_detector,
+                    expression_engine=expression_engine
+                )
+
+                # Run detection
+                patterns = hc_detector.detect_patterns(
+                    ticker=ticker,
+                    stocks=stocks,
+                    scan_from=from_date,
+                    scan_to=to_date,
+                    backward_days=backward_days,
+                    forward_days=forward_days
+                )
+
+                progress.update(task, completed=True)
+
+                # Save to database (if not dry-run)
+                if not dry_run and patterns:
+                    hc_pattern_repo = HighlightCentricPatternRepositoryImpl(session)
+                    for pattern in patterns:
+                        hc_pattern_repo.save(pattern)
+
+                # Extract detections for display (highlight blocks)
+                detections = []
+                for pattern in patterns:
+                    detections.append(pattern.highlight_block)
+                    if pattern.root_block.id != pattern.highlight_block.id:
+                        detections.append(pattern.root_block)
+                    detections.extend(pattern.forward_blocks)
+
+                # Show detection stats
+                console.print(f"   [green]OK[/green] Detected {len(patterns)} highlight patterns ({len(detections)} total blocks)\n")
 
         except Exception as e:
             console.print(f"   [red]ERROR[/red] Detection failed: {e}\n")
@@ -328,7 +388,10 @@ def detect_patterns_for_ticker(
     # 5. 데이터베이스 저장 (dry-run이 아닌 경우)
     if not dry_run:
         console.print("[cyan]5. Database operations...[/cyan]")
-        console.print(f"   [green]OK[/green] Patterns auto-saved by Orchestrator")
+        if mode == "sequential":
+            console.print(f"   [green]OK[/green] Patterns auto-saved by Orchestrator")
+        else:  # highlight-centric
+            console.print(f"   [green]OK[/green] Patterns auto-saved to highlight_centric_pattern table")
 
         # NOTE (2025-10-26): Blocks are already saved as JSON in seed_pattern.block_features
         # Saving them again to dynamic_block_detection causes duplication.
@@ -375,28 +438,61 @@ def detect_patterns_for_ticker(
 
         # Show pattern details
         console.print(f"[bold cyan]Pattern Details:[/bold cyan]")
-        for i, pattern in enumerate(patterns, 1):
-            console.print(f"   Pattern {i}: {pattern.pattern_id}")
-            console.print(f"      Status: {pattern.status.value}")
-            console.print(f"      Blocks: {', '.join(pattern.blocks.keys())}")
-            console.print(f"      Root Block1 Date: {pattern.root_block.started_at}")
 
-            # Show redetections (NEW - 2025-10-25)
-            total_redetections = sum(
-                block.get_redetection_count()
-                for block in pattern.blocks.values()
-            )
-            if total_redetections > 0:
-                console.print(f"      Total Redetections: {total_redetections}")
+        if mode == "sequential":
+            # Sequential mode: SeedPatternTree
+            for i, pattern in enumerate(patterns, 1):
+                console.print(f"   Pattern {i}: {pattern.pattern_id}")
+                console.print(f"      Status: {pattern.status.value}")
+                console.print(f"      Blocks: {', '.join(pattern.blocks.keys())}")
+                console.print(f"      Root Block1 Date: {pattern.root_block.started_at}")
 
-                # Show redetection dates
-                for block_id, block in pattern.blocks.items():
-                    if block.redetections:
-                        for idx, redet in enumerate(block.redetections, 1):
-                            status_str = f"[{redet.status.value}]" if hasattr(redet, 'status') else ""
-                            console.print(f"         - Redetection {idx} ({block_id}): {redet.started_at} ~ {redet.ended_at or 'active'} {status_str}")
+                # Show redetections (NEW - 2025-10-25)
+                total_redetections = sum(
+                    block.get_redetection_count()
+                    for block in pattern.blocks.values()
+                )
+                if total_redetections > 0:
+                    console.print(f"      Total Redetections: {total_redetections}")
 
-            console.print()
+                    # Show redetection dates
+                    for block_id, block in pattern.blocks.items():
+                        if block.redetections:
+                            for idx, redet in enumerate(block.redetections, 1):
+                                status_str = f"[{redet.status.value}]" if hasattr(redet, 'status') else ""
+                                console.print(f"         - Redetection {idx} ({block_id}): {redet.started_at} ~ {redet.ended_at or 'active'} {status_str}")
+
+                console.print()
+
+        else:  # highlight-centric
+            # Highlight-Centric mode: HighlightCentricPattern
+            for i, pattern in enumerate(patterns, 1):
+                console.print(f"   Pattern {i}: {pattern.pattern_id}")
+                console.print(f"      Status: {pattern.status.value}")
+                console.print(f"      Highlight Block: {pattern.highlight_block.block_id} (started: {pattern.highlight_block.started_at})")
+                console.print(f"      Root Block: {pattern.root_block.block_id} (started: {pattern.root_block.started_at})")
+                console.print(f"      Is Highlight Root: {pattern.is_highlight_root()}")
+
+                if pattern.backward_scan_result:
+                    bsr = pattern.backward_scan_result
+                    console.print(f"      Backward Scan: {'Found stronger root' if bsr.found_stronger_root else 'No stronger root'}")
+                    if bsr.found_stronger_root:
+                        console.print(f"         Peak Ratio: {bsr.peak_price_ratio:.2f}x, Lookback: {bsr.lookback_days} days")
+
+                console.print(f"      Forward Blocks: {len(pattern.forward_blocks)}")
+                if pattern.forward_blocks:
+                    console.print(f"         First: {pattern.forward_blocks[0].block_id} ({pattern.forward_blocks[0].started_at})")
+                    console.print(f"         Last: {pattern.forward_blocks[-1].block_id} ({pattern.forward_blocks[-1].started_at})")
+
+                console.print(f"      Pattern Duration: {pattern.get_pattern_duration_days()} days")
+                console.print(f"      Has S/R Analysis: {pattern.has_sr_analysis()}")
+
+                if pattern.has_sr_analysis():
+                    sr = pattern.sr_analysis
+                    console.print(f"         Level Type: {sr.get('level_type', 'unknown')}")
+                    console.print(f"         Retest Count: {sr.get('retest_count', 0)}")
+
+                console.print()
 
     if detections:
         # 타입별 집계
@@ -509,6 +605,28 @@ def main() -> None:
         help=f"데이터베이스 파일 경로 (기본값: {DEFAULT_DB_PATH})"
     )
 
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["sequential", "highlight-centric"],
+        default="sequential",
+        help="탐지 모드 (sequential: 순차 탐지, highlight-centric: 하이라이트 중심 탐지)"
+    )
+
+    parser.add_argument(
+        "--backward-days",
+        type=int,
+        default=30,
+        help="하이라이트 중심 모드: 역방향 스캔 일수 (기본값: 30)"
+    )
+
+    parser.add_argument(
+        "--forward-days",
+        type=int,
+        default=1125,
+        help="하이라이트 중심 모드: 순방향 스캔 일수 (기본값: 1125, 4.5년)"
+    )
+
     args = parser.parse_args()
 
     # 날짜 파싱
@@ -549,7 +667,10 @@ def main() -> None:
                 to_date=to_date,
                 db_path=args.db,
                 verbose=args.verbose,
-                dry_run=args.dry_run
+                dry_run=args.dry_run,
+                mode=args.mode,
+                backward_days=args.backward_days,
+                forward_days=args.forward_days
             )
 
             # 다음 종목 전에 구분선

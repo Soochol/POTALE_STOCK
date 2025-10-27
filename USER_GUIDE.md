@@ -213,6 +213,53 @@ block_graph:
     --from-date 2020-01-01
 ```
 
+### 4-4. Highlight-Centric 모드 (NEW - Phase 3)
+
+**새로운 탐지 방식**: 일반적인 Block1 → Block2 순차 탐지 대신, **하이라이트를 먼저 찾고 역방향/순방향으로 스캔**하는 방식입니다.
+
+**언제 사용하나요?**
+- ✅ **ML 학습 데이터 수집**: 장기 패턴 추적 (1125일, 4.5년)
+- ✅ **성공한 패턴 분석**: 이미 유의미했던 패턴만 선별
+- ✅ **연구/분석**: 어떤 Block1이 장기 상승으로 이어졌는지 연구
+- ❌ **실시간 매매**: 실시간 매매는 sequential 모드 사용 권장
+
+**기본 사용법**:
+```bash
+.venv\Scripts\python.exe scripts\rule_based_detection\detect_patterns.py \
+    --ticker 025980 \
+    --config presets\examples\ananti_validation.yaml \
+    --mode highlight-centric \
+    --from-date 2020-01-01 \
+    --backward-days 30 \
+    --forward-days 1125
+```
+
+**파라미터 설명**:
+- `--mode highlight-centric`: 하이라이트 중심 모드 활성화
+- `--backward-days 30`: 하이라이트 발견 후 30일 이전까지 역방향 스캔
+- `--forward-days 1125`: 루트 블록 발견 후 1125일 이후까지 순방향 스캔 (4.5년)
+
+**탐지 과정**:
+1. **Phase 1 - Highlight 스캔**: 전체 기간에서 하이라이트 블록 탐색 (2+ forward spots)
+2. **Phase 2 - Backward 스캔**: 각 하이라이트로부터 30일 이전을 탐색하여 더 강한 루트 Block1 찾기
+3. **Phase 3 - Forward 스캔**: 루트 블록부터 1125일 동안 패턴 진화 추적
+4. **Phase 4 - S/R 분석**: 루트 블록의 지지/저항 분석
+
+**결과 확인**:
+```bash
+# highlight_centric_pattern 테이블 확인
+sqlite3 data\database\stock_data.db "SELECT pattern_id, ticker, created_at, status FROM highlight_centric_pattern WHERE ticker='025980';"
+
+# 패턴 상세 정보
+sqlite3 data\database\stock_data.db "SELECT * FROM highlight_centric_pattern WHERE pattern_id='HIGHLIGHT_025980_20200414_001';"
+```
+
+**모드 비교**:
+| 모드 | 탐지 방향 | 용도 | 저장 테이블 |
+|------|----------|------|------------|
+| `sequential` (기본) | 순방향 (Block1 → Block2) | 실시간 매매, 일반 탐지 | `seed_pattern` |
+| `highlight-centric` | 역방향+순방향 (Highlight → Root → Forward) | ML 데이터, 연구 분석 | `highlight_centric_pattern` |
+
 ---
 
 ## 5. 결과 확인 (dynamic_block_detection 테이블)

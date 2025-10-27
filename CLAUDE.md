@@ -63,9 +63,22 @@ POTALE_STOCK is a Korean stock market analysis and AI learning program that impl
     --ticker 025980 \
     --config presets/examples/simple_pattern_example.yaml \
     --dry-run
+
+# Highlight-Centric mode (Phase 3)
+.venv/Scripts/python.exe scripts/rule_based_detection/detect_patterns.py \
+    --ticker 025980 \
+    --config presets/examples/ananti_validation.yaml \
+    --mode highlight-centric \
+    --from-date 2020-01-01 \
+    --backward-days 30 \
+    --forward-days 1125
 ```
 
 **Note**: `--config` parameter is **REQUIRED**. The system uses YAML files to define block detection logic.
+
+**Modes**:
+- `sequential` (default): Traditional Block1 → Block2 → ... detection
+- `highlight-centric`: Highlight-first approach (scan for highlights, then backward/forward)
 
 ### Database Operations
 ```bash
@@ -275,6 +288,8 @@ Pattern #3: Block1_C → ACTIVE
 - `stock_info`: Stock metadata (ticker, name, market)
 - **`dynamic_block_detection`**: **Main detection table** (replaces block1~6_detection)
   - Columns: `id`, `block_id`, `block_type`, `ticker`, `started_at`, `ended_at`, `peak_price`, `peak_volume`, `status`, `parent_blocks` (JSON), `custom_metadata` (JSON)
+- **`highlight_centric_pattern`**: **Highlight-centric pattern table** (Phase 3)
+  - Columns: `id`, `pattern_id`, `ticker`, `highlight_block_id`, `root_block_id`, `found_stronger_root`, `backward_lookback_days`, `peak_price_ratio`, `forward_scan_days`, `forward_block_count`, `sr_analysis` (JSON), `status`, `created_at`, `completed_at`
 - `collection_progress`: Tracks incremental collection state
 - `investor_trading`: Investor type trading data
 
@@ -286,6 +301,82 @@ Pattern #3: Block1_C → ACTIVE
 - ~~`seed_condition_preset`~~, ~~`redetection_condition_preset`~~ → Replaced by YAML files
 
 **Important Indexes**: Heavy indexing on ticker + date combinations for query performance.
+
+### Highlight-Centric Detection (Phase 3)
+
+**NEW (2025-10-27)**: Highlight-first pattern detection system for ML training data collection.
+
+**Purpose**: Instead of sequential Block1 → Block2 detection, this system:
+1. **Scans for highlights first**: Finds blocks that already proved significant (2+ forward spots)
+2. **Looks backward**: Searches 30 days before highlight to find true root Block1
+3. **Tracks forward**: Monitors 1125 days (4.5 years) for long-term evolution
+4. **Analyzes S/R**: Checks support/resistance behavior
+
+**Architecture**: Option D - Modular Coexistence
+- **Sequential Detector**: Traditional Block1-first approach (existing)
+- **Highlight-Centric Detector**: Highlight-first approach (new)
+- **Shared Services**: HighlightDetector, SupportResistanceAnalyzer, DynamicBlockDetector
+
+**Key Components**:
+```
+src/application/use_cases/
+  └─ highlight_centric_detector.py          # Main orchestrator (400 lines)
+
+src/domain/entities/patterns/
+  ├─ highlight_centric_pattern.py           # Aggregate root (300 lines)
+  └─ backward_scan_result.py                # Value object (150 lines)
+
+src/application/services/
+  ├─ highlight_detector.py                  # Shared (Phase 1)
+  └─ support_resistance_analyzer.py         # Shared (Phase 1)
+
+src/infrastructure/repositories/
+  └─ highlight_centric_pattern_repository_impl.py  # DB persistence (350 lines)
+
+src/infrastructure/database/models/
+  └─ highlight_centric_pattern.py           # SQLAlchemy model
+```
+
+**Usage**:
+```bash
+# Basic highlight-centric detection
+.venv/Scripts/python.exe scripts/rule_based_detection/detect_patterns.py \
+    --ticker 025980 \
+    --config presets/examples/ananti_validation.yaml \
+    --mode highlight-centric \
+    --from-date 2020-01-01 \
+    --backward-days 30 \
+    --forward-days 1125
+
+# Multiple tickers with highlight-centric
+.venv/Scripts/python.exe scripts/rule_based_detection/detect_patterns.py \
+    --ticker 025980,005930,035720 \
+    --config presets/examples/ananti_validation.yaml \
+    --mode highlight-centric \
+    --verbose
+```
+
+**When to Use**:
+- ✅ **ML training data collection**: Need long-term pattern evolution (1125 days)
+- ✅ **Retrospective analysis**: Finding patterns that already proved significant
+- ✅ **Research**: Understanding which Block1s led to sustained trends
+- ❌ **Real-time trading**: Use sequential mode instead (forward-looking)
+
+**Database**:
+- Table: `highlight_centric_pattern`
+- Pattern ID format: `HIGHLIGHT_{TICKER}_{YYYYMMDD}_{SEQUENCE}`
+- Example: `HIGHLIGHT_025980_20200414_001`
+
+**Detection Phases**:
+1. **Phase 1 - Highlight Scan**: Scan entire period for highlights (blocks with 2+ forward spots)
+2. **Phase 2 - Backward Scan**: For each highlight, scan 30 days backward to find stronger root
+3. **Phase 3 - Forward Scan**: From root, track 1125 days forward for evolution
+4. **Phase 4 - S/R Analysis**: Analyze support/resistance behavior using root block levels
+
+**Pattern Lifecycle**:
+- **ACTIVE**: Pattern is being constructed
+- **COMPLETED**: All scans finished, pattern ready for analysis
+- **ARCHIVED**: Pattern saved for historical reference
 
 ## Development Workflow
 

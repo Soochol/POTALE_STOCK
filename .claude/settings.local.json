@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(if exist data/database/stock_data.db del data/database/stock_data.db)"
+      "Bash(if exist data/database/stock_data.db del data/database/stock_data.db)",
+      "Bash(.venv/Scripts/python.exe -m pytest:*)",
+      "Bash(.venv/Scripts/python.exe:*)",
+      "Bash(sqlite3:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

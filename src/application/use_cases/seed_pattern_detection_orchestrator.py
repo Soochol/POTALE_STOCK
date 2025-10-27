@@ -10,6 +10,8 @@ from loguru import logger
 
 from src.application.services.seed_pattern_tree_manager import SeedPatternTreeManager
 from src.application.services.redetection_detector import RedetectionDetector
+from src.application.services.highlight_detector import HighlightDetector
+from src.application.services.support_resistance_analyzer import SupportResistanceAnalyzer
 from src.application.use_cases.dynamic_block_detector import DynamicBlockDetector
 from src.application.use_cases.pattern_detection_state import PatternContext, PatternDetectionState
 from src.domain.entities.block_graph import BlockGraph
@@ -70,6 +72,10 @@ class SeedPatternDetectionOrchestrator:
         self.redetection_detector = RedetectionDetector(expression_engine)
         self.seed_pattern_repository = seed_pattern_repository
         self.yaml_config_path = ""  # 외부에서 설정
+
+        # Shared Application Services (NEW - 2025-10-27 Phase 2)
+        self.highlight_detector = HighlightDetector(expression_engine)
+        self.support_resistance_analyzer = SupportResistanceAnalyzer(tolerance_pct=2.0)
 
         # Option D: 패턴 시퀀스 카운터 (ticker별)
         self.pattern_sequence_counter: Dict[str, int] = {}
@@ -226,6 +232,11 @@ class SeedPatternDetectionOrchestrator:
                 'pattern_ids': [p.pattern_id for p in active_pattern_contexts]
             }
         )
+
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        # 3.5. 하이라이트 탐지 (NEW - 2025-10-27 Phase 2)
+        # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        self._detect_highlights_for_patterns(ticker, stocks)
 
         # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         # 4. 재탐지 탐지
@@ -897,3 +908,96 @@ class SeedPatternDetectionOrchestrator:
     def set_yaml_config_path(self, path: str) -> None:
         """YAML 설정 파일 경로 설정"""
         self.yaml_config_path = path
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # Phase 2: Highlight Detection Integration (NEW - 2025-10-27)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def _detect_highlights_for_patterns(
+        self,
+        ticker: str,
+        stocks: List[Stock]
+    ) -> None:
+        """
+        모든 패턴에 대해 하이라이트 탐지 (NEW - 2025-10-27 Phase 2)
+
+        각 패턴의 블록들을 검사하여 하이라이트 조건을 만족하는
+        블록을 찾고, Primary highlight를 패턴에 저장합니다.
+
+        프로세스:
+        1. 모든 패턴 순회
+        2. 각 패턴의 블록들에 대해 highlight_condition 확인
+        3. HighlightDetector로 하이라이트 블록 찾기
+        4. Primary highlight를 SeedPatternTree에 설정
+
+        Args:
+            ticker: 종목 코드
+            stocks: 전체 주가 데이터
+
+        Example:
+            >>> self._detect_highlights_for_patterns('025980', stocks)
+            # Pattern SEED_025980_20180307_001: Highlight detected on block1
+        """
+        all_patterns = self.pattern_manager.get_all_patterns()
+        total_highlights = 0
+
+        for pattern in all_patterns:
+            # Block1의 highlight_condition 확인
+            block1_node = self.block_graph.get_node('block1')
+            if not block1_node or not block1_node.has_highlight_condition():
+                continue  # 하이라이트 조건 없음
+
+            highlight_condition = block1_node.highlight_condition
+
+            # 패턴의 모든 블록 조회 (리스트로 변환)
+            pattern_blocks = list(pattern.blocks.values())
+
+            # 평가 컨텍스트 구성
+            context = {
+                'ticker': ticker,
+                'all_stocks': stocks
+            }
+
+            # 하이라이트 탐지
+            highlights = self.highlight_detector.find_highlights(
+                blocks=pattern_blocks,
+                highlight_condition=highlight_condition,
+                context=context
+            )
+
+            if highlights:
+                # Primary highlight 설정
+                primary = self.highlight_detector.find_primary(highlights)
+
+                if primary:
+                    pattern.set_primary_highlight(
+                        block_id=primary.block_id,
+                        metadata={
+                            'highlight_type': highlight_condition.type,
+                            'spot_count': primary.get_spot_count(),
+                            'priority': highlight_condition.priority,
+                            'detected_at': primary.started_at.isoformat() if primary.started_at else None
+                        }
+                    )
+                    total_highlights += 1
+
+                    logger.info(
+                        f"Highlight detected for pattern {pattern.pattern_id}",
+                        extra={
+                            'pattern_id': str(pattern.pattern_id),
+                            'highlight_block_id': primary.block_id,
+                            'highlight_type': highlight_condition.type,
+                            'spot_count': primary.get_spot_count()
+                        }
+                    )
+
+        if total_highlights > 0:
+            logger.info(
+                f"Highlight detection summary",
+                extra={
+                    'ticker': ticker,
+                    'total_patterns': len(all_patterns),
+                    'patterns_with_highlights': total_highlights,
+                    'highlight_rate_pct': round(total_highlights / len(all_patterns) * 100, 2) if all_patterns else 0
+                }
+            )

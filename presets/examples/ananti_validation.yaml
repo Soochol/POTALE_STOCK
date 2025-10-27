@@ -1,0 +1,79 @@
+version: "1.0"
+
+# Simplified YAML for Ananti (025980) validation
+# Focus: Highlight detection with relaxed conditions
+
+block_graph:
+  pattern_type: "seed"
+  root_node: "block1"
+
+  nodes:
+    # Block1 - Simplified conditions for Ananti
+    block1:
+      block_id: "block1"
+      block_type: 1
+      name: "Volume Surge Pattern"
+      description: "Simplified pattern for Ananti highlight validation"
+
+      # Entry conditions (relaxed for small-cap stock)
+      entry_conditions:
+        - name: "price_surge"
+          expression: "prev != None and ((current.high - prev.close) / prev.close) >= 0.08"
+          description: "8% price surge (relaxed from 10%)"
+
+        - name: "volume_surge"
+          expression: "current.volume >= volume_ma(20) * 2.0"
+          description: "2x volume vs 20-day MA"
+
+      # Exit conditions
+      exit_conditions:
+        - name: "block2_started"
+          expression: "exists('block2')"
+          description: "Block2 starts"
+
+        - name: "max_duration"
+          expression: "candles_between(block1.started_at, current.date) >= 120"
+          description: "120 days elapsed"
+
+      # Forward spot condition
+      forward_spot_condition: "is_forward_spot('block1', 1, 2)"
+
+      # Spot entry conditions (must be met on D+1, D+2)
+      spot_entry_conditions:
+        - name: "spot_volume_surge"
+          expression: "current.volume >= prev.volume * 1.3"
+          description: "130% volume vs previous day"
+
+      # Highlight condition (2 consecutive spots = highlight)
+      highlight_condition:
+        type: "forward_spot"
+        enabled: true
+        priority: 1
+        parameters:
+          required_spot_count: 2
+          consecutive: true
+          day_offsets: [1, 2]
+        description: "Highlight: 2 consecutive volume spots"
+
+    # Block2 - Transition pattern
+    block2:
+      block_id: "block2"
+      block_type: 2
+      name: "Continuation Pattern"
+
+      entry_conditions:
+        - name: "requires_block1"
+          expression: "exists('block1')"
+
+        - name: "price_surge"
+          expression: "prev != None and ((current.high - prev.close) / prev.close) >= 0.08"
+
+      exit_conditions:
+        - name: "max_duration"
+          expression: "candles_between(block2.started_at, current.date) >= 60"
+
+  # Edges
+  edges:
+    - from_block: "block1"
+      to_block: "block2"
+      edge_type: "sequential"

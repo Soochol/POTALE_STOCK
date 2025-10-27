@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from src.domain.entities.conditions import Condition
+    from src.domain.entities.highlights import HighlightCondition
 
 
 @dataclass
@@ -54,6 +55,10 @@ class BlockNode:
     # 블록 완료 후 재진입 시 사용할 조건
     reentry_entry_conditions: Optional[List['Condition']] = None
     reentry_exit_conditions: Optional[List['Condition']] = None
+
+    # Highlight 조건 (선택적, NEW - 2025-10-27)
+    # 이 블록이 하이라이트로 인식될 조건
+    highlight_condition: Optional['HighlightCondition'] = None
 
     parameters: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -129,6 +134,20 @@ class BlockNode:
     def has_redetection(self) -> bool:
         """하위 호환성을 위한 alias"""
         return self.has_reentry()
+
+    def has_highlight_condition(self) -> bool:
+        """
+        이 블록이 하이라이트 조건을 가지고 있는지 확인
+
+        Returns:
+            하이라이트 조건이 정의되어 있으면 True
+
+        Example:
+            >>> if block_node.has_highlight_condition():
+            ...     # Process highlight detection
+            ...     pass
+        """
+        return self.highlight_condition is not None and self.highlight_condition.is_enabled()
 
     def validate(self) -> List[str]:
         """

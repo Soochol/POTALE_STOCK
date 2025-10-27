@@ -82,18 +82,6 @@ block_graph:
         - *trading_value_threshold
         - *normalized_volume_surge
 
-      # Highlight 조건 (NEW - 2025-10-27)
-      # Block1이 하이라이트로 인식될 조건 (2개의 연속 spot이 있으면 하이라이트)
-      highlight_condition:
-        type: "forward_spot"
-        enabled: true
-        priority: 1  # Primary highlight
-        parameters:
-          required_spot_count: 2
-          consecutive: true
-          day_offsets: [1, 2]
-        description: "Primary highlight: 2 consecutive volume spots at D+1, D+2 above Block1 peak"
-
       # 재탐지 조건 (Block1 완료 후)
       reentry:
         # 재진입 조건 (AND 조건)

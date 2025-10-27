@@ -21,6 +21,9 @@ from .dynamic_block_detection_model import DynamicBlockDetectionModel
 # Seed pattern models
 from .seed_pattern_model import SeedPatternModel
 
+# Highlight-centric pattern models
+from .highlight_centric_pattern import HighlightCentricPatternModel
+
 # Preset models
 from .presets import (
     SeedConditionPreset,
@@ -49,6 +52,9 @@ __all__ = [
 
     # Seed pattern models
     'SeedPatternModel',
+
+    # Highlight-centric pattern models
+    'HighlightCentricPatternModel',
 
     # Preset models
     'SeedConditionPreset',
