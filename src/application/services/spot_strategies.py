@@ -14,7 +14,7 @@ import re
 from src.domain.entities.block_graph import BlockNode
 from src.domain.entities.detections import DynamicBlockDetection
 from src.domain.entities.conditions import ExpressionEngine
-from src.infrastructure.logging import get_logger
+from src.common.logging import get_logger
 
 logger = get_logger(__name__)
 

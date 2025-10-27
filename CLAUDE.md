@@ -117,6 +117,14 @@ cp data/database/stock_data.db data/database/stock_data_backup.db
 
 ### Clean Architecture Layers
 
+**Common Layer** (`src/common/`) - **NEW (2025-10-27)**
+- **logging/**: Unified logging system (cross-cutting concern)
+  - `logger.py`: PotaleLogger, get_logger
+  - `decorators.py`: Error handling decorators
+- Accessible from all layers (Domain, Application, Infrastructure)
+- **Migration Note**: Moved from `src/infrastructure/logging` to follow Clean Architecture principles
+  - Old path (`src.infrastructure.logging`) is deprecated but still works for backward compatibility
+
 **Domain Layer** (`src/domain/`)
 - **entities/**: Core business entities
   - `conditions/`: ExpressionEngine, FunctionRegistry, builtin_functions
@@ -127,7 +135,7 @@ cp data/database/stock_data.db data/database/stock_data_backup.db
 - **repositories/**: Repository interfaces (abstract base classes)
   - `dynamic_block_repository.py`: Interface for dynamic block storage
   - `seed_pattern_repository.py`: Interface for seed pattern storage
-- Zero external dependencies
+- Zero external dependencies (only depends on common layer for logging)
 
 **Application Layer** (`src/application/`)
 - **use_cases/**: Business logic orchestration
@@ -137,8 +145,9 @@ cp data/database/stock_data.db data/database/stock_data_backup.db
 - **services/**: Application services
   - `block_graph_loader.py`: YAML → BlockGraph converter
   - `seed_pattern_tree_manager.py`: **NEW** Multi-pattern lifecycle manager
+  - `stock_data_utils.py`: **NEW** Stock data preprocessing utilities (moved from infrastructure)
   - `indicators/`: Technical indicator calculators
-- Depends only on domain layer
+- Depends only on domain layer and common layer
 
 **Infrastructure Layer** (`src/infrastructure/`)
 - **repositories/**: Repository implementations
@@ -151,9 +160,77 @@ cp data/database/stock_data.db data/database/stock_data_backup.db
 - **database/**: Database models and connection management
 - **utils/**: Price utilities, data validation
 
-**Presentation Layer** (`src/cli/`)
-- CLI commands and TUI interface
-- Orchestrates use cases
+**Presentation Layer** (`scripts/`)
+- CLI entry points and command-line interfaces
+- Located outside src/ for ease of use
+- Orchestrates use cases and formats output
+- **Note**: Not yet migrated to `src/presentation/` (planned for future)
+
+**Learning Module** (`src/learning/`) - **Independent Bounded Context**
+- **feature_engineering/**: Feature extraction for ML (50+ features)
+- **models/**: ML model definitions (Dense, LSTM, CNN)
+- **training/**: Training pipeline and callbacks
+- **evaluation/**: Metrics and confusion matrix
+- **inference/**: Batch and realtime prediction
+- **Note**: This is a separate bounded context from the rule-based detection system
+  - Operates independently with its own data pipeline
+  - Uses labeled data from `block_labels` table
+  - Not part of the main Clean Architecture layers
+
+### Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Presentation Layer                     │
+│                        (scripts/)                           │
+│    CLI entry points, command formatting, user interaction   │
+└────────────────────────┬────────────────────────────────────┘
+                         │ depends on
+┌────────────────────────▼────────────────────────────────────┐
+│                    Application Layer                        │
+│                   (src/application/)                        │
+│  Use Cases: DynamicBlockDetector, SeedPatternOrchestrator  │
+│  Services: BlockGraphLoader, SeedPatternTreeManager        │
+└────────────────────────┬────────────────────────────────────┘
+                         │ depends on
+┌────────────────────────▼────────────────────────────────────┐
+│                      Domain Layer                           │
+│                     (src/domain/)                           │
+│  Entities: Stock, BlockGraph, DynamicBlockDetection         │
+│  Repositories: Interfaces (IStockRepository, etc.)          │
+│  No external dependencies (only common layer)               │
+└────────────────────────┬────────────────────────────────────┘
+                         ▲ implements
+┌────────────────────────┴────────────────────────────────────┐
+│                  Infrastructure Layer                       │
+│                 (src/infrastructure/)                       │
+│  Repositories: SQLAlchemy implementations                   │
+│  Collectors: AsyncUnifiedCollector (Naver Finance API)      │
+│  Database: Models, connection management                    │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                      Common Layer                           │
+│                     (src/common/)                           │
+│              Cross-cutting concerns                         │
+│         Logging: PotaleLogger, decorators                   │
+│      Accessible from ALL layers above                       │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                   Learning Module                           │
+│                    (src/learning/)                          │
+│          Independent Bounded Context                        │
+│   Feature Engineering, ML Models, Training, Inference       │
+│              (Not part of main layers)                      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Dependency Flow**:
+- **Downward**: Presentation → Application → Domain
+- **Upward (DIP)**: Infrastructure implements Domain interfaces
+- **Cross-cutting**: Common layer accessible from all layers
+- **Independent**: Learning module operates separately
 
 ### Critical Architectural Concepts
 

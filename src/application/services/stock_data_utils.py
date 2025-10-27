@@ -2,8 +2,11 @@
 Stock Data Utilities - 주가 데이터 전처리 유틸리티
 
 주가 데이터 전처리 및 변환 함수들
+
+NOTE: 이 모듈은 infrastructure/utils/stock_data_utils.py에서 이동되었습니다.
+      Clean Architecture 원칙에 따라 application layer로 이동.
 """
-from typing import List
+from typing import List, Optional
 from src.domain.entities.core import Stock
 from src.common.logging import get_logger
 
@@ -104,7 +107,7 @@ def forward_fill_prices(stocks: List[Stock]) -> List[Stock]:
     return result
 
 
-def get_last_valid_stock(stocks: List[Stock], current_index: int) -> Stock:
+def get_last_valid_stock(stocks: List[Stock], current_index: int) -> Optional[Stock]:
     """
     마지막 정상 거래일 주가 반환
 

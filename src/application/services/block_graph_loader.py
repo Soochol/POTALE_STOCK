@@ -13,7 +13,7 @@ from src.domain.entities.conditions import Condition
 from src.domain.entities.patterns import RedetectionConfig
 from src.domain.exceptions import YAMLConfigError, ValidationError
 from src.domain.error_context import create_file_operation_context
-from src.infrastructure.logging import get_logger
+from src.common.logging import get_logger
 
 logger = get_logger(__name__)
 

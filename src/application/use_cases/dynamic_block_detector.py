@@ -14,7 +14,7 @@ from src.domain.entities.conditions import ExpressionEngine
 from src.domain.exceptions import ExpressionEvaluationError
 from src.application.services.spot_strategies import SpotStrategy, CompositeSpotStrategy
 from src.application.use_cases.pattern_detection_state import PatternDetectionState
-from src.infrastructure.logging import get_logger
+from src.common.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -80,7 +80,7 @@ class DynamicBlockDetector:
             active_blocks = []
 
         # 데이터 전처리: 거래 없는 날의 가격을 마지막 거래 종가로 채움
-        from src.infrastructure.utils.stock_data_utils import forward_fill_prices
+        from src.application.services.stock_data_utils import forward_fill_prices
         stocks = forward_fill_prices(stocks)
         logger.info(
             "Applied forward-fill preprocessing",

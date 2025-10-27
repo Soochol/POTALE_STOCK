@@ -11,7 +11,7 @@ from io import StringIO
 
 from .base import AsyncCollectorBase
 from src.infrastructure.utils import round_to_tick_size
-from src.infrastructure.logging import get_logger
+from src.common.logging import get_logger
 
 logger = get_logger(__name__)
 
